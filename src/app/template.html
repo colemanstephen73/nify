@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Race Telemetry Analysis</title>
+<meta name="description" content="Driver performance analysis: consistency, mistakes, corner performance and theoretical best lap from raw TSV telemetry.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/*__STYLES__*/
+</style>
+<!--__PLOTLY__-->
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="mark"></span><span>Telemetry<span class="full"> · Race Engineering</span></span></div>
+  <nav class="nav" id="nav">
+    <a href="#overview">Overview</a>
+    <a href="#laps">Laps</a>
+    <a href="#corners">Corners</a>
+    <a href="#theoretical">Theoretical best</a>
+    <a href="#telemetry">Telemetry</a>
+    <a href="#track">Track map</a>
+    <a href="#insights">Insights</a>
+    <a href="#method">Method &amp; data</a>
+  </nav>
+  <div class="top-actions">
+    <button class="btn" id="btn-dq" title="Data-quality report">Data quality</button>
+    <label class="btn primary" for="file-input" title="Load one or more TSV files">Load TSV…</label>
+    <input type="file" id="file-input" accept=".tsv,.txt,.csv,.log,text/tab-separated-values,text/plain" multiple hidden>
+  </div>
+</header>
+
+<div id="loading"><div class="spin"></div><div class="dim" id="loading-msg">Analysing telemetry…</div></div>
+<div id="drop">Drop TSV file(s) to analyse</div>
+<div class="modal-bg" id="modal"><div class="modal" id="modal-body"></div></div>
+
+<main id="app">
+  <div class="welcome" id="welcome" hidden>
+    <h1>Race telemetry analysis</h1>
+    <p class="dim">Load one or more raw TSV telemetry files. Everything runs locally in your browser — nothing is uploaded.</p>
+    <div class="dz">Drag &amp; drop TSV files here, or use <b>Load TSV…</b> above.<br><span class="muted">Columns are detected automatically (lap, time, distance, speed, throttle, brake, steering, gear, RPM, accelerations, GPS/XY, sectors, track limits…).</span></div>
+    <div id="welcome-err"></div>
+  </div>
+
+  <div id="report" hidden>
+    <div class="session-head">
+      <h1 id="session-title">Session</h1>
+      <div class="badges" id="session-badges"></div>
+    </div>
+
+    <div class="verdict" id="verdict"></div>
+
+    <section id="overview">
+      <div class="sec-title"><h2>Performance overview</h2><span class="sub">Pace, execution quality and validity are scored separately</span></div>
+      <div class="kpis" id="kpis"></div>
+      <div class="grid g-main" style="margin-top:12px">
+        <div class="panel"><h3>Lap-time progression <span class="r">click a lap to inspect</span></h3><div class="chart" id="ch-progress" style="height:300px"></div><div class="legend" id="lg-status"></div></div>
+        <div class="panel"><h3>Where the time goes <span class="r">per lap, seconds</span></h3><div class="chart" id="ch-budget" style="height:300px"></div><div class="note" id="budget-note"></div></div>
+      </div>
+      <div class="grid g-3" style="margin-top:12px">
+        <div class="panel"><h3>Lap-time distribution <span class="r">complete, valid laps</span></h3><div class="chart" id="ch-dist" style="height:220px"></div></div>
+        <div class="panel"><h3>Execution trend <span class="r">mistake score per lap (0–100)</span></h3><div class="chart" id="ch-mtrend" style="height:220px"></div></div>
+        <div class="panel"><h3>Consistency trend <span class="r">per-lap consistency score</span></h3><div class="chart" id="ch-ctrend" style="height:220px"></div></div>
+      </div>
+      <div class="grid g-2" style="margin-top:12px">
+        <div class="panel"><h3>Driver consistency score — components</h3><div id="cons-break"></div></div>
+        <div class="panel"><h3>Pace — raw vs clean vs theoretical</h3><div id="pace-break"></div></div>
+      </div>
+    </section>
+
+    <section id="laps">
+      <div class="sec-title"><h2>Lap explorer</h2><span class="sub">Every lap accounted for · click to inspect · shift-click to add to comparison</span></div>
+      <div class="strip" id="lap-strip"></div>
+      <div class="grid g-main">
+        <div class="panel"><h3>Lap timeline</h3><div class="tbl-wrap" style="max-height:440px"><table class="tbl" id="tbl-laps"></table></div></div>
+        <div class="panel" id="lap-detail"></div>
+      </div>
+    </section>
+
+    <section id="corners">
+      <div class="sec-title"><h2>Corner performance</h2><span class="sub" id="corner-sub"></span></div>
+      <div class="panel"><div class="tbl-wrap" style="max-height:none"><table class="tbl" id="tbl-corners"></table></div><div class="note">Segment = corner plus the following straight up to the next corner's approach (non-overlapping; segments sum to the lap). Best/median/worst-clean are segment times in seconds. Speeds km/h, distances m from S/F.</div></div>
+      <div class="grid g-main" style="margin-top:12px">
+        <div class="panel" id="corner-detail"></div>
+        <div class="panel"><h3>Pace vs consistency matrix <span class="r">click a corner</span></h3><div class="chart" id="ch-matrix" style="height:340px"></div><div class="note">x: repeatability gap (median − best segment time). y: estimated pace gap from grip utilisation vs the driver's own session envelope (inferred benchmark). Top-right = critical.</div></div>
+      </div>
+      <div class="grid g-2" style="margin-top:12px">
+        <div class="panel"><h3 id="cd-dist-title">Segment time by lap</h3><div class="chart" id="ch-corner-laps" style="height:260px"></div></div>
+        <div class="panel"><h3 id="cd-diff-title">What drives the time</h3><div class="chart" id="ch-corner-diff" style="height:260px"></div></div>
+      </div>
+      <div class="panel" style="margin-top:12px"><h3>Lap × segment delta to best segment <span class="r">seconds · click a cell</span></h3><div class="chart" id="ch-heat" style="height:420px"></div></div>
+    </section>
+
+    <section id="theoretical">
+      <div class="sec-title"><h2>Theoretical best lap</h2><span class="sub">Sum of the best valid time in each non-overlapping segment</span></div>
+      <div class="grid g-main">
+        <div class="panel"><h3>Potential by segment <span class="r">best lap − best segment</span></h3><div class="chart" id="ch-theo" style="height:300px"></div><div class="note" id="theo-note"></div></div>
+        <div class="panel"><h3>Composition</h3><div id="theo-table"></div></div>
+      </div>
+    </section>
+
+    <section id="telemetry">
+      <div class="sec-title"><h2>Telemetry explorer</h2><span class="sub">Distance-aligned · drag to zoom · double-click to reset · hover is linked to the track map</span></div>
+      <div class="panel">
+        <div class="controls" id="tm-controls"></div>
+        <div class="chart" id="ch-telemetry" style="height:860px"></div>
+      </div>
+      <div class="grid g-main" style="margin-top:12px">
+        <div class="panel"><h3>Speed trace comparison &amp; time delta <span class="r" id="speed-cmp-sub"></span></h3><div class="chart" id="ch-speedcmp" style="height:340px"></div></div>
+        <div class="panel"><h3>Delta accumulation <span class="r">+ = slower than reference</span></h3><div class="tbl-wrap" style="max-height:340px"><table class="tbl" id="tbl-delta"></table></div></div>
+      </div>
+    </section>
+
+    <section id="track">
+      <div class="sec-title"><h2>Track map</h2><span class="sub" id="track-sub"></span></div>
+      <div class="grid g-main">
+        <div class="panel"><div class="controls" id="map-controls"></div><div class="chart" id="ch-map" style="height:620px"></div><div class="legend" id="map-legend"></div></div>
+        <div class="panel"><h3>Mistake locations <span class="r">all laps</span></h3><div id="map-mistakes"></div></div>
+      </div>
+    </section>
+
+    <section id="insights">
+      <div class="sec-title"><h2>Engineering insights</h2><span class="sub">Generated from the computed results — click to jump to the corner</span></div>
+      <div class="insights" id="insight-list"></div>
+      <div class="sec-title" style="margin-top:20px"><h2>Driver coaching — priorities</h2><span class="sub">Highest-value improvements first</span></div>
+      <div class="coach" id="coach-list"></div>
+    </section>
+
+    <section id="method">
+      <div class="sec-title"><h2>Methodology &amp; data quality</h2></div>
+      <div id="method-body"></div>
+    </section>
+  </div>
+</main>
+
+<!--__DATA__-->
+<script>
+/*__ENGINE__*/
+</script>
+<script>
+/*__APP__*/
+</script>
+</body>
+</html>

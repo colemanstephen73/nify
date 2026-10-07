@@ -1,0 +1,211 @@
+{
+  "synthetic": true,
+  "track_length_m": 4280.5,
+  "laps": {
+    "1": {
+      "simulated_lap_time_s": 107.01692640523979,
+      "partial": true
+    },
+    "2": {
+      "simulated_lap_time_s": 98.38641834211815,
+      "partial": false
+    },
+    "3": {
+      "simulated_lap_time_s": 98.37304243776924,
+      "partial": false
+    },
+    "4": {
+      "simulated_lap_time_s": 98.10174762878353,
+      "partial": false
+    },
+    "5": {
+      "simulated_lap_time_s": 100.2341552574367,
+      "partial": false
+    },
+    "6": {
+      "simulated_lap_time_s": 98.51537270587583,
+      "partial": false
+    },
+    "7": {
+      "simulated_lap_time_s": 97.56031030945103,
+      "partial": false
+    },
+    "8": {
+      "simulated_lap_time_s": 98.20116871964294,
+      "partial": false
+    },
+    "9": {
+      "simulated_lap_time_s": 97.77024666361085,
+      "partial": false
+    },
+    "10": {
+      "simulated_lap_time_s": 97.99671720246606,
+      "partial": false
+    },
+    "11": {
+      "simulated_lap_time_s": 97.52635427787548,
+      "partial": false
+    },
+    "12": {
+      "simulated_lap_time_s": 103.96263046399703,
+      "partial": true
+    },
+    "13": {
+      "simulated_lap_time_s": 106.77120075068949,
+      "partial": true
+    },
+    "14": {
+      "simulated_lap_time_s": 98.50352450092205,
+      "partial": false
+    },
+    "15": {
+      "simulated_lap_time_s": 98.86329892026941,
+      "partial": false
+    },
+    "16": {
+      "simulated_lap_time_s": 97.94145883926281,
+      "partial": false
+    },
+    "17": {
+      "simulated_lap_time_s": 99.47657267724601,
+      "partial": false
+    },
+    "18": {
+      "simulated_lap_time_s": 97.9861308047886,
+      "partial": false
+    },
+    "19": {
+      "simulated_lap_time_s": 98.86345405588872,
+      "partial": false
+    },
+    "20": {
+      "simulated_lap_time_s": 97.50320923970928,
+      "partial": false
+    },
+    "21": {
+      "simulated_lap_time_s": 98.03170938243923,
+      "partial": false
+    },
+    "22": {
+      "simulated_lap_time_s": 97.18880774228145,
+      "partial": false
+    },
+    "23": {
+      "simulated_lap_time_s": 98.07002618362513,
+      "partial": false
+    },
+    "24": {
+      "simulated_lap_time_s": 103.70299369022497,
+      "partial": true
+    }
+  },
+  "events": [
+    {
+      "lap": 3,
+      "corner": "T1",
+      "type": "lockup_overshoot",
+      "expected_level": 3
+    },
+    {
+      "lap": 5,
+      "corner": "T7",
+      "type": "off_track_exit",
+      "expected_level": 4
+    },
+    {
+      "lap": 6,
+      "corner": "T4",
+      "type": "early_braking",
+      "expected_level": 2
+    },
+    {
+      "lap": 8,
+      "corner": "T9",
+      "type": "throttle_lift_exit",
+      "expected_level": 2
+    },
+    {
+      "lap": 9,
+      "corner": "T2",
+      "type": "double_braking",
+      "expected_level": 2
+    },
+    {
+      "lap": 15,
+      "corner": "T11",
+      "type": "delayed_throttle",
+      "expected_level": 2
+    },
+    {
+      "lap": 17,
+      "corner": "T5",
+      "type": "off_track_exit",
+      "expected_level": 4
+    },
+    {
+      "lap": 19,
+      "corner": "T1",
+      "type": "early_braking",
+      "expected_level": 2
+    },
+    {
+      "lap": 21,
+      "corner": "T9",
+      "type": "lockup_overshoot",
+      "expected_level": 3
+    }
+  ],
+  "corners": {
+    "T1": {
+      "start_m": 620.0,
+      "end_m": 689.0
+    },
+    "T2": {
+      "start_m": 859.5,
+      "end_m": 951.0
+    },
+    "T3": {
+      "start_m": 1211.5,
+      "end_m": 1387.0
+    },
+    "T4": {
+      "start_m": 1717.5,
+      "end_m": 1751.5
+    },
+    "T5": {
+      "start_m": 1780.0,
+      "end_m": 1812.0
+    },
+    "T6": {
+      "start_m": 2192.5,
+      "end_m": 2291.5
+    },
+    "T7": {
+      "start_m": 2432.0,
+      "end_m": 2498.5
+    },
+    "T8": {
+      "start_m": 3019.0,
+      "end_m": 3081.5
+    },
+    "T9": {
+      "start_m": 3292.0,
+      "end_m": 3377.0
+    },
+    "T10": {
+      "start_m": 3527.5,
+      "end_m": 3684.0
+    },
+    "T11": {
+      "start_m": 3984.5,
+      "end_m": 4100.0
+    }
+  },
+  "notes": "Lap 1, 12, 13, 24 are partial out/in laps. 0.6 s dropout in lap 10.",
+  "defects": {
+    "dropout_lap": 10,
+    "duplicate_rows": 15,
+    "malformed_rows": 5,
+    "missing_cells": 45
+  }
+}
