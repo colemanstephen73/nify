@@ -6,7 +6,7 @@ const [, , page_, ...files] = process.argv;
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1500, height: 1000 } }); const errs = [];
   p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()); });
-  await p.route('**/plotly*.js', r => r.fulfill({ body: fs.readFileSync('/tmp/claude-0/plotly.min.js'), contentType: 'application/javascript' }));
+  await p.route('**/plotly*.js', r => r.fulfill({ body: fs.readFileSync(require('path').join(__dirname, '..', 'vendor', 'plotly-strict-2.35.2.min.js')), contentType: 'application/javascript' }));
   await p.route('https://fonts.googleapis.com/**', r => r.fulfill({ body: '', contentType: 'text/css' }));
   await p.goto('file://' + path.resolve(page_)); await p.waitForFunction(() => window.__dashboardReady);
   for (const f of files) {

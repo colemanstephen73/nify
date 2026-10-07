@@ -4,7 +4,7 @@
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const fs = require('fs'), path = require('path');
 const file = process.argv[2];
-const plotly = process.argv[3] || '/tmp/claude-0/plotly.min.js';
+const plotly = process.argv[3] || require('path').join(__dirname, '..', 'vendor', 'plotly-strict-2.35.2.min.js');
 let failures = 0;
 const ok = (c, m) => { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) failures++; };
 

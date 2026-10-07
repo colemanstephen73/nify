@@ -20,6 +20,9 @@
   const LEVEL_COL = [COL.na, COL.warn, COL.serious, COL.critical, '#8f1d1d'];
   const LEVEL_NAME = ['Normal', 'Minor imperfection', 'Significant mistake', 'Major mistake', 'Compromised / off-track'];
   const MONO = 'JetBrains Mono, ui-monospace, Menlo, Consolas, monospace';
+  // WebGL is optional: some viewers/hosts disable it, so fall back to SVG traces
+  const HAS_WEBGL = (() => { try { const c = document.createElement('canvas'); return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl'))); } catch (e) { return false; } })();
+  const GL = HAS_WEBGL ? 'scattergl' : 'scatter';
   const CFG = { displaylogo: false, responsive: true, displayModeBar: 'hover', modeBarButtonsToRemove: ['lasso2d', 'select2d', 'autoScale2d', 'toggleSpikelines', 'hoverClosestCartesian', 'hoverCompareCartesian'] };
   const CFG_STATIC = { displaylogo: false, responsive: true, displayModeBar: false };
 
@@ -673,7 +676,7 @@
     rows.forEach(r => {
       if (r.c === 'delta') return;
       const g = ref.g[r.c]; if (!g) return;
-      data.push({ type: 'scattergl', mode: 'lines', x, y: Array.from(g), xaxis: 'x', yaxis: axisOf[r.c], line: { color: COL.ref, width: 1.2, dash: 'dot' }, name: ref.short, hovertemplate: `${ref.short}: %{y:${fmtCh[r.c]}}<extra></extra>`, line_shape: r.c === 'gear' ? 'hv' : 'linear' });
+      data.push({ type: GL, mode: 'lines', x, y: Array.from(g), xaxis: 'x', yaxis: axisOf[r.c], line: { color: COL.ref, width: 1.2, dash: 'dot' }, name: ref.short, hovertemplate: `${ref.short}: %{y:${fmtCh[r.c]}}<extra></extra>`, line_shape: r.c === 'gear' ? 'hv' : 'linear' });
     });
     shown.forEach((lap, li) => {
       const col = COL.laps[li];
@@ -681,7 +684,7 @@
         let y;
         if (r.c === 'delta') { if (!lap.complete) return; y = Array.from(deltaOf(lap, ref)); }
         else { if (!lap.grid[r.c]) return; y = Array.from(lap.grid[r.c]); }
-        data.push({ type: 'scattergl', mode: 'lines', x, y, xaxis: 'x', yaxis: axisOf[r.c], line: { color: col, width: li === 0 ? 1.8 : 1.4, shape: r.c === 'gear' ? 'hv' : 'linear' }, name: lap.label, hovertemplate: `${lap.label}: %{y:${fmtCh[r.c]}}${r.c === 'delta' ? ' s' : ''}<extra></extra>` });
+        data.push({ type: GL, mode: 'lines', x, y, xaxis: 'x', yaxis: axisOf[r.c], line: { color: col, width: li === 0 ? 1.8 : 1.4, shape: r.c === 'gear' ? 'hv' : 'linear' }, name: lap.label, hovertemplate: `${lap.label}: %{y:${fmtCh[r.c]}}${r.c === 'delta' ? ' s' : ''}<extra></extra>` });
       });
     });
     // overlays
@@ -740,7 +743,7 @@
     const sel = R.laps[S.sel];
     const best = R.laps[R.sessionStats.bestLap];
     const traces = [];
-    const add = (g, name, col, w, dash) => { if (g && g.speed) traces.push({ type: 'scattergl', mode: 'lines', x, y: Array.from(g.speed), yaxis: 'y', line: { color: col, width: w, dash }, name, hovertemplate: `${name}: %{y:.1f} km/h<extra></extra>` }); };
+    const add = (g, name, col, w, dash) => { if (g && g.speed) traces.push({ type: GL, mode: 'lines', x, y: Array.from(g.speed), yaxis: 'y', line: { color: col, width: w, dash }, name, hovertemplate: `${name}: %{y:.1f} km/h<extra></extra>` }); };
     add(R.ref, 'Median', '#6b7280', 1.2, 'dot');
     add(R.theo.trace, 'Theoretical', COL.laps[2], 1.4);
     if (best.index !== sel.index) add(best.grid, `Best ${best.label}`, COL.good, 1.4);
@@ -844,9 +847,9 @@
     const idx = []; for (let k = 0; k < N; k++) idx.push(k);
     const data = [];
     // track ribbon (reference line)
-    data.push({ type: 'scattergl', mode: 'lines', x: idx.map(k => RP(k)[0]), y: idx.map(k => RP(k)[1]), line: { color: '#20252c', width: hasXY ? 16 : 30 }, hoverinfo: 'skip' });
+    data.push({ type: GL, mode: 'lines', x: idx.map(k => RP(k)[0]), y: idx.map(k => RP(k)[1]), line: { color: '#20252c', width: hasXY ? 16 : 30 }, hoverinfo: 'skip' });
     // coloured lap
-    data.push({ type: 'scattergl', mode: 'markers', x: idx.map(k => P(k)[0]), y: idx.map(k => P(k)[1]), marker: { size: hasXY ? 5 : 14, symbol: hasXY ? 'circle' : 'square', color: Array.from(cd.vals).map(v => Number.isFinite(v) ? v : null), colorscale: cd.cs, cmin: cd.cmin, cmax: cd.cmax, colorbar: { thickness: 10, len: 0.5, y: 0.25, title: { text: cd.title, side: 'right', font: { size: 10 } }, tickfont: { family: MONO, size: 9 }, outlinewidth: 0 } },
+    data.push({ type: GL, mode: 'markers', x: idx.map(k => P(k)[0]), y: idx.map(k => P(k)[1]), marker: { size: hasXY ? 5 : 14, symbol: hasXY ? 'circle' : 'square', color: Array.from(cd.vals).map(v => Number.isFinite(v) ? v : null), colorscale: cd.cs, cmin: cd.cmin, cmax: cd.cmax, colorbar: { thickness: 10, len: 0.5, y: 0.25, title: { text: cd.title, side: 'right', font: { size: 10 } }, tickfont: { family: MONO, size: 9 }, outlinewidth: 0 } },
       text: idx.map(k => `${fmt(G.grid[k], 0)} m · ${cd.txt(k)}`), hovertemplate: '%{text}<extra></extra>', customdata: idx });
     // corner labels
     const lab = R.corners.map(c => {
@@ -871,7 +874,7 @@
     const myInc = R.incidents.filter(i => i.lap === lap.index);
     if (myInc.length) data.push({ type: 'scatter', mode: 'markers', x: myInc.map(i => pos(i)[0]), y: myInc.map(i => pos(i)[1]), marker: { symbol: myInc.map(i => i.offTrack ? 'x' : 'circle-x'), size: 16, color: myInc.map(i => LEVEL_COL[i.level]), line: { width: 2, color: myInc.map(i => LEVEL_COL[i.level]) } }, text: myInc.map(i => `${R.laps[i.lap].label} ${i.cornerId}: ${i.type} (L${i.level}, ${i.confidence}) +${fmt(i.loss, 2)} s lost`), customdata: myInc.map(i => ['inc', i.id]), hovertemplate: '%{text}<extra></extra>' });
     // zoom range highlight + cursor (placeholders, updated in place)
-    data.push({ type: 'scattergl', mode: 'lines', x: [], y: [], line: { color: COL.cyan, width: hasXY ? 4 : 8 }, hoverinfo: 'skip', name: 'range' });
+    data.push({ type: GL, mode: 'lines', x: [], y: [], line: { color: COL.cyan, width: hasXY ? 4 : 8 }, hoverinfo: 'skip', name: 'range' });
     data.push({ type: 'scatter', mode: 'markers', x: [], y: [], marker: { size: 14, color: COL.cyan, line: { width: 2, color: '#0a0b0d' } }, hoverinfo: 'skip', name: 'cursor' });
     const layout = baseLayout({ margin: { l: 10, r: 10, t: 10, b: 10 }, dragmode: 'pan', hovermode: 'closest',
       xaxis: { visible: false, scaleanchor: hasXY ? 'y' : undefined, scaleratio: 1 }, yaxis: { visible: false, range: hasXY ? undefined : [-1, 1.2] } });
@@ -1108,8 +1111,14 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
     const todo = new Set(); keys.forEach(k => (deps[k] || []).forEach(r => todo.add(r)));
     for (const r of Object.keys(renderers)) if (todo.has(r)) safe(r, renderers[r]);
   }
+  const CHART_OF = { progress: 'ch-progress', budget: 'ch-budget', dist: 'ch-dist', trends: 'ch-mtrend', lapDetail: 'ch-lapseg', cornerDetail: 'ch-corner-speed', matrix: 'ch-matrix', cornerLaps: 'ch-corner-laps', cornerDiff: 'ch-corner-diff', heat: 'ch-heat', theo: 'ch-theo', telemetry: 'ch-telemetry', speedCmp: 'ch-speedcmp', map: 'ch-map' };
   function safe(name, fn) {
-    try { fn(); } catch (e) { console.error(`[render ${name}]`, e); }
+    try { fn(); }
+    catch (e) {
+      console.error(`[render ${name}]`, e);
+      const el = $(CHART_OF[name]);
+      if (el) el.innerHTML = `<div class="err">This chart could not be drawn: ${esc(e.message)}</div>`;
+    }
   }
 
   // ======================================================================
@@ -1205,7 +1214,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
       for (const s of secs) if (s.offsetTop <= y) cur = s;
       document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('active', cur && a.getAttribute('href') === '#' + cur.id));
     }, { passive: true });
-    if (typeof Plotly === 'undefined') { showError('The charting library (Plotly) could not be loaded. Open this file with an internet connection, or rebuild it with the library inlined (tools/build_dashboard.py --inline-plotly).'); return; }
+    if (typeof Plotly === 'undefined') { showError('The charting library (Plotly) could not be loaded, so no charts can be drawn. Use the offline build (dist/sample_dashboard_offline.html), which has the library built in.'); return; }
     const embedded = Array.from(document.querySelectorAll('script[type="text/tab-separated-values"]')).map(s => ({ name: s.dataset.name || 'embedded.tsv', text: s.textContent.replace(/<\\\//g, '</').replace(/^\n/, '') }))
       .concat(Array.from(document.querySelectorAll('script[type="application/x-ibt-base64"]')).map(s => ({ name: s.dataset.name || 'embedded.ibt', buffer: E.ibt.fromBase64(s.textContent) })));
     if (embedded.length) run(embedded);

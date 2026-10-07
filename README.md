@@ -9,14 +9,15 @@ All analysis runs **in the browser** from the raw file. There is no server, and 
 | File | What it is |
 |---|---|
 | `dist/dashboard.html` | Empty dashboard. Open it and drag-and-drop (or **Load .ibt / TSV…**) one or more iRacing `.ibt` or TSV files. |
-| `dist/sample_dashboard.html` | Dashboard with the synthetic demo session embedded (Plotly from the cdnjs CDN). |
-| `dist/sample_dashboard_offline.html` | Same, with Plotly inlined. Works with no internet. |
+| `dist/sample_dashboard.html` | Dashboard with the synthetic demo session embedded. |
+
+Both files have the chart library (Plotly's CSP-safe "strict" build, `vendor/`) built in, so they work offline and in sandboxed viewers that block CDNs or `eval`. If WebGL isn't available, the telemetry, speed-comparison and track-map charts fall back to SVG.
 
 To build a dashboard with your own data embedded:
 
 ```bash
-python3 tools/build_dashboard.py --ibt my_session.ibt --out dist/my_session.html   # iRacing telemetry (base64-embedded)
-python3 tools/build_dashboard.py --tsv my_session.tsv --out dist/my_session.html [--inline-plotly plotly.min.js]
+python3 tools/build_dashboard.py --inline-plotly --ibt my_session.ibt --out dist/my_session.html   # iRacing telemetry (base64-embedded)
+python3 tools/build_dashboard.py --inline-plotly --tsv my_session.tsv --out dist/my_session.html   # omit --inline-plotly to load Plotly from cdnjs instead
 ```
 
 > `data/sample_session.tsv` is **synthetic** data from `tools/generate_sample_tsv.py`: a physics-based lap simulation with injected mistakes, off-tracks and data defects. Its known answers are in `data/sample_session.truth.json`. The dashboard shows a "SYNTHETIC DEMO DATA" badge when this file is loaded.

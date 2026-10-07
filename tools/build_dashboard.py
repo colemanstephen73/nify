@@ -14,6 +14,7 @@ from it at load time.
 import argparse
 import html
 import os
+import re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 ENGINE_ORDER = ["stats", "ibt", "ingest", "laps", "track", "features", "mistakes", "scoring", "insights", "analyze"]
@@ -30,7 +31,8 @@ def main():
     ap.add_argument("--tsv", action="append", default=[], help="TSV file to embed (repeatable)")
     ap.add_argument("--ibt", action="append", default=[], help="iRacing .ibt file to embed (repeatable, base64)")
     ap.add_argument("--out", required=True)
-    ap.add_argument("--inline-plotly", help="path to plotly.min.js to inline (offline build)")
+    ap.add_argument("--inline-plotly", nargs="?", const=os.path.join(ROOT, "vendor", "plotly-strict-2.35.2.min.js"),
+                    help="inline Plotly (default: the bundled CSP-safe vendor/plotly-strict build) instead of loading it from the CDN")
     ap.add_argument("--fragment", action="store_true", help="omit doctype/html/head/body wrappers (for hosts that add their own skeleton)")
     args = ap.parse_args()
 
@@ -39,7 +41,16 @@ def main():
     engine = "\n".join(read(os.path.join(ROOT, "src", "engine", f"{m}.js")) for m in ENGINE_ORDER)
     app = read(os.path.join(ROOT, "src", "app", "app.js"))
     if args.inline_plotly:
-        plotly = "<script>" + read(args.inline_plotly).replace("</script", "<\\/script") + "</script>"
+        src = read(args.inline_plotly)
+        # escape non-ASCII (the bundle holds literal U+FFFD etc.) so the page is pure ASCII-safe JS
+        def esc(m):
+            cp = ord(m.group())
+            if cp <= 0xFFFF:
+                return "\\u%04x" % cp
+            cp -= 0x10000
+            return "\\u%04x\\u%04x" % (0xD800 + (cp >> 10), 0xDC00 + (cp & 0x3FF))
+        src = re.sub(r"[^\x00-\x7f]", esc, src)
+        plotly = "<script>" + src.replace("</script", "<\\/script") + "</script>"
     else:
         plotly = f'<script src="{PLOTLY_CDN}" charset="utf-8"></script>'
     data = []
@@ -57,7 +68,6 @@ def main():
               .replace("/*__ENGINE__*/", engine.replace("</script", "<\\/script"))
               .replace("/*__APP__*/", app.replace("</script", "<\\/script")))
     if args.fragment:
-        import re
         out = re.sub(r"(?i)<!doctype html>\s*|</?html[^>]*>\s*|</?head>\s*|</?body>\s*", "", out, count=8)
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as fh:

@@ -2,7 +2,7 @@
 // linked selection behaviour and screenshots each section.
 const { chromium } = require('/opt/node22/lib/node_modules/playwright');
 const fs = require('fs');
-const [,, file, outDir = '/tmp/claude-0/shots', plotlyPath = '/tmp/claude-0/plotly.min.js'] = process.argv;
+const [,, file, outDir = '/tmp/claude-0/shots', plotlyPath = require('path').join(__dirname, '..', 'vendor', 'plotly-strict-2.35.2.min.js')] = process.argv;
 (async () => {
   fs.mkdirSync(outDir, { recursive: true });
   const browser = await chromium.launch({ headless: true });
