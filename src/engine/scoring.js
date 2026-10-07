@@ -218,7 +218,9 @@
         }
       }
       const mist = incidents.filter(i => i.corner === ci);
+      const line = lineAnalysis(rows.filter(r => !offAt(r.lap, ci)), bestRow, c.id);
       return {
+        line,
         index: ci, id: c.id, dir: c.dir, dist: c.dist, n: rows.length,
         best, bestLap: bestRow ? bestRow.lap : null, median: med, mean: St.mean(times), std: St.std(times), iqr: St.iqr(times),
         q25: St.quantile(times, 0.25), q75: St.quantile(times, 0.75),
@@ -250,6 +252,45 @@
       c.opportunity = 0.5 * c.repeatGap + (Number.isFinite(c.paceGap) ? c.paceGap : 0) + c.mistakeLoss / Math.max(1, c.n);
     });
     return { list: out, envelope: env };
+  }
+
+  // --------------------------------------------------------------------------
+  // Racing line (GPS / X-Y): which line choices go with faster corner times
+  // --------------------------------------------------------------------------
+  const LINE_METRICS = {
+    lineTurnIn: { label: 'turn-in position', unit: 'm', d: 1, higher: 'nearer the inside at turn-in', lower: 'wider (outside) at turn-in' },
+    lineApex: { label: 'apex placement', unit: 'm', d: 1, higher: 'closer to the inside at the apex', lower: 'further from the inside at the apex' },
+    lineClip: { label: 'closest approach to the inside', unit: 'm', d: 1, higher: 'clipping the inside more tightly', lower: 'leaving more room on the inside' },
+    lineExit: { label: 'exit position', unit: 'm', d: 1, higher: 'staying tighter on exit', lower: 'using more exit width (running out wider)' },
+    lineWidth: { label: 'track width used', unit: 'm', d: 1, higher: 'using more of the track width', lower: 'using less of the track width' },
+    pathDelta: { label: 'path length vs median line', unit: 'm', d: 1, higher: 'a longer path', lower: 'a shorter path' },
+    minRadius: { label: 'tightest radius', unit: 'm', d: 0, higher: 'a rounder, larger-radius line', lower: 'a tighter, smaller-radius line' },
+  };
+  function lineAnalysis(rows, bestRow, cid) {
+    if (!rows.length || !Number.isFinite(rows[0].f.lineApex)) return null;
+    const t = rows.map(r => r.f.segTime);
+    const metrics = {};
+    let top = null;
+    for (const [k, def] of Object.entries(LINE_METRICS)) {
+      const v = rows.map(r => r.f[k]);
+      const sp = St.spearman(v, t), lr = St.linreg(v, t), iqr = St.iqr(v);
+      metrics[k] = { ...def, med: St.median(v), sd: St.robustScale(v, 0), q25: St.quantile(v, 0.25), q75: St.quantile(v, 0.75), rho: sp.rho, n: sp.n, effect: Math.abs(lr.slope * iqr), best: bestRow ? bestRow.f[k] : NaN };
+      if (sp.n >= 8 && Number.isFinite(sp.rho) && (!top || Math.abs(sp.rho) > Math.abs(top.rho))) top = { metric: k, ...metrics[k] };
+    }
+    // significance with a Bonferroni correction for the measures tested at this corner:
+    // Fisher z = atanh(ρ)·√(n−3) must exceed the two-sided critical value for α = 0.05 / #measures
+    const nTests = Object.keys(LINE_METRICS).length;
+    const zCrit = 2.69; // two-sided p < 0.05/7 ≈ 0.0071
+    const sig = m => m && m.n >= 8 && Math.abs(Math.atanh(Math.max(-0.999, Math.min(0.999, m.rho)))) * Math.sqrt(m.n - 3) >= zCrit && m.effect >= 0.01;
+    let finding;
+    if (sig(top)) {
+      // spearman(metric, time) < 0 → higher metric = faster
+      const dir = top.rho < 0 ? top.higher : top.lower;
+      finding = { strong: true, metric: top.metric, text: `Faster laps at ${cid} go with ${dir}: ${top.label} correlates with segment time at ρ = ${top.rho.toFixed(2)} (n = ${top.n}, significant after correcting for ${nTests} line measures); its interquartile range (${top.q25.toFixed(top.d)} to ${top.q75.toFixed(top.d)} ${top.unit}) is worth ≈${top.effect.toFixed(3)} s by linear fit.` };
+    } else {
+      finding = { strong: false, metric: top ? top.metric : null, text: `No racing-line measure correlates significantly with time at ${cid}${top ? ` (strongest: ${top.label}, ρ = ${top.rho.toFixed(2)}, not significant across ${nTests} measures)` : ''}. The line is not what separates fast and slow laps here; apex placement varies by ±${metrics.lineApex.sd.toFixed(1)} m (robust σ).` };
+    }
+    return { metrics, finding, spreadApex: metrics.lineApex.sd };
   }
 
   // --------------------------------------------------------------------------
@@ -323,5 +364,5 @@
     };
   }
 
-  NS.scoring = { scoreLaps, theoretical, corners, session, STATUS_ORDER };
+  NS.scoring = { scoreLaps, theoretical, corners, session, STATUS_ORDER, LINE_METRICS };
 })(typeof window !== 'undefined' ? window : globalThis);

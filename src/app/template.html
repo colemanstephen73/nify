@@ -92,6 +92,16 @@
         <div class="panel"><h3 id="cd-dist-title">Segment time by lap</h3><div class="chart" id="ch-corner-laps" style="height:260px"></div></div>
         <div class="panel"><h3 id="cd-diff-title">What drives the time</h3><div class="chart" id="ch-corner-diff" style="height:260px"></div></div>
       </div>
+      <div class="panel" id="line-panel" style="margin-top:12px">
+        <h3 id="line-title">Racing line comparison</h3>
+        <div class="empty" id="line-empty" hidden>Racing-line comparison needs GPS (latitude/longitude) or X/Y position channels, which this data does not contain. The rest of the corner analysis is unaffected.</div>
+        <div class="controls" id="line-controls"></div>
+        <div class="grid g-main" id="line-body">
+          <div><div class="chart" id="ch-line-map" style="height:440px"></div><div class="legend" id="line-legend"></div></div>
+          <div style="min-width:0"><div class="chart" id="ch-line-offset" style="height:230px"></div><div id="line-table" style="overflow-x:auto"></div></div>
+        </div>
+        <div class="line-finding" id="line-finding"></div>
+      </div>
       <div class="panel" style="margin-top:12px"><h3>Lap × segment delta to best segment <span class="r">seconds · click a cell</span></h3><div class="chart" id="ch-heat" style="height:420px"></div></div>
     </section>
 

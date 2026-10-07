@@ -102,6 +102,15 @@
         value: p.paceGap,
       });
     }
+    // 5b. Racing line (GPS): strongest line-vs-time relationship across corners
+    const lineC = CL.filter(c => c.line && c.line.finding.strong).sort((a, b) => b.line.metrics[b.line.finding.metric].effect - a.line.metrics[a.line.finding.metric].effect);
+    if (lineC.length) {
+      const c = lineC[0];
+      out.push({ kind: 'opportunity', corner: c.index, title: `Racing line — ${c.id}`, text: c.line.finding.text, value: c.line.metrics[c.line.finding.metric].effect });
+    } else if (CL.some(c => c.line)) {
+      const sp = CL.filter(c => c.line).sort((a, b) => b.line.spreadApex - a.line.spreadApex)[0];
+      out.push({ kind: 'diagnosis', corner: sp.index, title: 'Racing line — not the main differentiator', text: `Across all corners, no racing-line measure from GPS correlates significantly with corner time (Spearman, corrected for 7 measures per corner), so time differences come from braking, speed and throttle rather than line choice. The least repeatable line is at ${sp.id} (apex placement ±${sp.line.spreadApex.toFixed(1)} m).` });
+    }
     // 6. Mistake hotspot
     const sig = incidents.filter(i => i.level >= 2);
     if (sig.length) {
@@ -172,6 +181,13 @@
         problem = `Exit speed varies and carries down the following straight.`;
         evidence = `Exit speed P25–P75 ${d.q25.toFixed(1)}–${d.q75.toFixed(1)} km/h (ρ = ${d.rho.toFixed(2)}); best ${c.bestExit.v.toFixed(1)} km/h.`;
         objective = `Sacrifice a little entry speed if needed to straighten the exit and reach full throttle earlier.`;
+      } else if (c.line && c.line.finding.strong && c.line.metrics[c.line.finding.metric].effect >= Math.max(0.02, d ? d.effect * 0.8 : 0)) {
+        const lm = c.line.metrics[c.line.finding.metric];
+        const better = lm.rho < 0 ? lm.higher : lm.lower;
+        title = `${c.id} — Racing line: ${lm.label}`;
+        problem = `Line choice through ${c.id} varies, and the faster laps share a pattern.`;
+        evidence = c.line.finding.text;
+        objective = `Aim for ${better}; use the best lap's line (${lm.label} ${Number.isFinite(lm.best) ? lm.best.toFixed(lm.d) + ' ' + lm.unit : '—'} vs median ${lm.med.toFixed(lm.d)} ${lm.unit}) as the reference.`;
       } else if (c.paceClass === 'Weak' || (c.paceClass === 'Moderate' && c.consClass === 'Strong')) {
         title = `${c.id} — Explore more cornering speed`;
         problem = `Consistent but under-driven: grip utilisation ${(100 * c.util).toFixed(0)}% of the session envelope.`;

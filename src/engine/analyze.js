@@ -44,9 +44,9 @@
     const segs = NS.track.buildSegments(corners, ref, G);
     const sectors = NS.track.buildSectors(trackLaps, segs, G, I);
     // lateral deviation (needs reference line)
-    if (I.avail.position && !opts.base) for (const l of laps) if (l.complete) l.dev = NS.features.lateralDeviation(l, ref, G);
+    if (I.avail.position && !opts.base) for (const l of laps) if (l.complete) { const r = NS.features.lateralDeviation(l, ref, G); l.dev = r.dev; l.off = r.off; }
     const brakeThr = I.avail.brake ? Math.max(0.06 * St.quantile(St.finite(Array.from(ref.brake || [])), 0.99), 1) : NaN;
-    const model = { I, laps, G, ref, corners, segs, sectors, avail: I.avail, brakeThr };
+    const model = { I, laps, G, ref, corners, segs, sectors, avail: I.avail, brakeThr, refXY: ref.x && ref.y ? { x: ref.x, y: ref.y } : null };
     model.features = NS.features.extract(model);
     const det = ana.length >= 3 ? NS.mistakes.detect(model) : { incidents: [], base: corners.map(() => ({})), devThr: NaN };
     model.incidents = det.incidents; model.base = det.base; model.devThr = det.devThr;

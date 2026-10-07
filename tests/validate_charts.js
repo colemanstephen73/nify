@@ -13,7 +13,7 @@ async function validate(p, label) {
   const r = await p.evaluate(() => {
     const R = window.__analysis, out = {}, near = (a, b, t = 1e-6) => Math.abs(a - b) <= t;
     const g = id => document.getElementById(id);
-    const charts = ['ch-progress', 'ch-budget', 'ch-dist', 'ch-mtrend', 'ch-ctrend', 'ch-lapseg', 'ch-corner-speed', 'ch-matrix', 'ch-corner-laps', 'ch-corner-diff', 'ch-heat', 'ch-theo', 'ch-telemetry', 'ch-speedcmp', 'ch-map'];
+    const charts = ['ch-progress', 'ch-budget', 'ch-dist', 'ch-mtrend', 'ch-ctrend', 'ch-lapseg', 'ch-corner-speed', 'ch-matrix', 'ch-corner-laps', 'ch-corner-diff', 'ch-heat', 'ch-theo', 'ch-telemetry', 'ch-speedcmp', 'ch-map', 'ch-line-map', 'ch-line-offset'];
     out.render = charts.map(id => {
       const el = g(id);
       if (!el) { const selLap = R.laps[+g('tm-lap').value]; return id === 'ch-lapseg' && !selLap.analysable ? [id, true, 'hidden: selected lap is not analysable (by design)'] : [id, false, 'missing element']; }
@@ -66,6 +66,14 @@ async function validate(p, label) {
     // map: coloured lap has one point per grid sample
     const mp = g('ch-map').data.find(t => t.marker && Array.isArray(t.marker.color) && t.x.length === R.G.N);
     out.map = !!mp && mp.marker.color.filter(v => v !== null && Number.isFinite(v)).length > R.G.N * 0.9;
+    // racing line: offset trace of the best-at-corner lap = signed offset × corner direction; 7 measures in table
+    {
+      const cs = R.cornerStats.list[ci], c = R.corners[ci], best = R.laps[cs.bestLap];
+      const lo = g('ch-line-offset').data.find(t => t.name === best.label);
+      const k0 = Math.round(lo.x[0] / R.G.ds);
+      out.lineOffset = !!lo && lo.y.every((v, i) => Math.abs(v - best.off[k0 + i] * (c.sign || 1)) < 1e-4);
+      out.lineTable = document.querySelectorAll('#line-table tbody tr').length === 7 && !!document.getElementById('line-finding').textContent;
+    }
     // KPIs
     const kv = Array.from(document.querySelectorAll('.kpi .v')).map(e => e.textContent);
     const fl = t => { const m = Math.floor(t / 60); return `${m}:${(t - 60 * m).toFixed(3).padStart(6, '0')}`; };
@@ -77,7 +85,7 @@ async function validate(p, label) {
     return out;
   });
   r.render.forEach(([id, good, info]) => ok(good, `${id} rendered (${info})`));
-  for (const k of ['progress', 'progressOrder', 'progressExcludedGrey', 'budget', 'dist', 'trends', 'heat', 'theo', 'theoNoExcluded', 'matrix', 'cornerLaps', 'lapseg', 'telemetrySpeed', 'telemetryDelta', 'deltaSign', 'speedcmpDelta', 'map', 'kpi', 'table'])
+  for (const k of ['progress', 'progressOrder', 'progressExcludedGrey', 'budget', 'dist', 'trends', 'heat', 'theo', 'theoNoExcluded', 'matrix', 'cornerLaps', 'lapseg', 'telemetrySpeed', 'telemetryDelta', 'deltaSign', 'speedcmpDelta', 'map', 'lineOffset', 'lineTable', 'kpi', 'table'])
     ok(r[k], `${k} values match the analysis`);
   console.log('  state:', JSON.stringify(r.state));
   return r.state;

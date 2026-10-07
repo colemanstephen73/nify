@@ -8,24 +8,65 @@
   const St = NS.stats;
 
   /** Cross-track deviation of a lap's X/Y from the reference line (m) at each grid point. */
+  /**
+   * Distance of a lap's X/Y from the reference (median) line at each grid point.
+   * dev = unsigned distance (m), off = signed offset (m, + = left of the direction of travel).
+   */
   function lateralDeviation(lap, ref, G) {
-    const N = G.N, out = new Float32Array(N).fill(NaN);
-    if (!lap.grid.x || !ref.x) return out;
+    const N = G.N, dev = new Float32Array(N).fill(NaN), off = new Float32Array(N).fill(NaN);
+    if (!lap.grid.x || !ref.x) return { dev, off };
     const W = Math.max(4, Math.round(30 / G.ds));
     for (let k = 0; k < N; k++) {
       const px = lap.grid.x[k], py = lap.grid.y[k];
       if (!Number.isFinite(px)) continue;
-      let best = Infinity;
+      let best = Infinity, side = 0;
       for (let j = Math.max(0, k - W); j < Math.min(N - 1, k + W); j++) {
         const ax = ref.x[j], ay = ref.y[j], bx = ref.x[j + 1], by = ref.y[j + 1];
         const vx = bx - ax, vy = by - ay, L2 = vx * vx + vy * vy;
         let t = L2 ? ((px - ax) * vx + (py - ay) * vy) / L2 : 0; t = Math.max(0, Math.min(1, t));
         const d = Math.hypot(px - (ax + t * vx), py - (ay + t * vy));
-        if (d < best) best = d;
+        if (d < best) { best = d; side = Math.sign(vx * (py - ay) - vy * (px - ax)); }
       }
-      out[k] = best;
+      dev[k] = best; off[k] = best * (side || 1);
     }
-    return out;
+    return { dev, off };
+  }
+
+  /** Racing-line metrics for one lap through one corner (needs X/Y). "Inside" is positive. */
+  function lineMetrics(lap, c, refXY, G, apexIdx) {
+    const off = lap.off, g = lap.grid, ds = G.ds, N = G.N;
+    if (!off || !g.x) return null;
+    const sg = c.sign || 1;
+    const m = x => Math.round(x / ds);
+    const ins = k => off[Math.max(0, Math.min(N - 1, k))] * sg;
+    const w0 = Math.max(0, c.i0 - m(40)), w1 = Math.min(N - 1, Math.max(c.exit, c.i1) + m(40));
+    let maxIn = -Infinity, clip = c.i0, lo = Infinity, hi = -Infinity;
+    for (let k = c.i0; k <= c.i1; k++) { const v = ins(k); if (v > maxIn) { maxIn = v; clip = k; } }
+    for (let k = w0; k <= w1; k++) { const v = ins(k); if (Number.isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }
+    // path length and tightest radius from lightly smoothed positions
+    const sm = St.smooth(Array.from(g.x.slice(w0, w1 + 1)), Math.max(3, m(8)));
+    const smy = St.smooth(Array.from(g.y.slice(w0, w1 + 1)), Math.max(3, m(8)));
+    // reference smoothed identically so path-length differences are not a smoothing artefact
+    const rx = St.smooth(Array.from(refXY.x.slice(w0, w1 + 1)), Math.max(3, m(8)));
+    const ry = St.smooth(Array.from(refXY.y.slice(w0, w1 + 1)), Math.max(3, m(8)));
+    let len = 0, refLen = 0;
+    for (let i = 1; i < sm.length; i++) {
+      len += Math.hypot(sm[i] - sm[i - 1], smy[i] - smy[i - 1]);
+      refLen += Math.hypot(rx[i] - rx[i - 1], ry[i] - ry[i - 1]);
+    }
+    const h = Math.max(1, m(8));
+    let kMax = 0;
+    for (let i = h; i < sm.length - h; i++) {
+      const a1 = Math.atan2(smy[i] - smy[i - h], sm[i] - sm[i - h]), a2 = Math.atan2(smy[i + h] - smy[i], sm[i + h] - sm[i]);
+      let d = a2 - a1; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+      const gk = w0 + i;
+      if (gk >= c.i0 && gk <= c.i1) kMax = Math.max(kMax, Math.abs(d) / (h * ds));
+    }
+    return {
+      lineTurnIn: ins(c.i0), lineApex: ins(apexIdx), lineClip: maxIn, lineClipDist: clip * ds,
+      lineExit: ins(Math.min(c.exit, N - 1)), lineWidth: hi - lo, pathDelta: len - refLen,
+      minRadius: kMax > 1e-4 ? 1 / kMax : NaN, lineWin: [w0, w1],
+    };
   }
 
   function extrema(sig, lo, hi, minAmp) {
@@ -147,6 +188,7 @@
           for (const v of sm) pk = Math.max(pk, Math.abs(v));
           f.latPeak = pk;
         }
+        if (lap.off && model.refXY) { const lm = lineMetrics(lap, c, model.refXY, G, apex); if (lm) Object.assign(f, lm); }
         if (dev && Number.isFinite(dev[lo])) {
           let mx = 0, at = lo; for (let k = lo; k <= hi; k++) if (dev[k] > mx) { mx = dev[k]; at = k; }
           f.maxDev = mx; f.maxDevIdx = at;
@@ -163,5 +205,5 @@
     return out;
   }
 
-  NS.features = { extract, lateralDeviation };
+  NS.features = { extract, lateralDeviation, lineMetrics };
 })(typeof window !== 'undefined' ? window : globalThis);

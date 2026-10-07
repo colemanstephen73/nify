@@ -58,7 +58,7 @@
   }
 
   // ---------------------------------------------------------------- state
-  const S = { R: null, files: null, sel: null, cmp: [], ref: 'theo', corner: null, ch: null, ov: { corners: true, brake: true, apex: true, mistakes: true }, mapColor: 'speed', xr: null, diffMetric: null, sort: {} };
+  const S = { R: null, files: null, lineAll: true, lineX: 5, sel: null, cmp: [], ref: 'theo', corner: null, ch: null, ov: { corners: true, brake: true, apex: true, mistakes: true }, mapColor: 'speed', xr: null, diffMetric: null, sort: {} };
   const L = () => S.R.laps;
   const ana = () => S.R.laps.filter(l => l.analysable);
   const lapCol = idx => { const order = [S.sel, ...S.cmp]; const i = order.indexOf(idx); return i >= 0 ? COL.laps[i] : COL.muted; };
@@ -441,6 +441,7 @@
       { k: 'typicalBrake', h: 'Brake typ.', title: 'median brake point (m)', f: r => fmt(r.typicalBrake, 0) },
       { k: 'latestBrake', h: 'Brake latest', title: 'latest clean brake point (m)', sv: r => r.latestBrake.v, f: r => fmt(r.latestBrake.v, 0) },
       { k: 'bestPickup', h: 'Best pickup', title: 'earliest clean throttle pickup (m)', sv: r => r.bestPickup.v, f: r => fmt(r.bestPickup.v, 0) },
+      { k: 'lineSd', h: 'Line σ', title: 'robust spread of apex placement from GPS (m)', sv: r => r.line ? r.line.spreadApex : NaN, f: r => r.line ? `${r.line.spreadApex.toFixed(1)}${r.line.finding.strong ? ' <span title="line choice correlates with time" style="color:var(--lap3)">●</span>' : ''}` : '—' },
       { k: 'avgLoss', h: 'Avg loss', title: 'mean − best segment time (s/lap)', f: r => `<span class="t-bad">${fmt(r.avgLoss)}</span>` },
       { k: 'consistency', h: 'Consist.', f: r => `<span style="display:inline-flex;align-items:center;gap:6px"><span class="bar" style="width:40px"><i style="width:${r.consistency}%;background:${r.consistency >= 70 ? COL.good : r.consistency >= 50 ? COL.warn : COL.serious}"></i></span>${fmt(r.consistency, 0)}</span>` },
       { k: 'paceClass', h: 'Pace', txt: true, f: r => `<span class="cls ${r.paceClass === 'n/a' ? 'na' : r.paceClass}">${r.paceClass}</span>` },
@@ -551,6 +552,109 @@
       annotations: [{ xref: 'paper', yref: 'paper', x: 0.01, y: 0.98, xanchor: 'left', yanchor: 'top', showarrow: false, text: `Spearman ρ = ${Number.isFinite(sp.rho) ? sp.rho.toFixed(2) : '—'} · n = ${sp.n}${Number.isFinite(lr.slope) ? ` · slope ${lr.slope.toFixed(4)} s/unit` : ''}`, font: { size: 10, family: MONO, color: COL.text2 } }] }), CFG_STATIC);
     const el = $('ch-corner-diff'); el.removeAllListeners && el.removeAllListeners('plotly_click');
     el.on('plotly_click', ev => { const p = ev.points[0]; if (p.customdata) selectLap(p.customdata[0]); });
+  }
+
+  // ---------------------------------------------------------------- racing line (GPS / X-Y)
+  function lineWindow(c) {
+    const G = S.R.G, m = x => Math.round(x / G.ds);
+    return [Math.max(0, c.i0 - m(40)), Math.min(G.N - 1, Math.max(c.exit, c.i1) + m(40))];
+  }
+  function renderLine() {
+    const R = S.R, ci = S.corner, panel = $('line-panel');
+    if (!panel) return;
+    const hasXY = !!(R.avail.position && R.ref.x && R.laps.some(l => l.off));
+    if (ci === null || ci === undefined) return;
+    const c = R.corners[ci], cs = R.cornerStats.list[ci];
+    $('line-title').innerHTML = `Racing line comparison — ${esc(c.id)} ${esc(c.dir)} <span class="r">${hasXY ? 'from ' + esc(R.avail.position) + ' · offsets relative to the session median line, + = toward the inside' : ''}</span>`;
+    const noLine = !hasXY || !cs.line;
+    $('line-empty').hidden = !noLine; $('line-body').hidden = noLine; $('line-finding').hidden = noLine; $('line-controls').hidden = noLine;
+    if (noLine) return;
+    const G = R.G, [w0, w1] = lineWindow(c), sg = c.sign || 1;
+    const ks = []; for (let k = w0; k <= w1; k++) ks.push(k);
+    const ana = R.laps.filter(l => l.analysable && l.off);
+    const best = cs.bestLap !== null ? R.laps[cs.bestLap] : null;
+    const shown = [S.sel, ...S.cmp].map(i => R.laps[i]).filter(l => l && l.grid.x && l.off);
+    $('line-controls').innerHTML = `<div class="ctl"><label>Laps</label><div class="chips"><button class="chip ${S.lineAll ? 'on' : 'off'}" id="line-all">All laps (faint)</button>
+      ${best ? `<span class="chip on" style="--cc:${COL.good}"><span class="sw"></span>Best at ${esc(c.id)}: ${esc(best.label)}</span>` : ''}
+      ${shown.map((l, i) => `<span class="chip on" style="--cc:${COL.laps[i]}"><span class="sw"></span>${esc(l.label)}${i === 0 ? ' (selected)' : ''}</span>`).join('')}
+      <span class="chip on" style="--cc:${COL.ref}"><span class="sw"></span>median line</span></div></div>
+      <div class="ctl muted" style="font-size:11px">Change the selected / compared laps in the lap table or telemetry explorer.</div>`;
+    $('line-controls').insertAdjacentHTML('beforeend', `<div class="ctl"><label>Lateral scale</label><div class="chips">${[1, 5, 10].map(x => `<button class="chip ${S.lineX === x ? 'on' : ''}" data-lx="${x}">${x === 1 ? '×1 true scale' : '×' + x}</button>`).join('')}</div></div>`);
+    $('line-all').onclick = () => { S.lineAll = !S.lineAll; renderLine(); };
+    $('line-controls').querySelectorAll('[data-lx]').forEach(b => b.onclick = () => { S.lineX = +b.dataset.lx; renderLine(); });
+    // left-normal of the median line, used to exaggerate each lap's offset from it
+    const nrm = k => { const a = Math.max(0, k - 2), b2 = Math.min(G.N - 1, k + 2); const dx = R.ref.x[b2] - R.ref.x[a], dy = R.ref.y[b2] - R.ref.y[a]; const n = Math.hypot(dx, dy) || 1; return [-dy / n, dx / n]; };
+    const X = S.lineX;
+    const P = (l, k) => {
+      if (X === 1 || !Number.isFinite(l.off[k])) return [l.grid.x[k], l.grid.y[k]];
+      const [nx, ny] = nrm(k); return [R.ref.x[k] + nx * l.off[k] * X, R.ref.y[k] + ny * l.off[k] * X];
+    };
+    const data = [];
+    // track ribbon + median line
+    data.push({ type: 'scatter', mode: 'lines', x: ks.map(k => R.ref.x[k]), y: ks.map(k => R.ref.y[k]), line: { color: '#1d2228', width: X === 1 ? 26 : 40 }, hoverinfo: 'skip' });
+    if (S.lineAll) {
+      const xs = [], ys = [];
+      ana.forEach(l => { ks.forEach(k => { const [x, y] = P(l, k); xs.push(x); ys.push(y); }); xs.push(null); ys.push(null); });
+      data.push({ type: 'scatter', mode: 'lines', x: xs, y: ys, line: { color: 'rgba(167,173,183,0.18)', width: 1 }, hoverinfo: 'skip', connectgaps: false });
+    }
+    data.push({ type: 'scatter', mode: 'lines', x: ks.map(k => R.ref.x[k]), y: ks.map(k => R.ref.y[k]), line: { color: COL.ref, width: 1.2, dash: 'dot' }, name: 'median line', hovertemplate: 'median line %{customdata} m<extra></extra>', customdata: ks.map(k => (k * G.ds).toFixed(0)) });
+    const lapTrace = (l, col, w) => ({ type: 'scatter', mode: 'lines', x: ks.map(k => P(l, k)[0]), y: ks.map(k => P(l, k)[1]), line: { color: col, width: w }, name: l.label,
+      customdata: ks.map(k => [(k * G.ds).toFixed(0), (l.off[k] * sg).toFixed(2), l.grid.speed ? l.grid.speed[k].toFixed(1) : '—']),
+      hovertemplate: `${l.label} · %{customdata[0]} m<br>%{customdata[1]} m toward inside · %{customdata[2]} km/h<extra></extra>` });
+    if (best && !shown.some(l => l.index === best.index)) data.push(lapTrace(best, COL.good, 2.6));
+    shown.slice().reverse().forEach(l => data.push(lapTrace(l, l.index === best?.index ? COL.good : COL.laps[shown.indexOf(l)], l.index === S.sel ? 2.4 : 1.8)));
+    // apex + brake markers for best and shown laps
+    const marks = [best, ...shown].filter((l, i, a) => l && a.indexOf(l) === i && l.analysable);
+    const mx = [], my = [], mt = [], mc = [], msym = [];
+    marks.forEach(l => {
+      const f = R.features.get(l.index).corners[ci];
+      const col = l.index === best?.index ? COL.good : COL.laps[shown.indexOf(l)];
+      if (Number.isFinite(f.apexIdx)) { const [x, y] = P(l, f.apexIdx); mx.push(x); my.push(y); mt.push(`${l.label} apex (min speed ${fmt(f.minSpeed, 1)} km/h) · ${fmt(f.lineApex, 2)} m toward inside`); mc.push(col); msym.push('diamond'); }
+      if (Number.isFinite(f.brakeIdx) && f.brakeIdx >= w0) { const [x, y] = P(l, f.brakeIdx); mx.push(x); my.push(y); mt.push(`${l.label} brake point ${fmt(f.brakePoint, 0)} m`); mc.push(col); msym.push('triangle-down'); }
+      if (Number.isFinite(f.lineClipDist)) { const k = Math.round(f.lineClipDist / G.ds); const [x, y] = P(l, k); mx.push(x); my.push(y); mt.push(`${l.label} closest to inside: ${fmt(f.lineClip, 2)} m @ ${fmt(f.lineClipDist, 0)} m`); mc.push(col); msym.push('circle-open'); }
+    });
+    data.push({ type: 'scatter', mode: 'markers', x: mx, y: my, text: mt, marker: { symbol: msym, size: 10, color: mc, line: { width: 1.5, color: mc } }, hovertemplate: '%{text}<extra></extra>' });
+    data.push({ type: 'scatter', mode: 'markers', x: [], y: [], marker: { size: 12, color: COL.cyan, line: { width: 2, color: '#0a0b0d' } }, hoverinfo: 'skip', name: 'cursor' });
+    const a0 = ks[0], a1 = ks[Math.min(ks.length - 1, Math.round(15 / G.ds))];
+    react('ch-line-map', data, baseLayout({ margin: { l: 8, r: 8, t: 8, b: 8 }, hovermode: 'closest', dragmode: 'pan',
+      xaxis: { visible: false, scaleanchor: 'y', scaleratio: 1 }, yaxis: { visible: false },
+      annotations: [{ x: R.ref.x[a1], y: R.ref.y[a1], ax: R.ref.x[a0], ay: R.ref.y[a0], axref: 'x', ayref: 'y', showarrow: true, arrowhead: 2, arrowsize: 1.2, arrowwidth: 1.5, arrowcolor: COL.text2, text: '' },
+        { x: R.ref.x[c.apex], y: R.ref.y[c.apex], text: c.id, showarrow: false, yshift: 0, font: { family: MONO, size: 12, color: COL.cyan }, bgcolor: 'rgba(10,11,13,0.7)' }] }), { ...CFG, scrollZoom: true });
+    $('ch-line-map')._cursor = data.length - 1;
+    $('line-legend').innerHTML = `<span class="li"><span style="color:${COL.text2}">◆</span> apex (min speed)</span><span class="li">▼ brake point</span><span class="li">○ closest point to the inside</span><span class="li">${X === 1 ? 'true scale' : `lateral offsets exaggerated ×${X} for visibility (distances along the track are true scale)`}; grey band = ribbon around the median line, not the real track width</span>`;
+    // lateral offset vs distance
+    const xd = ks.map(k => k * G.ds);
+    const band = ks.map(k => { const v = ana.map(l => l.off[k] * sg).filter(Number.isFinite); return [St.quantile(v, 0.1), St.median(v), St.quantile(v, 0.9)]; });
+    const od = [
+      { type: 'scatter', mode: 'lines', x: xd, y: band.map(b => b[2]), line: { width: 0 }, hoverinfo: 'skip', showlegend: false },
+      { type: 'scatter', mode: 'lines', x: xd, y: band.map(b => b[0]), line: { width: 0 }, fill: 'tonexty', fillcolor: 'rgba(167,173,183,0.12)', hoverinfo: 'skip', name: 'P10–P90 all laps' },
+      { type: 'scatter', mode: 'lines', x: xd, y: band.map(b => b[1]), line: { color: COL.ref, width: 1, dash: 'dot' }, name: 'median', hovertemplate: 'median %{y:.2f} m<extra></extra>' },
+    ];
+    const offTrace = (l, col, w) => ({ type: 'scatter', mode: 'lines', x: xd, y: ks.map(k => l.off[k] * sg), line: { color: col, width: w }, name: l.label, hovertemplate: `${l.label} %{y:.2f} m<extra></extra>` });
+    if (best && !shown.some(l => l.index === best.index)) od.push(offTrace(best, COL.good, 2.2));
+    shown.forEach((l, i) => od.push(offTrace(l, l.index === best?.index ? COL.good : COL.laps[i], i === 0 ? 2 : 1.5)));
+    const vl = (k, t) => [{ type: 'line', x0: k * G.ds, x1: k * G.ds, yref: 'paper', y0: 0, y1: 1, line: { color: '#3a404a', width: 1 } }, { x: k * G.ds, y: 1, yref: 'paper', yanchor: 'bottom', text: t, showarrow: false, font: { size: 9, color: COL.muted } }];
+    const marksV = [vl(c.i0, 'turn-in'), vl(c.apex, 'apex'), vl(Math.min(c.exit, G.N - 1), 'exit')];
+    react('ch-line-offset', od, baseLayout({ margin: { l: 46, r: 10, t: 18, b: 34 }, hovermode: 'x unified', showlegend: false,
+      xaxis: { title: { text: 'lap distance (m)' } }, yaxis: { title: { text: '← wide · inside → (m)' }, zeroline: true, zerolinecolor: COL.ref },
+      shapes: marksV.map(v => v[0]), annotations: marksV.map(v => v[1]) }), CFG_STATIC);
+    const oel = $('ch-line-offset');
+    oel.removeAllListeners && oel.removeAllListeners('plotly_hover');
+    oel.on('plotly_hover', ev => {
+      const k = Math.round(ev.points[0].x / G.ds); const l = shown[0] || best; const m = $('ch-line-map');
+      if (l && m && m.data) { const [x, y] = P(l, k); Plotly.restyle(m, { x: [[x]], y: [[y]] }, [m._cursor]); }
+    });
+    // metrics table
+    const L = cs.line, sel = R.laps[S.sel], fs = sel && sel.analysable ? R.features.get(sel.index).corners[ci] : null;
+    const order = ['lineTurnIn', 'lineApex', 'lineClip', 'lineExit', 'lineWidth', 'pathDelta', 'minRadius'];
+    const v = (x, d) => Number.isFinite(x) ? (d === 0 ? x.toFixed(0) : (x > 0 ? '+' : '') + x.toFixed(d)) : '—';
+    $('line-table').innerHTML = `<table class="tbl" style="margin-top:8px"><thead><tr><th class="l">Line measure</th><th>Best ${best ? esc(best.label) : ''}</th><th>${sel ? esc(sel.label) : 'Selected'}</th><th>Median</th><th>Spread σ</th><th title="Spearman correlation with segment time; negative = higher value goes with faster laps">ρ vs time</th></tr></thead><tbody>${order.map(k => {
+      const m = L.metrics[k]; const hl = L.finding.strong && L.finding.metric === k;
+      return `<tr style="cursor:default"><td class="txt l">${esc(m.label)} <span class="muted">(${m.unit})</span></td><td>${v(m.best, m.d)}</td><td>${fs ? v(fs[k], m.d) : '—'}</td><td>${v(m.med, m.d)}</td><td>${Number.isFinite(m.sd) ? m.sd.toFixed(m.d || 1) : '—'}</td><td class="${hl ? 'hl' : ''}">${Number.isFinite(m.rho) ? m.rho.toFixed(2) : '—'}</td></tr>`;
+    }).join('')}</tbody></table>`;
+    const fdv = $('line-finding');
+    fdv.className = 'line-finding' + (L.finding.strong ? ' strong' : '');
+    fdv.textContent = L.finding.text;
   }
 
   function renderHeat() {
@@ -1010,6 +1114,8 @@ L3 Major mistake         — loss ≥ max(0.30 s, 5σ_seg), ≥3 channel groups,
 L4 Compromised           — off-track with ≥0.5 s loss, track-limit violation, or spin signature
 Confidence: High = ≥2 independent channel groups agree and loss z ≥ 2 (or explicit channel);
             Medium = one strong channel (|z| ≥ 4) with loss, or ≥ 2 groups; Low = otherwise ("possible").</div>`),
+      sec('Racing line (GPS)', R.avail.position ? `Each lap's position (${esc(R.avail.position)}) is compared with the session's median line at the same lap distance. The signed perpendicular offset is converted to "toward the inside of the corner" (+) or "wide" (−) using the corner's direction. For each corner the window runs from 40 m before turn-in to 40 m after the exit point. Measures: offset at turn-in, at the lap's own apex (minimum speed) and at the exit point; closest approach to the inside and where it happens; track width used (max − min offset); path length versus the median line (both smoothed over 8 m, so smoothing does not bias the comparison); tightest radius (heading change over a ±8 m chord).<br>
+        For each measure, a Spearman correlation with segment time is computed over the analysable laps (off-track laps at that corner are excluded). A line finding is reported only if it is significant after a Bonferroni correction for the 7 measures tested (Fisher z, two-sided p &lt; 0.05/7) and worth at least 0.01 s across the interquartile range. Otherwise the dashboard says the line is not the differentiator. The median line is the average driven line, not the track centreline; track width is not known from the data.` : 'No GPS or X/Y channels in this data, so racing-line comparison is unavailable.'),
       sec('Lap status & mistake score', `Lap status separates <b>validity</b> (complete / data quality / track limits), <b>execution</b> (worst event level) and <b>pace</b> (lap time). A slow lap with no abnormal telemetry stays <b>Valid</b>.
         <div class="formula">raw = Σ_events (levelPts[L] + 20·offTrack + 30·min(loss, 1.5 s)) × confWeight     levelPts = [0, 6, 18, 35, 55], confWeight H 1 · M 0.75 · L 0.4
     + Σ_corners min(6, Σ_metrics max(0, |z| − 2))                        (accumulated untidiness)
@@ -1096,22 +1202,22 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
   }
 
   const deps = {
-    sel: ['strip', 'lapTable', 'lapDetail', 'progress', 'trends', 'cornerDetail', 'cornerLaps', 'cornerDiff', 'heat', 'tmControls', 'telemetry', 'speedCmp', 'delta', 'mapControls', 'map'],
-    cmp: ['strip', 'tmControls', 'telemetry'],
+    sel: ['strip', 'lapTable', 'lapDetail', 'progress', 'trends', 'cornerDetail', 'cornerLaps', 'cornerDiff', 'line', 'heat', 'tmControls', 'telemetry', 'speedCmp', 'delta', 'mapControls', 'map'],
+    cmp: ['strip', 'tmControls', 'telemetry', 'line'],
     ref: ['tmControls', 'telemetry', 'speedCmp', 'delta', 'mapControls', 'map'],
-    corner: ['cornerTable', 'cornerDetail', 'matrix', 'cornerLaps', 'cornerDiff', 'heat', 'tmControls', 'telemetry', 'speedCmp', 'map', 'mapMistakes', 'coaching'],
+    corner: ['cornerTable', 'cornerDetail', 'matrix', 'cornerLaps', 'cornerDiff', 'line', 'heat', 'tmControls', 'telemetry', 'speedCmp', 'map', 'mapMistakes', 'coaching'],
     ch: ['tmControls', 'telemetry'], ov: ['tmControls', 'telemetry'],
   };
   const renderers = {
     strip: renderStrip, lapTable: renderLapTable, lapDetail: renderLapDetail, progress: renderProgress, trends: renderTrends,
-    cornerTable: renderCornerTable, cornerDetail: renderCornerDetail, matrix: renderMatrix, cornerLaps: renderCornerLaps, cornerDiff: renderCornerDiff, heat: renderHeat,
+    cornerTable: renderCornerTable, cornerDetail: renderCornerDetail, matrix: renderMatrix, cornerLaps: renderCornerLaps, cornerDiff: renderCornerDiff, line: renderLine, heat: renderHeat,
     tmControls: renderTmControls, telemetry: renderTelemetry, speedCmp: renderSpeedCmp, delta: renderDeltaTable, mapControls: renderMapControls, map: renderMap, mapMistakes: renderMapMistakes, coaching: renderCoaching,
   };
   function update(keys) {
     const todo = new Set(); keys.forEach(k => (deps[k] || []).forEach(r => todo.add(r)));
     for (const r of Object.keys(renderers)) if (todo.has(r)) safe(r, renderers[r]);
   }
-  const CHART_OF = { progress: 'ch-progress', budget: 'ch-budget', dist: 'ch-dist', trends: 'ch-mtrend', lapDetail: 'ch-lapseg', cornerDetail: 'ch-corner-speed', matrix: 'ch-matrix', cornerLaps: 'ch-corner-laps', cornerDiff: 'ch-corner-diff', heat: 'ch-heat', theo: 'ch-theo', telemetry: 'ch-telemetry', speedCmp: 'ch-speedcmp', map: 'ch-map' };
+  const CHART_OF = { progress: 'ch-progress', budget: 'ch-budget', dist: 'ch-dist', trends: 'ch-mtrend', lapDetail: 'ch-lapseg', cornerDetail: 'ch-corner-speed', matrix: 'ch-matrix', cornerLaps: 'ch-corner-laps', cornerDiff: 'ch-corner-diff', line: 'ch-line-map', heat: 'ch-heat', theo: 'ch-theo', telemetry: 'ch-telemetry', speedCmp: 'ch-speedcmp', map: 'ch-map' };
   function safe(name, fn) {
     try { fn(); }
     catch (e) {
@@ -1140,7 +1246,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
     }
     [['header', renderHeader], ['verdict', renderVerdict], ['kpis', renderKPIs], ['progress', renderProgress], ['budget', renderBudget], ['dist', renderDist], ['trends', renderTrends],
       ['consBreak', renderConsBreak], ['paceBreak', renderPaceBreak], ['strip', renderStrip], ['lapTable', renderLapTable], ['lapDetail', renderLapDetail],
-      ['cornerTable', renderCornerTable], ['cornerDetail', renderCornerDetail], ['matrix', renderMatrix], ['cornerLaps', renderCornerLaps], ['cornerDiff', renderCornerDiff], ['heat', renderHeat],
+      ['cornerTable', renderCornerTable], ['cornerDetail', renderCornerDetail], ['matrix', renderMatrix], ['cornerLaps', renderCornerLaps], ['cornerDiff', renderCornerDiff], ['line', renderLine], ['heat', renderHeat],
       ['theo', renderTheo], ['tmControls', renderTmControls], ['telemetry', renderTelemetry], ['speedCmp', renderSpeedCmp], ['delta', renderDeltaTable],
       ['mapControls', renderMapControls], ['map', renderMap], ['mapMistakes', renderMapMistakes], ['insights', renderInsights], ['coaching', renderCoaching], ['method', renderMethod]].forEach(([n, f]) => safe(n, f));
     window.__dashboardReady = true;

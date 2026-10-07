@@ -22,6 +22,17 @@ python3 tools/build_dashboard.py --inline-plotly --tsv my_session.tsv --out dist
 
 > `data/sample_session.tsv` is **synthetic** data from `tools/generate_sample_tsv.py`: a physics-based lap simulation with injected mistakes, off-tracks and data defects. Its known answers are in `data/sample_session.truth.json`. The dashboard shows a "SYNTHETIC DEMO DATA" badge when this file is loaded.
 
+## Racing line (GPS)
+
+When the data has GPS latitude/longitude (iRacing `.ibt` files do) or X/Y position, the corner analysis includes a racing-line comparison for the selected corner:
+
+- **Corner map**: best-at-corner lap, selected and compared laps, all laps faintly, and the session median line, with apex, brake and closest-to-inside markers. Lateral offsets can be exaggerated (×5 or ×10) to make line differences visible; ×1 is true scale.
+- **Lateral-offset trace**: distance through the corner on the x-axis, metres toward the inside (+) or wide (−) of the median line on the y-axis, with the P10–P90 band across all laps.
+- **Line measures**: turn-in, apex and exit position, closest approach to the inside, track width used, path length versus the median line, and tightest radius, each with its spread and its Spearman correlation with corner time.
+- **Finding**: names the line choice that goes with faster laps. It is reported only when the correlation is significant after correcting for the 7 measures tested (Fisher z, p < 0.05/7). Otherwise the dashboard says the line is not the differentiator.
+
+Significant line findings also feed into the insights and coaching. The corner table shows each corner's apex-placement spread (Line σ).
+
 ## Excluding laps
 
 Untick **Use** for a lap in the lap table, or press **Exclude lap** in the lap assessment, to remove that lap from the analysis. Pace, consistency, the mistake baselines, corner statistics, the theoretical best, insights and every chart are then recomputed in about 0.1 s, because the parsed data is reused. Excluded laps stay listed and their telemetry can still be viewed. They can be restored one at a time, or all at once with **Restore all**. The track model (corners and segments) always uses every complete lap, so corner IDs don't change when laps are excluded. At least 3 laps must stay in the analysis. Exclusions are remembered in your browser for the same file.
