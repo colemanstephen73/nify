@@ -30,6 +30,7 @@ def main():
     ap.add_argument("--tsv", action="append", default=[], help="TSV file to embed (repeatable)")
     ap.add_argument("--out", required=True)
     ap.add_argument("--inline-plotly", help="path to plotly.min.js to inline (offline build)")
+    ap.add_argument("--fragment", action="store_true", help="omit doctype/html/head/body wrappers (for hosts that add their own skeleton)")
     args = ap.parse_args()
 
     tpl = read(os.path.join(ROOT, "src", "app", "template.html"))
@@ -49,6 +50,9 @@ def main():
               .replace("<!--__DATA__-->", "\n".join(data))
               .replace("/*__ENGINE__*/", engine.replace("</script", "<\\/script"))
               .replace("/*__APP__*/", app.replace("</script", "<\\/script")))
+    if args.fragment:
+        import re
+        out = re.sub(r"(?i)<!doctype html>\s*|</?html[^>]*>\s*|</?head>\s*|</?body>\s*", "", out, count=8)
     os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as fh:
         fh.write(out)
