@@ -1,7 +1,7 @@
 // Node harness: loads the engine modules in pipeline order and analyses TSV files.
 const fs = require('fs');
 const path = require('path');
-const ORDER = ['stats', 'ingest', 'laps', 'track', 'features', 'mistakes', 'scoring', 'insights', 'analyze'];
+const ORDER = ['stats', 'ibt', 'ingest', 'laps', 'track', 'features', 'mistakes', 'scoring', 'insights', 'analyze'];
 function loadEngine() {
   delete globalThis.TelemetryEngine;
   for (const m of ORDER) require(path.join(__dirname, '..', 'src', 'engine', m + '.js'));
@@ -10,7 +10,7 @@ function loadEngine() {
 module.exports = { loadEngine, ORDER };
 if (require.main === module) {
   const E = loadEngine();
-  const files = process.argv.slice(2).map(p => ({ name: path.basename(p), text: fs.readFileSync(p, 'utf8') }));
+  const files = process.argv.slice(2).map(p => /\.ibt$/i.test(p) ? { name: path.basename(p), buffer: new Uint8Array(fs.readFileSync(p)).buffer } : { name: path.basename(p), text: fs.readFileSync(p, 'utf8') });
   const R = E.analyze(files);
   const fl = E.insights.fmtLap;
   console.log('elapsed', R.elapsedMs, 'ms');

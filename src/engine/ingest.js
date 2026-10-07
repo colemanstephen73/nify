@@ -319,14 +319,23 @@
     const notes = [];
     const per = [];
     let sessionCounter = 0;
+    const metas = [];
     for (const f of files) {
-      const parsed = parseDelimited(f.text, f.name);
+      // binary iRacing telemetry (by content, not just extension)
+      if (f.buffer && NS.ibt && NS.ibt.isIBT(f.buffer)) {
+        const r = NS.ibt.parse(f.buffer, f.name);
+        per.push(r); metas.push({ file: f.name, ...r.parsed.ibtMeta });
+        continue;
+      }
+      if (f.buffer && /\.ibt$/i.test(f.name)) throw new Error(`${f.name}: not a valid iRacing .ibt file (header check failed).`);
+      const text = f.text !== undefined ? f.text : new TextDecoder('utf-8').decode(f.buffer);
+      const parsed = parseDelimited(text, f.name);
       const det = detectColumns(parsed);
       per.push({ parsed, det });
     }
     // union of roles; each file is mapped independently
     const avail = {};
-    const out = { session: [], fileIdx: [], line: [], lap: [], t: [], dist: [], x: [], y: [], sector: [], trackLimit: [], corner: [], lapTimeCol: [] };
+    const out = { session: [], fileIdx: [], line: [], lap: [], t: [], dist: [], x: [], y: [], sector: [], trackLimit: [], corner: [], lapTimeCol: [], pit: [], incidents: [] };
     for (const c of CHANNELS) out[c] = [];
     const channelUnits = {};
     const fileReports = [];
@@ -446,6 +455,8 @@
         out.trackLimit.push(tl);
         out.corner.push(R.corner ? (R.corner.rawStrings ? R.corner.rawStrings[i] : String(R.corner.values[i])) : '');
         out.lapTimeCol.push(R.lapTime ? R.lapTime.values[i] : NaN);
+        out.pit.push(R.pit ? R.pit.values[i] : NaN);
+        out.incidents.push(R.incidents ? R.incidents.values[i] : NaN);
         for (const c of CHANNELS) out[c].push(chVals[c] ? chVals[c][i] : NaN);
       }
       sessionCounter = maxSess + 1;
@@ -454,13 +465,14 @@
       if (R.trackLimit) avail.trackLimit = R.trackLimit.name;
       if (R.lapTime) avail.lapTime = R.lapTime.name;
       if (R.corner) avail.corner = R.corner.name;
-      ['tyre', 'fuel', 'position'].forEach(k => { if (R[k]) avail[k] = R[k].name; });
+      ['tyre', 'fuel', 'position', 'pit', 'incidents'].forEach(k => { if (R[k] && !(k === 'position' && avail.position)) avail[k === 'position' ? 'racePosition' : k] = R[k].name; });
+      if (parsed.ibtNotes) fnotes.push(...parsed.ibtNotes);
       fileReports.push({
         name: parsed.source, delimiter: parsed.delimiter === '\t' ? 'TAB' : parsed.delimiter,
         headerFound: parsed.headerFound, headerLine: parsed.headerLine, unitsRow: !!parsed.unitsRow,
         rows: parsed.rows.length, columns: parsed.names.length, malformed: parsed.malformed,
         comments: parsed.comments.length, metaLines: parsed.meta.length, blankLines: parsed.blankLines,
-        timeSource, timeAbsolute: absolute, decimalComma: det.decimalComma, notes: fnotes,
+        timeSource, timeAbsolute: absolute, decimalComma: det.decimalComma, notes: fnotes, format: parsed.format || 'text', ibtMeta: parsed.ibtMeta || null,
         columnInfo: det.cols.map(c => ({
           name: c.name, unit: c.unit, type: c.type, role: c.role, missing: c.missing, nonNumeric: c.nonNumeric,
           missingPct: parsed.rows.length ? 100 * (c.missing + (c.type === 'numeric' ? c.nonNumeric : 0)) / parsed.rows.length : 0,
@@ -537,7 +549,7 @@
 
     const sessions = Array.from(new Set(Array.from(C.session))).sort((a, b) => a - b);
     return {
-      table: C, avail, channelUnits, notes, files: fileReports, sessions,
+      table: C, avail, channelUnits, notes, files: fileReports, sessions, meta: metas,
       sampling: {
         medianDt: mdt, hz: 1 / mdt, minDt: dts.length ? St.min(dts) : NaN, maxDt: dts.length ? St.max(dts) : NaN,
         p05: St.quantile(dts, 0.05), p95: St.quantile(dts, 0.95), jitterPct: dts.length ? 100 * St.mad(dts) * 1.4826 / mdt : NaN,

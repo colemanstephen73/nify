@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Race Telemetry Analysis</title>
-<meta name="description" content="Driver performance analysis: consistency, mistakes, corner performance and theoretical best lap from raw TSV telemetry.">
+<meta name="description" content="Driver performance analysis: consistency, mistakes, corner performance and theoretical best lap from iRacing .ibt or raw TSV telemetry.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -273,20 +273,20 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
   </nav>
   <div class="top-actions">
     <button class="btn" id="btn-dq" title="Data-quality report">Data quality</button>
-    <label class="btn primary" for="file-input" title="Load one or more TSV files">Load TSV…</label>
-    <input type="file" id="file-input" accept=".tsv,.txt,.csv,.log,text/tab-separated-values,text/plain" multiple hidden>
+    <label class="btn primary" for="file-input" title="Load iRacing .ibt or TSV telemetry files">Load .ibt / TSV…</label>
+    <input type="file" id="file-input" accept=".ibt,.tsv,.txt,.csv,.log,text/tab-separated-values,text/plain" multiple hidden>
   </div>
 </header>
 
 <div id="loading"><div class="spin"></div><div class="dim" id="loading-msg">Analysing telemetry…</div></div>
-<div id="drop">Drop TSV file(s) to analyse</div>
+<div id="drop">Drop iRacing .ibt or TSV file(s) to analyse</div>
 <div class="modal-bg" id="modal"><div class="modal" id="modal-body"></div></div>
 
 <main id="app">
   <div class="welcome" id="welcome" hidden>
     <h1>Race telemetry analysis</h1>
-    <p class="dim">Load one or more raw TSV telemetry files. Everything runs locally in your browser — nothing is uploaded.</p>
-    <div class="dz">Drag &amp; drop TSV files here, or use <b>Load TSV…</b> above.<br><span class="muted">Columns are detected automatically (lap, time, distance, speed, throttle, brake, steering, gear, RPM, accelerations, GPS/XY, sectors, track limits…).</span></div>
+    <p class="dim">Load one or more iRacing <b>.ibt</b> telemetry files or raw TSV exports. Everything runs locally in your browser — nothing is uploaded.</p>
+    <div class="dz">Drag &amp; drop .ibt or TSV files here, or use <b>Load .ibt / TSV…</b> above.<br><span class="muted">Columns are detected automatically (lap, time, distance, speed, throttle, brake, steering, gear, RPM, accelerations, GPS/XY, sectors, track limits…).</span></div>
     <div id="welcome-err"></div>
   </div>
 
@@ -509,6 +509,191 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
   const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
   NS.stats = { finite, quantile, median, mean, std, mad, iqr, min, max, argmin, argmax, mode, robustScale, spearman, pearson, linreg, theilSen, smooth, smoothCircular, interp, fillGapsLinear, clamp };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+/* ============================================================================
+ * iRacing .ibt telemetry reader (binary, little-endian; irsdk disk format).
+ *
+ *   irsdk_header (112 B) | irsdk_diskSubHeader (32 B) | var headers (144 B each)
+ *   | session-info YAML | fixed-size sample records (bufLen B each)
+ *
+ * Produces the same {parsed, det} structure the TSV path produces, so the rest
+ * of the pipeline is unchanged. Only the channels the analysis uses are decoded
+ * (a long session has 200+ channels × 60 Hz); every channel name is still listed
+ * in the data-quality report.
+ * ========================================================================== */
+(function (root) {
+  'use strict';
+  const NS = root.TelemetryEngine = root.TelemetryEngine || {};
+
+  const TYPE_SIZE = [1, 1, 4, 4, 4, 8]; // char, bool, int, bitField, float, double
+  const TRK_OFF_TRACK = 0, TRK_IN_PIT_STALL = 1, TRK_APPROACHING_PITS = 2;
+
+  // iRacing channel → pipeline role
+  const ROLE_MAP = {
+    SessionTime: 'time', SessionNum: 'session', Lap: 'lap', LapDist: 'lapDistance',
+    Speed: 'speed', Throttle: 'throttle', Brake: 'brake', SteeringWheelAngle: 'steering',
+    Gear: 'gear', RPM: 'rpm', LatAccel: 'latG', LongAccel: 'lonG', Lat: 'gpsLat', Lon: 'gpsLon',
+    LapLastLapTime: 'lapTime', FuelLevel: 'fuel', OnPitRoad: 'pit',
+  };
+  const EXTRA = ['IsOnTrack', 'PlayerTrackSurface', 'PlayerCarMyIncidentCount', 'LapDistPct'];
+
+  function isIBT(buf) {
+    if (!buf || buf.byteLength < 144) return false;
+    const dv = new DataView(buf);
+    const ver = dv.getInt32(0, true), tick = dv.getInt32(8, true), nv = dv.getInt32(24, true);
+    const vho = dv.getInt32(28, true), bufLen = dv.getInt32(36, true);
+    return ver >= 1 && ver <= 4 && tick > 0 && tick <= 1000 && nv > 0 && nv < 10000 && vho >= 112 && vho + nv * 144 <= buf.byteLength && bufLen > 0;
+  }
+
+  function cstr(bytes, off, len) {
+    let s = '';
+    for (let i = 0; i < len; i++) { const c = bytes[off + i]; if (!c) break; s += String.fromCharCode(c); }
+    return s;
+  }
+
+  /** Minimal extraction from the session-info YAML (no YAML library needed). */
+  function sessionMeta(yaml) {
+    const m = (re) => { const r = yaml.match(re); return r ? r[1].trim() : null; };
+    const meta = {
+      track: m(/TrackDisplayName:\s*(.*)/) || m(/TrackName:\s*(.*)/),
+      trackConfig: m(/TrackConfigName:\s*(.*)/),
+      trackLengthKm: parseFloat(m(/TrackLength:\s*([\d.]+)\s*km/) || 'NaN'),
+      sectorsPct: [],
+      car: null, driver: null, sessionTypes: [],
+    };
+    const sec = yaml.split('SplitTimeInfo:')[1];
+    if (sec) {
+      const block = sec.split(/\n\S/)[0];
+      let r; const re = /SectorStartPct:\s*([\d.]+)/g;
+      while ((r = re.exec(block))) meta.sectorsPct.push(parseFloat(r[1]));
+    }
+    const carIdx = m(/DriverCarIdx:\s*(\d+)/);
+    if (carIdx !== null) {
+      const drivers = yaml.split(/\n\s*-\s*CarIdx:\s*/).slice(1);
+      const me = drivers.find(d => d.split('\n')[0].trim() === carIdx);
+      if (me) {
+        const g = re => { const r = me.match(re); return r ? r[1].trim() : null; };
+        meta.driver = g(/UserName:\s*(.*)/);
+        meta.car = g(/CarScreenName:\s*(.*)/);
+      }
+    }
+    let r; const st = /SessionType:\s*(.*)/g;
+    while ((r = st.exec(yaml))) meta.sessionTypes.push(r[1].trim());
+    return meta;
+  }
+
+  function parse(buf, sourceName) {
+    if (!isIBT(buf)) throw new Error(`${sourceName}: not a valid iRacing .ibt file (header check failed)`);
+    const dv = new DataView(buf);
+    const bytes = new Uint8Array(buf);
+    const H = {
+      ver: dv.getInt32(0, true), tickRate: dv.getInt32(8, true),
+      sessionInfoLen: dv.getInt32(16, true), sessionInfoOffset: dv.getInt32(20, true),
+      numVars: dv.getInt32(24, true), varHeaderOffset: dv.getInt32(28, true),
+      numBuf: dv.getInt32(32, true), bufLen: dv.getInt32(36, true),
+      bufOffset: dv.getInt32(48 + 4, true), // varBuf[0].bufOffset
+    };
+    const sub = {
+      startDate: Number(dv.getBigInt64(112, true)), startTime: dv.getFloat64(120, true), endTime: dv.getFloat64(128, true),
+      lapCount: dv.getInt32(136, true), recordCount: dv.getInt32(140, true),
+    };
+    const vars = [];
+    for (let i = 0; i < H.numVars; i++) {
+      const o = H.varHeaderOffset + i * 144;
+      vars.push({
+        type: dv.getInt32(o, true), offset: dv.getInt32(o + 4, true), count: dv.getInt32(o + 8, true),
+        name: cstr(bytes, o + 16, 32), desc: cstr(bytes, o + 48, 64), unit: cstr(bytes, o + 112, 32),
+      });
+    }
+    let yaml = '';
+    if (H.sessionInfoLen > 0 && H.sessionInfoOffset + H.sessionInfoLen <= buf.byteLength) {
+      yaml = new TextDecoder('latin1').decode(bytes.subarray(H.sessionInfoOffset, H.sessionInfoOffset + H.sessionInfoLen)).replace(/\0+$/, '');
+    }
+    const fitRecords = Math.floor((buf.byteLength - H.bufOffset) / H.bufLen);
+    const notes = [];
+    let nRec = sub.recordCount > 0 ? Math.min(sub.recordCount, fitRecords) : fitRecords;
+    if (sub.recordCount <= 0) notes.push(`Record count missing in header (file not closed cleanly?) — ${fitRecords} records inferred from file size.`);
+    else if (sub.recordCount > fitRecords) notes.push(`Header declares ${sub.recordCount} records but the file holds ${fitRecords} — file truncated; using ${fitRecords}.`);
+    const byName = new Map(vars.map(v => [v.name, v]));
+    const read = (v, rec) => {
+      const o = H.bufOffset + rec * H.bufLen + v.offset;
+      switch (v.type) {
+        case 0: case 1: return bytes[o];
+        case 2: case 3: return dv.getInt32(o, true);
+        case 4: return dv.getFloat32(o, true);
+        case 5: return dv.getFloat64(o, true);
+        default: return NaN;
+      }
+    };
+    // keep only records where the player's car is on track (garage / replay frames excluded)
+    const onTrack = byName.get('IsOnTrack');
+    const keep = [];
+    let dropped = 0;
+    for (let r = 0; r < nRec; r++) {
+      if (onTrack && onTrack.count >= 1 && !read(onTrack, r)) { dropped++; continue; }
+      keep.push(r);
+    }
+    if (dropped) notes.push(`${dropped} record(s) with IsOnTrack = false (garage / not driving) excluded.`);
+    const n = keep.length;
+    const wanted = Object.keys(ROLE_MAP).concat(EXTRA).filter(k => byName.has(k) && byName.get(k).count >= 1);
+    const cols = [];
+    const roles = {};
+    const col = (name, unit, values, role) => {
+      const c = { index: cols.length, name, base: name, unit, key: name.toLowerCase(), values, missing: 0, nonNumeric: 0, type: 'numeric', categories: null, rawStrings: null, clockFormat: false, isoFormat: false, role: role || null };
+      for (let i = 0; i < values.length; i++) if (!Number.isFinite(values[i])) c.missing++;
+      cols.push(c); if (role) roles[role] = c;
+      return c;
+    };
+    const decoded = {};
+    for (const name of wanted) {
+      const v = byName.get(name);
+      const a = new Float64Array(n);
+      for (let i = 0; i < n; i++) a[i] = read(v, keep[i]);
+      decoded[name] = a;
+    }
+    // LapDist is -1 / garbage while not in world; LapLastLapTime is -1 when no valid lap
+    if (decoded.LapDist) for (let i = 0; i < n; i++) if (decoded.LapDist[i] < 0) decoded.LapDist[i] = NaN;
+    if (decoded.LapLastLapTime) for (let i = 0; i < n; i++) if (!(decoded.LapLastLapTime[i] > 0)) decoded.LapLastLapTime[i] = NaN;
+    for (const name of wanted) {
+      if (EXTRA.includes(name)) continue;
+      const v = byName.get(name);
+      col(name, v.unit, decoded[name], ROLE_MAP[name]);
+    }
+    if (decoded.PlayerTrackSurface) {
+      const s = decoded.PlayerTrackSurface, off = new Float64Array(n), pit = new Float64Array(n);
+      for (let i = 0; i < n; i++) { off[i] = s[i] === TRK_OFF_TRACK ? 1 : 0; pit[i] = (s[i] === TRK_IN_PIT_STALL || s[i] === TRK_APPROACHING_PITS) ? 1 : 0; }
+      col('OffTrack (PlayerTrackSurface)', '', off, 'trackLimit');
+      if (decoded.OnPitRoad) for (let i = 0; i < n; i++) roles.pit.values[i] = Math.max(roles.pit.values[i], pit[i]);
+      else col('InPits (PlayerTrackSurface)', '', pit, 'pit');
+    }
+    if (decoded.PlayerCarMyIncidentCount) col('PlayerCarMyIncidentCount', 'x', decoded.PlayerCarMyIncidentCount, 'incidents');
+    const meta = sessionMeta(yaml);
+    meta.tickRate = H.tickRate; meta.ibtVersion = H.ver; meta.records = nRec; meta.channelsInFile = vars.length;
+    meta.allChannels = vars.map(v => v.name + (v.count > 1 ? `[${v.count}]` : ''));
+    meta.unusedChannels = vars.filter(v => !wanted.includes(v.name)).length;
+    if (sub.startDate > 0) meta.sessionDate = new Date(sub.startDate * 1000).toISOString().slice(0, 10);
+    const missingCore = ['SessionTime', 'Lap', 'LapDist', 'Speed'].filter(k => !byName.has(k));
+    if (missingCore.length) notes.push(`Core iRacing channel(s) missing: ${missingCore.join(', ')}.`);
+    const rowLine = new Int32Array(n);
+    for (let i = 0; i < n; i++) rowLine[i] = keep[i] + 1;
+    const parsed = {
+      source: sourceName, delimiter: 'iRacing IBT', headerFound: true, headerLine: 0, names: cols.map(c => c.name), unitsRow: null,
+      rows: { length: n }, rowLine, malformed: [], comments: [], meta: [], blankLines: 0, totalLines: nRec, rawLines: null,
+      format: 'ibt', ibtNotes: notes, ibtMeta: meta,
+    };
+    return { parsed, det: { cols, roles, decimalComma: false } };
+  }
+
+  /** base64 → ArrayBuffer (for .ibt files embedded in a built dashboard). */
+  function fromBase64(b64) {
+    const bin = atob(b64.replace(/\s+/g, ''));
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out.buffer;
+  }
+
+  NS.ibt = { isIBT, parse, sessionMeta, fromBase64 };
 })(typeof window !== 'undefined' ? window : globalThis);
 
 /* ============================================================================
@@ -832,14 +1017,23 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
     const notes = [];
     const per = [];
     let sessionCounter = 0;
+    const metas = [];
     for (const f of files) {
-      const parsed = parseDelimited(f.text, f.name);
+      // binary iRacing telemetry (by content, not just extension)
+      if (f.buffer && NS.ibt && NS.ibt.isIBT(f.buffer)) {
+        const r = NS.ibt.parse(f.buffer, f.name);
+        per.push(r); metas.push({ file: f.name, ...r.parsed.ibtMeta });
+        continue;
+      }
+      if (f.buffer && /\.ibt$/i.test(f.name)) throw new Error(`${f.name}: not a valid iRacing .ibt file (header check failed).`);
+      const text = f.text !== undefined ? f.text : new TextDecoder('utf-8').decode(f.buffer);
+      const parsed = parseDelimited(text, f.name);
       const det = detectColumns(parsed);
       per.push({ parsed, det });
     }
     // union of roles; each file is mapped independently
     const avail = {};
-    const out = { session: [], fileIdx: [], line: [], lap: [], t: [], dist: [], x: [], y: [], sector: [], trackLimit: [], corner: [], lapTimeCol: [] };
+    const out = { session: [], fileIdx: [], line: [], lap: [], t: [], dist: [], x: [], y: [], sector: [], trackLimit: [], corner: [], lapTimeCol: [], pit: [], incidents: [] };
     for (const c of CHANNELS) out[c] = [];
     const channelUnits = {};
     const fileReports = [];
@@ -959,6 +1153,8 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
         out.trackLimit.push(tl);
         out.corner.push(R.corner ? (R.corner.rawStrings ? R.corner.rawStrings[i] : String(R.corner.values[i])) : '');
         out.lapTimeCol.push(R.lapTime ? R.lapTime.values[i] : NaN);
+        out.pit.push(R.pit ? R.pit.values[i] : NaN);
+        out.incidents.push(R.incidents ? R.incidents.values[i] : NaN);
         for (const c of CHANNELS) out[c].push(chVals[c] ? chVals[c][i] : NaN);
       }
       sessionCounter = maxSess + 1;
@@ -967,13 +1163,14 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
       if (R.trackLimit) avail.trackLimit = R.trackLimit.name;
       if (R.lapTime) avail.lapTime = R.lapTime.name;
       if (R.corner) avail.corner = R.corner.name;
-      ['tyre', 'fuel', 'position'].forEach(k => { if (R[k]) avail[k] = R[k].name; });
+      ['tyre', 'fuel', 'position', 'pit', 'incidents'].forEach(k => { if (R[k] && !(k === 'position' && avail.position)) avail[k === 'position' ? 'racePosition' : k] = R[k].name; });
+      if (parsed.ibtNotes) fnotes.push(...parsed.ibtNotes);
       fileReports.push({
         name: parsed.source, delimiter: parsed.delimiter === '\t' ? 'TAB' : parsed.delimiter,
         headerFound: parsed.headerFound, headerLine: parsed.headerLine, unitsRow: !!parsed.unitsRow,
         rows: parsed.rows.length, columns: parsed.names.length, malformed: parsed.malformed,
         comments: parsed.comments.length, metaLines: parsed.meta.length, blankLines: parsed.blankLines,
-        timeSource, timeAbsolute: absolute, decimalComma: det.decimalComma, notes: fnotes,
+        timeSource, timeAbsolute: absolute, decimalComma: det.decimalComma, notes: fnotes, format: parsed.format || 'text', ibtMeta: parsed.ibtMeta || null,
         columnInfo: det.cols.map(c => ({
           name: c.name, unit: c.unit, type: c.type, role: c.role, missing: c.missing, nonNumeric: c.nonNumeric,
           missingPct: parsed.rows.length ? 100 * (c.missing + (c.type === 'numeric' ? c.nonNumeric : 0)) / parsed.rows.length : 0,
@@ -1050,7 +1247,7 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
 
     const sessions = Array.from(new Set(Array.from(C.session))).sort((a, b) => a - b);
     return {
-      table: C, avail, channelUnits, notes, files: fileReports, sessions,
+      table: C, avail, channelUnits, notes, files: fileReports, sessions, meta: metas,
       sampling: {
         medianDt: mdt, hz: 1 / mdt, minDt: dts.length ? St.min(dts) : NaN, maxDt: dts.length ? St.max(dts) : NaN,
         p05: St.quantile(dts, 0.05), p95: St.quantile(dts, 0.95), jitterPct: dts.length ? 100 * St.mad(dts) * 1.4826 / mdt : NaN,
@@ -1221,16 +1418,22 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
       }
       if (backSteps > 3) { dq.push({ type: 'distance', severe: true, text: `${backSteps} backwards distance jumps` }); dqSevere = true; }
       const lengthOk = Math.abs(lengthEst - L) / L < 0.04;
-      const complete = l.startsAtLine && endsAtLine && lengthOk;
+      // pit-lane laps (iRacing OnPitRoad / track surface) are in/out laps, never representative
+      let pitFirst = -1, pitLast = -1;
+      if (C.pit) for (let i = l.i0; i <= l.i1; i++) if (C.pit[i] >= 0.5) { if (pitFirst < 0) pitFirst = i; pitLast = i; }
+      const usedPit = pitFirst >= 0;
+      const complete = l.startsAtLine && endsAtLine && lengthOk && !usedPit;
       let partialReason = null;
-      if (!l.startsAtLine) partialReason = `starts at ${l.d[0].toFixed(0)} m (not at S/F)`;
+      if (usedPit) partialReason = `used the pit lane (${pitFirst - l.i0 < (l.i1 - l.i0) / 2 ? 'out-lap' : 'in-lap'})`;
+      if (partialReason) { /* pit lane */ }
+      else if (!l.startsAtLine) partialReason = `starts at ${l.d[0].toFixed(0)} m (not at S/F)`;
       else if (!endsAtLine) partialReason = `ends at ${l.dEnd.toFixed(0)} m of ${L.toFixed(0)} m`;
       else if (!lengthOk) partialReason = `lap length ${lengthEst.toFixed(0)} m deviates ${(100 * (lengthEst - L) / L).toFixed(1)}% from reference`;
       res.push({
         index: k, session: l.session, lapNo: l.lapNo, i0: l.i0, i1: l.i1, d: l.d,
         tStart: l.tStart, tEnd, lapTime: complete ? tEnd - l.tStart : NaN, duration: tEnd - l.tStart,
         startDist: l.d[0], endDist: l.dEnd, lengthEst, complete, partialReason, maxGap, dq, dqSevere,
-        samples: l.n, timeSource: 'computed from S/F crossings',
+        samples: l.n, timeSource: 'computed from S/F crossings', usedPit, pitAtStart: usedPit && pitFirst - l.i0 < (l.i1 - l.i0) / 2,
       });
     }
     applyExplicitLapTimes(I, res);
@@ -1246,7 +1449,8 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
     });
     res.forEach((l, k) => {
       l.kind = 'flying';
-      if (!l.complete) {
+      if (!l.complete && l.usedPit) l.kind = l.pitAtStart ? 'out' : 'in';
+      else if (!l.complete) {
         if (l.startDist > Math.max(30, 0.015 * L)) l.kind = 'out';
         else if (l.endDist < 0.97 * L) l.kind = 'in';
         else l.kind = 'partial';
@@ -1262,10 +1466,11 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
     if (!I.avail.lapTime) return;
     const C = I.table;
     const vals = laps.map(l => {
-      const a = []; for (let i = l.i0; i <= l.i1; i++) if (Number.isFinite(C.lapTimeCol[i])) a.push(C.lapTimeCol[i]);
-      if (!a.length || St.max(a) - St.min(a) > 1e-3) return NaN;
-      let v = a[0]; if (v > 1000) v /= 1000; // ms
-      return v;
+      const a = []; for (let i = l.i0; i <= l.i1; i++) if (Number.isFinite(C.lapTimeCol[i])) a.push(Math.round(C.lapTimeCol[i] * 1e4) / 1e4);
+      if (!a.length) return NaN;
+      const v0 = St.mode(a);
+      if (a.filter(x => x === v0).length < 0.8 * a.length) return NaN; // not a per-lap value
+      return v0 > 1000 ? v0 / 1000 : v0; // ms
     });
     const errSame = [], errPrev = [];
     laps.forEach((l, k) => {
@@ -1306,6 +1511,12 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
         if (s[s.length - 1] < L) { s.push(L); t.push(lap.lapTime); idx.push(idx[idx.length - 1]); }
       }
       const R = { time: St.interp(grid, s, t) };
+      // pin the trace to the lap time (an official lap-time channel can differ from the
+      // sampled crossing by up to one sample); rescaling keeps segment times summing to the lap
+      if (lap.complete && R.time[N - 1] > 0 && Math.abs(R.time[N - 1] - lap.lapTime) > 1e-9) {
+        const f = lap.lapTime / R.time[N - 1];
+        for (let k = 0; k < N; k++) R.time[k] *= f;
+      }
       const pick = arr => idx.map(i => arr[i]);
       for (const c of CH) if (has[c]) R[c] = St.interp(grid, s, pick(C[c]), c === 'gear');
       if (has.speed) for (let k = 0; k < N; k++) R.speed[k] *= 3.6; // display unit km/h
@@ -1552,6 +1763,12 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
   /** Sectors: from a sector channel when present, otherwise 3 inferred sectors snapped to segment boundaries. */
   function buildSectors(laps, segs, G, I) {
     const N = G.N, ds = G.ds;
+    const meta = (I.meta || []).find(m => m.sectorsPct && m.sectorsPct.length >= 2);
+    if (meta) {
+      const starts = meta.sectorsPct.filter(p => p > 0 && p < 1).sort((a, b) => a - b);
+      const edges = [0, ...starts.map(p => Math.round(p * (N - 1))), N - 1];
+      return { source: 'iRacing session info (SplitTimeInfo)', inferred: false, list: edges.slice(0, -1).map((e, j) => ({ id: `S${j + 1}`, i0: e, i1: edges[j + 1], d0: e * ds, d1: Math.min(edges[j + 1] * ds, G.grid[N - 1]), segments: segs.filter(s => s.i0 >= e && s.i1 <= edges[j + 1]).map(s => s.index) })) };
+    }
     if (I.avail.sector) {
       const C = I.table;
       const changes = [];
@@ -1845,7 +2062,11 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
         const lossZ = b.segTime ? loss / b.segTime.scale : 0;
         // off-track
         let off = null;
-        if (f.trackLimit) { off = { how: 'channel', conf: 'High' }; add('offtrack', 'track', 9, `Track-limit channel "${avail.trackLimit}" active at ${(f.trackLimitIdx * G.ds).toFixed(0)} m`, 'trackLimit'); }
+        if (f.trackLimit) {
+          const iracing = /PlayerTrackSurface/.test(avail.trackLimit);
+          off = { how: 'channel', conf: 'High', label: iracing ? 'Off-track' : 'Track-limit violation' };
+          add('offtrack', 'track', 9, iracing ? `iRacing track surface reported OffTrack at ${(f.trackLimitIdx * G.ds).toFixed(0)} m` : `Track-limit channel "${avail.trackLimit}" active at ${(f.trackLimitIdx * G.ds).toFixed(0)} m`, 'trackLimit');
+        }
         else if (Number.isFinite(devThr) && f.maxDev > devThr) {
           const strong = f.maxDev > 1.5 * devThr || loss > 0.2;
           off = { how: 'xy', conf: strong ? 'High' : 'Medium' };
@@ -1920,7 +2141,7 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
   }
 
   function primaryType(t, off) {
-    if (off) return { name: off.how === 'channel' ? 'Track-limit violation' : 'Off-track', phase: 'Off-track' };
+    if (off) return { name: off.label || 'Off-track', phase: 'Off-track' };
     if (t.has('spin')) return { name: 'Spin / major incident', phase: 'Apex' };
     if (t.has('lockup') && (t.has('lowMin') || t.has('apexShift') || t.has('lateBrake') || t.has('poorExit'))) return { name: 'Lock-up / overshoot', phase: 'Braking' };
     if (t.has('lateBrake') && (t.has('lowMin') || t.has('apexShift'))) return { name: 'Late braking / overshoot', phase: 'Braking' };
@@ -2522,12 +2743,13 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
       latG: 'Grip-utilisation pace benchmark (falls back to curvature × speed² if X/Y available)',
       lonG: 'Deceleration-based lock-up signature',
       position: 'Track map and X/Y off-track detection (distance-based track strip used instead)',
-      trackLimit: 'Explicit track-limit validation (heuristic off-track detection used instead)',
+      trackLimit: 'Explicit off-track / track-limit validation (X/Y trajectory heuristic used instead)',
       sector: 'Official sectors (3 inferred sectors used instead)',
       corner: 'Explicit corner metadata (corners inferred from telemetry instead)',
       lap: 'Explicit lap counter (laps inferred from distance resets / trajectory)',
     };
-    for (const [k, v] of Object.entries(need)) if (!I.avail[k]) unavailable.push({ channel: k, impact: v });
+    const metaSectors = (I.meta || []).some(m => m.sectorsPct && m.sectorsPct.length >= 2);
+    for (const [k, v] of Object.entries(need)) if (!I.avail[k] && !(k === 'sector' && metaSectors)) unavailable.push({ channel: k, impact: v });
 
     // data quality report
     const totalMalformed = I.files.reduce((s, f) => s + f.malformed.length, 0);
@@ -2554,6 +2776,7 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
       cornerSource: trackModel.inferred ? 'inferred' : 'explicit', curvatureSource: trackModel.curv ? trackModel.curv.source : (corners.length ? 'speed minima' : 'none'),
       devThr: det.devThr, brakeThr, gridStep: G.ds, lapLength: G.L,
     };
+    model.trackMeta = I.meta && I.meta.length ? I.meta[0] : null;
     model.elapsedMs = Date.now() - t0;
     model.version = '1.0.0';
     return model;
@@ -2655,12 +2878,14 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
   function renderHeader() {
     const R = S.R, D = R.dqReport;
     const names = D.files.map(f => f.name).join(', ');
-    $('session-title').textContent = names || 'Session';
+    const M = R.trackMeta;
+    $('session-title').textContent = M && M.track ? [M.track + (M.trackConfig ? ' – ' + M.trackConfig : ''), M.car, M.driver].filter(Boolean).join(' · ') : (names || 'Session');
     document.title = 'Race Telemetry Analysis';
     const synth = D.files.some(f => f.comments && false) || (R.I.files || []).some(() => false);
     const b = [];
     if (R.synthetic) b.push(`<span class="badge synth" title="${esc(R.syntheticNote)}">SYNTHETIC DEMO DATA</span>`);
-    b.push(`<span class="badge">${D.parsedRows.toLocaleString()} rows</span>`);
+    if (M) b.push(`<span class="badge" title="${esc(names)}">iRacing IBT${M.sessionDate ? ' · ' + M.sessionDate : ''}${M.sessionTypes && M.sessionTypes.length ? ' · ' + esc(M.sessionTypes.join('/')) : ''}</span>`);
+    b.push(`<span class="badge">${D.parsedRows.toLocaleString()} ${M ? 'samples' : 'rows'}</span>`);
     b.push(`<span class="badge">${D.laps} laps · ${D.completeLaps} complete</span>`);
     if (D.sessions > 1) b.push(`<span class="badge">${D.sessions} sessions</span>`);
     b.push(`<span class="badge">${fmt(D.sampling.hz, 1)} Hz</span>`);
@@ -2715,7 +2940,7 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
       ['Theoretical potential', `+${fmt(R.theo.potential)}<small> s</small>`, 'best lap − theoretical', COL.laps[2]],
       ['Consistency score', `${cons.toFixed(0)}<small> / 100</small>`, cons >= 85 ? 'very consistent' : cons >= 70 ? 'consistent' : cons >= 55 ? 'moderate' : 'inconsistent', cons >= 70 ? COL.good : cons >= 55 ? COL.warn : COL.serious],
       ['Mistake rate', `${fmt(SS.rates.mistakes, 2)}<small> / lap</small>`, `${fmt(SS.rates.sig + SS.rates.major, 2)} significant+ / lap`, SS.rates.mistakes > 0.5 ? COL.serious : SS.rates.mistakes > 0.2 ? COL.warn : COL.good],
-      ['Off-tracks', `${SS.counts.offTracks}`, R.avail.trackLimit ? 'from track-limit channel' : R.avail.position ? 'from X/Y trajectory' : 'heuristic only', SS.counts.offTracks ? COL.critical : COL.good],
+      ['Off-tracks', `${SS.counts.offTracks}`, R.avail.trackLimit ? (/PlayerTrackSurface/.test(R.avail.trackLimit) ? 'from iRacing track surface' : 'from track-limit channel') : R.avail.position ? 'from X/Y trajectory' : 'heuristic only', SS.counts.offTracks ? COL.critical : COL.good],
       ['Clean laps', `${SS.counts.clean}<small> / ${SS.counts.analysable}</small>`, `${R.laps.length - SS.counts.analysable} not analysable (out/in/partial)`, COL.good],
     ];
     $('kpis').innerHTML = k.map(([a, b, c, col]) => `<div class="kpi" style="--kc:${col}"><div class="k">${a}</div><div class="v">${b}</div><div class="s">${esc(c)}</div></div>`).join('');
@@ -3501,7 +3726,10 @@ details.method code { font-family: var(--mono); font-size: 11.5px; color: var(--
   function dqHtml() {
     const R = S.R, D = R.dqReport;
     const ch = Object.entries(D.channels).map(([k, v]) => `<tr style="cursor:default"><td class="txt">${esc(k)}</td><td class="txt l">${esc(v)}</td><td>${Number.isFinite(D.missingPct[k === 'distance' ? 'dist' : k]) ? fmt(D.missingPct[k === 'distance' ? 'dist' : k], 2) + '%' : ''}</td></tr>`).join('');
-    const files = D.files.map(f => `<div style="margin:8px 0"><b>${esc(f.name)}</b> — delimiter ${esc(f.delimiter)}, header ${f.headerFound ? 'line ' + f.headerLine : 'not found (generic names)'}${f.unitsRow ? ', units row detected' : ''}, ${f.rows.toLocaleString()} rows × ${f.columns} columns, time ${esc(f.timeSource)} (${f.timeAbsolute ? 'absolute' : 'relative'}), ${f.comments} comment line(s), ${f.malformed.length} malformed row(s).
+    const files = D.files.map(f => f.format === 'ibt' ? `<div style="margin:8px 0"><b>${esc(f.name)}</b> — iRacing IBT v${f.ibtMeta.ibtVersion}, ${f.ibtMeta.tickRate} Hz, ${f.ibtMeta.records.toLocaleString()} records, ${f.ibtMeta.channelsInFile} channels in file (${f.columns} decoded). Track ${esc(f.ibtMeta.track || '?')}${Number.isFinite(f.ibtMeta.trackLengthKm) ? ' (' + f.ibtMeta.trackLengthKm + ' km)' : ''}, car ${esc(f.ibtMeta.car || '?')}, driver ${esc(f.ibtMeta.driver || '?')}${f.ibtMeta.sectorsPct.length ? ', ' + f.ibtMeta.sectorsPct.length + ' official sectors' : ''}.
+      <div class="tbl-wrap" style="max-height:220px;margin-top:6px"><table class="tbl"><thead><tr><th class="l">Decoded channel</th><th class="l">Unit</th><th class="l">Role</th><th>Missing</th></tr></thead><tbody>${f.columnInfo.map(c => `<tr style="cursor:default"><td class="txt l">${esc(c.name)}</td><td class="txt l">${esc(c.unit || '')}</td><td class="txt l">${c.role ? esc(c.role) : ''}</td><td>${fmt(c.missingPct, 2)}%</td></tr>`).join('')}</tbody></table></div>
+      <details style="margin-top:6px"><summary class="muted" style="cursor:pointer">All ${f.ibtMeta.allChannels.length} channels in the file</summary><div class="note" style="font-family:var(--mono)">${esc(f.ibtMeta.allChannels.join(', '))}</div></details></div>`
+      : `<div style="margin:8px 0"><b>${esc(f.name)}</b> — delimiter ${esc(f.delimiter)}, header ${f.headerFound ? 'line ' + f.headerLine : 'not found (generic names)'}${f.unitsRow ? ', units row detected' : ''}, ${f.rows.toLocaleString()} rows × ${f.columns} columns, time ${esc(f.timeSource)} (${f.timeAbsolute ? 'absolute' : 'relative'}), ${f.comments} comment line(s), ${f.malformed.length} malformed row(s).
       <div class="tbl-wrap" style="max-height:260px;margin-top:6px"><table class="tbl"><thead><tr><th class="l">Column</th><th class="l">Unit</th><th class="l">Type</th><th class="l">Detected role</th><th>Missing</th></tr></thead><tbody>${f.columnInfo.map(c => `<tr style="cursor:default"><td class="txt l">${esc(c.name)}</td><td class="txt l">${esc(c.unit || '')}</td><td class="txt l">${c.type}</td><td class="txt l">${c.role ? esc(c.role) : '<span class="muted">unused</span>'}</td><td>${fmt(c.missingPct, 2)}%</td></tr>`).join('')}</tbody></table></div>
       ${f.malformed.length ? `<div class="note">Malformed rows (skipped, shown raw): ${f.malformed.slice(0, 10).map(m => `line ${m.line}: ${m.fields}/${m.expected} fields <code>${esc(m.text.slice(0, 60))}</code>`).join(' · ')}${f.malformed.length > 10 ? ' …' : ''}</div>` : ''}</div>`).join('');
     return `<div class="grid g-2">
@@ -3644,7 +3872,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
     setTimeout(() => {
       try {
         const R = E.analyze(files);
-        R.synthetic = files.some(f => /synthetic/i.test(f.text.slice(0, 600)) && /not real/i.test(f.text.slice(0, 600)));
+        R.synthetic = files.some(f => f.text ? (/synthetic/i.test(f.text.slice(0, 600)) && /not real/i.test(f.text.slice(0, 600))) : /synthetic/i.test(((R.trackMeta || {}).track || '') + ((R.trackMeta || {}).driver || '')));
         R.syntheticNote = 'The loaded file declares itself as synthetic test data (header comment).';
         window.__analysis = R;
         if (!R.sessionStats || !R.theo) {
@@ -3666,7 +3894,10 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
   function readFiles(list) {
     const arr = Array.from(list);
     if (!arr.length) return;
-    Promise.all(arr.map(f => f.text().then(text => ({ name: f.name, text })))).then(run);
+    // .ibt (and anything that looks binary) is read as bytes; the engine sniffs the format
+    Promise.all(arr.map(f => f.arrayBuffer().then(buffer => ({ name: f.name, buffer }))))
+      .then(files => files.map(f => (E.ibt.isIBT(f.buffer) || /\.ibt$/i.test(f.name)) ? f : { name: f.name, text: new TextDecoder('utf-8').decode(f.buffer) }))
+      .then(run).catch(e => showError('Could not read file: ' + e.message));
   }
 
   function boot() {
@@ -3693,7 +3924,8 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
       document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('active', cur && a.getAttribute('href') === '#' + cur.id));
     }, { passive: true });
     if (typeof Plotly === 'undefined') { showError('The charting library (Plotly) could not be loaded. Open this file with an internet connection, or rebuild it with the library inlined (tools/build_dashboard.py --inline-plotly).'); return; }
-    const embedded = Array.from(document.querySelectorAll('script[type="text/tab-separated-values"]')).map(s => ({ name: s.dataset.name || 'embedded.tsv', text: s.textContent.replace(/<\\\//g, '</').replace(/^\n/, '') }));
+    const embedded = Array.from(document.querySelectorAll('script[type="text/tab-separated-values"]')).map(s => ({ name: s.dataset.name || 'embedded.tsv', text: s.textContent.replace(/<\\\//g, '</').replace(/^\n/, '') }))
+      .concat(Array.from(document.querySelectorAll('script[type="application/x-ibt-base64"]')).map(s => ({ name: s.dataset.name || 'embedded.ibt', buffer: E.ibt.fromBase64(s.textContent) })));
     if (embedded.length) run(embedded);
     else { $('loading').classList.add('hide'); $('welcome').hidden = false; window.__dashboardReady = true; }
   }

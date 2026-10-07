@@ -156,16 +156,22 @@
       }
       if (backSteps > 3) { dq.push({ type: 'distance', severe: true, text: `${backSteps} backwards distance jumps` }); dqSevere = true; }
       const lengthOk = Math.abs(lengthEst - L) / L < 0.04;
-      const complete = l.startsAtLine && endsAtLine && lengthOk;
+      // pit-lane laps (iRacing OnPitRoad / track surface) are in/out laps, never representative
+      let pitFirst = -1, pitLast = -1;
+      if (C.pit) for (let i = l.i0; i <= l.i1; i++) if (C.pit[i] >= 0.5) { if (pitFirst < 0) pitFirst = i; pitLast = i; }
+      const usedPit = pitFirst >= 0;
+      const complete = l.startsAtLine && endsAtLine && lengthOk && !usedPit;
       let partialReason = null;
-      if (!l.startsAtLine) partialReason = `starts at ${l.d[0].toFixed(0)} m (not at S/F)`;
+      if (usedPit) partialReason = `used the pit lane (${pitFirst - l.i0 < (l.i1 - l.i0) / 2 ? 'out-lap' : 'in-lap'})`;
+      if (partialReason) { /* pit lane */ }
+      else if (!l.startsAtLine) partialReason = `starts at ${l.d[0].toFixed(0)} m (not at S/F)`;
       else if (!endsAtLine) partialReason = `ends at ${l.dEnd.toFixed(0)} m of ${L.toFixed(0)} m`;
       else if (!lengthOk) partialReason = `lap length ${lengthEst.toFixed(0)} m deviates ${(100 * (lengthEst - L) / L).toFixed(1)}% from reference`;
       res.push({
         index: k, session: l.session, lapNo: l.lapNo, i0: l.i0, i1: l.i1, d: l.d,
         tStart: l.tStart, tEnd, lapTime: complete ? tEnd - l.tStart : NaN, duration: tEnd - l.tStart,
         startDist: l.d[0], endDist: l.dEnd, lengthEst, complete, partialReason, maxGap, dq, dqSevere,
-        samples: l.n, timeSource: 'computed from S/F crossings',
+        samples: l.n, timeSource: 'computed from S/F crossings', usedPit, pitAtStart: usedPit && pitFirst - l.i0 < (l.i1 - l.i0) / 2,
       });
     }
     applyExplicitLapTimes(I, res);
@@ -181,7 +187,8 @@
     });
     res.forEach((l, k) => {
       l.kind = 'flying';
-      if (!l.complete) {
+      if (!l.complete && l.usedPit) l.kind = l.pitAtStart ? 'out' : 'in';
+      else if (!l.complete) {
         if (l.startDist > Math.max(30, 0.015 * L)) l.kind = 'out';
         else if (l.endDist < 0.97 * L) l.kind = 'in';
         else l.kind = 'partial';
@@ -197,10 +204,11 @@
     if (!I.avail.lapTime) return;
     const C = I.table;
     const vals = laps.map(l => {
-      const a = []; for (let i = l.i0; i <= l.i1; i++) if (Number.isFinite(C.lapTimeCol[i])) a.push(C.lapTimeCol[i]);
-      if (!a.length || St.max(a) - St.min(a) > 1e-3) return NaN;
-      let v = a[0]; if (v > 1000) v /= 1000; // ms
-      return v;
+      const a = []; for (let i = l.i0; i <= l.i1; i++) if (Number.isFinite(C.lapTimeCol[i])) a.push(Math.round(C.lapTimeCol[i] * 1e4) / 1e4);
+      if (!a.length) return NaN;
+      const v0 = St.mode(a);
+      if (a.filter(x => x === v0).length < 0.8 * a.length) return NaN; // not a per-lap value
+      return v0 > 1000 ? v0 / 1000 : v0; // ms
     });
     const errSame = [], errPrev = [];
     laps.forEach((l, k) => {
@@ -241,6 +249,12 @@
         if (s[s.length - 1] < L) { s.push(L); t.push(lap.lapTime); idx.push(idx[idx.length - 1]); }
       }
       const R = { time: St.interp(grid, s, t) };
+      // pin the trace to the lap time (an official lap-time channel can differ from the
+      // sampled crossing by up to one sample); rescaling keeps segment times summing to the lap
+      if (lap.complete && R.time[N - 1] > 0 && Math.abs(R.time[N - 1] - lap.lapTime) > 1e-9) {
+        const f = lap.lapTime / R.time[N - 1];
+        for (let k = 0; k < N; k++) R.time[k] *= f;
+      }
       const pick = arr => idx.map(i => arr[i]);
       for (const c of CH) if (has[c]) R[c] = St.interp(grid, s, pick(C[c]), c === 'gear');
       if (has.speed) for (let k = 0; k < N; k++) R.speed[k] *= 3.6; // display unit km/h

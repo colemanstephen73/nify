@@ -226,6 +226,12 @@
   /** Sectors: from a sector channel when present, otherwise 3 inferred sectors snapped to segment boundaries. */
   function buildSectors(laps, segs, G, I) {
     const N = G.N, ds = G.ds;
+    const meta = (I.meta || []).find(m => m.sectorsPct && m.sectorsPct.length >= 2);
+    if (meta) {
+      const starts = meta.sectorsPct.filter(p => p > 0 && p < 1).sort((a, b) => a - b);
+      const edges = [0, ...starts.map(p => Math.round(p * (N - 1))), N - 1];
+      return { source: 'iRacing session info (SplitTimeInfo)', inferred: false, list: edges.slice(0, -1).map((e, j) => ({ id: `S${j + 1}`, i0: e, i1: edges[j + 1], d0: e * ds, d1: Math.min(edges[j + 1] * ds, G.grid[N - 1]), segments: segs.filter(s => s.i0 >= e && s.i1 <= edges[j + 1]).map(s => s.index) })) };
+    }
     if (I.avail.sector) {
       const C = I.table;
       const changes = [];

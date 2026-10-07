@@ -50,12 +50,13 @@
       latG: 'Grip-utilisation pace benchmark (falls back to curvature × speed² if X/Y available)',
       lonG: 'Deceleration-based lock-up signature',
       position: 'Track map and X/Y off-track detection (distance-based track strip used instead)',
-      trackLimit: 'Explicit track-limit validation (heuristic off-track detection used instead)',
+      trackLimit: 'Explicit off-track / track-limit validation (X/Y trajectory heuristic used instead)',
       sector: 'Official sectors (3 inferred sectors used instead)',
       corner: 'Explicit corner metadata (corners inferred from telemetry instead)',
       lap: 'Explicit lap counter (laps inferred from distance resets / trajectory)',
     };
-    for (const [k, v] of Object.entries(need)) if (!I.avail[k]) unavailable.push({ channel: k, impact: v });
+    const metaSectors = (I.meta || []).some(m => m.sectorsPct && m.sectorsPct.length >= 2);
+    for (const [k, v] of Object.entries(need)) if (!I.avail[k] && !(k === 'sector' && metaSectors)) unavailable.push({ channel: k, impact: v });
 
     // data quality report
     const totalMalformed = I.files.reduce((s, f) => s + f.malformed.length, 0);
@@ -82,6 +83,7 @@
       cornerSource: trackModel.inferred ? 'inferred' : 'explicit', curvatureSource: trackModel.curv ? trackModel.curv.source : (corners.length ? 'speed minima' : 'none'),
       devThr: det.devThr, brakeThr, gridStep: G.ds, lapLength: G.L,
     };
+    model.trackMeta = I.meta && I.meta.length ? I.meta[0] : null;
     model.elapsedMs = Date.now() - t0;
     model.version = '1.0.0';
     return model;

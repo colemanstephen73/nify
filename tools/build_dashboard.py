@@ -16,7 +16,7 @@ import html
 import os
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ENGINE_ORDER = ["stats", "ingest", "laps", "track", "features", "mistakes", "scoring", "insights", "analyze"]
+ENGINE_ORDER = ["stats", "ibt", "ingest", "laps", "track", "features", "mistakes", "scoring", "insights", "analyze"]
 PLOTLY_CDN = "https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"
 
 
@@ -28,6 +28,7 @@ def read(p):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tsv", action="append", default=[], help="TSV file to embed (repeatable)")
+    ap.add_argument("--ibt", action="append", default=[], help="iRacing .ibt file to embed (repeatable, base64)")
     ap.add_argument("--out", required=True)
     ap.add_argument("--inline-plotly", help="path to plotly.min.js to inline (offline build)")
     ap.add_argument("--fragment", action="store_true", help="omit doctype/html/head/body wrappers (for hosts that add their own skeleton)")
@@ -45,6 +46,11 @@ def main():
     for p in args.tsv:
         txt = read(p).replace("</", "<\\/")
         data.append(f'<script type="text/tab-separated-values" data-name="{html.escape(os.path.basename(p))}">\n{txt}</script>')
+    import base64
+    for p in args.ibt:
+        with open(p, "rb") as fh:
+            b64 = base64.b64encode(fh.read()).decode("ascii")
+        data.append(f'<script type="application/x-ibt-base64" data-name="{html.escape(os.path.basename(p))}">{b64}</script>')
     out = (tpl.replace("/*__STYLES__*/", styles)
               .replace("<!--__PLOTLY__-->", plotly)
               .replace("<!--__DATA__-->", "\n".join(data))

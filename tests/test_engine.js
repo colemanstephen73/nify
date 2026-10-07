@@ -4,7 +4,7 @@ const fs = require('fs'), path = require('path');
 const { loadEngine } = require('./run_engine.js');
 const E = loadEngine();
 const [, , tsv, truthPath] = process.argv;
-const R = E.analyze([{ name: path.basename(tsv), text: fs.readFileSync(tsv, 'utf8') }]);
+const R = E.analyze([/\.ibt$/i.test(tsv) ? { name: path.basename(tsv), buffer: new Uint8Array(fs.readFileSync(tsv)).buffer } : { name: path.basename(tsv), text: fs.readFileSync(tsv, 'utf8') }]);
 const truth = JSON.parse(fs.readFileSync(truthPath, 'utf8'));
 let fail = 0;
 const check = (ok, msg) => { console.log((ok ? 'PASS ' : 'FAIL ') + msg); if (!ok) fail++; };

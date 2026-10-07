@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Race Telemetry Analysis</title>
-<meta name="description" content="Driver performance analysis: consistency, mistakes, corner performance and theoretical best lap from raw TSV telemetry.">
+<meta name="description" content="Driver performance analysis: consistency, mistakes, corner performance and theoretical best lap from iRacing .ibt or raw TSV telemetry.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -27,20 +27,20 @@
   </nav>
   <div class="top-actions">
     <button class="btn" id="btn-dq" title="Data-quality report">Data quality</button>
-    <label class="btn primary" for="file-input" title="Load one or more TSV files">Load TSV…</label>
-    <input type="file" id="file-input" accept=".tsv,.txt,.csv,.log,text/tab-separated-values,text/plain" multiple hidden>
+    <label class="btn primary" for="file-input" title="Load iRacing .ibt or TSV telemetry files">Load .ibt / TSV…</label>
+    <input type="file" id="file-input" accept=".ibt,.tsv,.txt,.csv,.log,text/tab-separated-values,text/plain" multiple hidden>
   </div>
 </header>
 
 <div id="loading"><div class="spin"></div><div class="dim" id="loading-msg">Analysing telemetry…</div></div>
-<div id="drop">Drop TSV file(s) to analyse</div>
+<div id="drop">Drop iRacing .ibt or TSV file(s) to analyse</div>
 <div class="modal-bg" id="modal"><div class="modal" id="modal-body"></div></div>
 
 <main id="app">
   <div class="welcome" id="welcome" hidden>
     <h1>Race telemetry analysis</h1>
-    <p class="dim">Load one or more raw TSV telemetry files. Everything runs locally in your browser — nothing is uploaded.</p>
-    <div class="dz">Drag &amp; drop TSV files here, or use <b>Load TSV…</b> above.<br><span class="muted">Columns are detected automatically (lap, time, distance, speed, throttle, brake, steering, gear, RPM, accelerations, GPS/XY, sectors, track limits…).</span></div>
+    <p class="dim">Load one or more iRacing <b>.ibt</b> telemetry files or raw TSV exports. Everything runs locally in your browser — nothing is uploaded.</p>
+    <div class="dz">Drag &amp; drop .ibt or TSV files here, or use <b>Load .ibt / TSV…</b> above.<br><span class="muted">Columns are detected automatically (lap, time, distance, speed, throttle, brake, steering, gear, RPM, accelerations, GPS/XY, sectors, track limits…).</span></div>
     <div id="welcome-err"></div>
   </div>
 

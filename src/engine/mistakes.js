@@ -72,7 +72,11 @@
         const lossZ = b.segTime ? loss / b.segTime.scale : 0;
         // off-track
         let off = null;
-        if (f.trackLimit) { off = { how: 'channel', conf: 'High' }; add('offtrack', 'track', 9, `Track-limit channel "${avail.trackLimit}" active at ${(f.trackLimitIdx * G.ds).toFixed(0)} m`, 'trackLimit'); }
+        if (f.trackLimit) {
+          const iracing = /PlayerTrackSurface/.test(avail.trackLimit);
+          off = { how: 'channel', conf: 'High', label: iracing ? 'Off-track' : 'Track-limit violation' };
+          add('offtrack', 'track', 9, iracing ? `iRacing track surface reported OffTrack at ${(f.trackLimitIdx * G.ds).toFixed(0)} m` : `Track-limit channel "${avail.trackLimit}" active at ${(f.trackLimitIdx * G.ds).toFixed(0)} m`, 'trackLimit');
+        }
         else if (Number.isFinite(devThr) && f.maxDev > devThr) {
           const strong = f.maxDev > 1.5 * devThr || loss > 0.2;
           off = { how: 'xy', conf: strong ? 'High' : 'Medium' };
@@ -147,7 +151,7 @@
   }
 
   function primaryType(t, off) {
-    if (off) return { name: off.how === 'channel' ? 'Track-limit violation' : 'Off-track', phase: 'Off-track' };
+    if (off) return { name: off.label || 'Off-track', phase: 'Off-track' };
     if (t.has('spin')) return { name: 'Spin / major incident', phase: 'Apex' };
     if (t.has('lockup') && (t.has('lowMin') || t.has('apexShift') || t.has('lateBrake') || t.has('poorExit'))) return { name: 'Lock-up / overshoot', phase: 'Braking' };
     if (t.has('lateBrake') && (t.has('lowMin') || t.has('apexShift'))) return { name: 'Late braking / overshoot', phase: 'Braking' };

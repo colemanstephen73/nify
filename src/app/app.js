@@ -89,12 +89,14 @@
   function renderHeader() {
     const R = S.R, D = R.dqReport;
     const names = D.files.map(f => f.name).join(', ');
-    $('session-title').textContent = names || 'Session';
+    const M = R.trackMeta;
+    $('session-title').textContent = M && M.track ? [M.track + (M.trackConfig ? ' – ' + M.trackConfig : ''), M.car, M.driver].filter(Boolean).join(' · ') : (names || 'Session');
     document.title = 'Race Telemetry Analysis';
     const synth = D.files.some(f => f.comments && false) || (R.I.files || []).some(() => false);
     const b = [];
     if (R.synthetic) b.push(`<span class="badge synth" title="${esc(R.syntheticNote)}">SYNTHETIC DEMO DATA</span>`);
-    b.push(`<span class="badge">${D.parsedRows.toLocaleString()} rows</span>`);
+    if (M) b.push(`<span class="badge" title="${esc(names)}">iRacing IBT${M.sessionDate ? ' · ' + M.sessionDate : ''}${M.sessionTypes && M.sessionTypes.length ? ' · ' + esc(M.sessionTypes.join('/')) : ''}</span>`);
+    b.push(`<span class="badge">${D.parsedRows.toLocaleString()} ${M ? 'samples' : 'rows'}</span>`);
     b.push(`<span class="badge">${D.laps} laps · ${D.completeLaps} complete</span>`);
     if (D.sessions > 1) b.push(`<span class="badge">${D.sessions} sessions</span>`);
     b.push(`<span class="badge">${fmt(D.sampling.hz, 1)} Hz</span>`);
@@ -149,7 +151,7 @@
       ['Theoretical potential', `+${fmt(R.theo.potential)}<small> s</small>`, 'best lap − theoretical', COL.laps[2]],
       ['Consistency score', `${cons.toFixed(0)}<small> / 100</small>`, cons >= 85 ? 'very consistent' : cons >= 70 ? 'consistent' : cons >= 55 ? 'moderate' : 'inconsistent', cons >= 70 ? COL.good : cons >= 55 ? COL.warn : COL.serious],
       ['Mistake rate', `${fmt(SS.rates.mistakes, 2)}<small> / lap</small>`, `${fmt(SS.rates.sig + SS.rates.major, 2)} significant+ / lap`, SS.rates.mistakes > 0.5 ? COL.serious : SS.rates.mistakes > 0.2 ? COL.warn : COL.good],
-      ['Off-tracks', `${SS.counts.offTracks}`, R.avail.trackLimit ? 'from track-limit channel' : R.avail.position ? 'from X/Y trajectory' : 'heuristic only', SS.counts.offTracks ? COL.critical : COL.good],
+      ['Off-tracks', `${SS.counts.offTracks}`, R.avail.trackLimit ? (/PlayerTrackSurface/.test(R.avail.trackLimit) ? 'from iRacing track surface' : 'from track-limit channel') : R.avail.position ? 'from X/Y trajectory' : 'heuristic only', SS.counts.offTracks ? COL.critical : COL.good],
       ['Clean laps', `${SS.counts.clean}<small> / ${SS.counts.analysable}</small>`, `${R.laps.length - SS.counts.analysable} not analysable (out/in/partial)`, COL.good],
     ];
     $('kpis').innerHTML = k.map(([a, b, c, col]) => `<div class="kpi" style="--kc:${col}"><div class="k">${a}</div><div class="v">${b}</div><div class="s">${esc(c)}</div></div>`).join('');
@@ -935,7 +937,10 @@
   function dqHtml() {
     const R = S.R, D = R.dqReport;
     const ch = Object.entries(D.channels).map(([k, v]) => `<tr style="cursor:default"><td class="txt">${esc(k)}</td><td class="txt l">${esc(v)}</td><td>${Number.isFinite(D.missingPct[k === 'distance' ? 'dist' : k]) ? fmt(D.missingPct[k === 'distance' ? 'dist' : k], 2) + '%' : ''}</td></tr>`).join('');
-    const files = D.files.map(f => `<div style="margin:8px 0"><b>${esc(f.name)}</b> — delimiter ${esc(f.delimiter)}, header ${f.headerFound ? 'line ' + f.headerLine : 'not found (generic names)'}${f.unitsRow ? ', units row detected' : ''}, ${f.rows.toLocaleString()} rows × ${f.columns} columns, time ${esc(f.timeSource)} (${f.timeAbsolute ? 'absolute' : 'relative'}), ${f.comments} comment line(s), ${f.malformed.length} malformed row(s).
+    const files = D.files.map(f => f.format === 'ibt' ? `<div style="margin:8px 0"><b>${esc(f.name)}</b> — iRacing IBT v${f.ibtMeta.ibtVersion}, ${f.ibtMeta.tickRate} Hz, ${f.ibtMeta.records.toLocaleString()} records, ${f.ibtMeta.channelsInFile} channels in file (${f.columns} decoded). Track ${esc(f.ibtMeta.track || '?')}${Number.isFinite(f.ibtMeta.trackLengthKm) ? ' (' + f.ibtMeta.trackLengthKm + ' km)' : ''}, car ${esc(f.ibtMeta.car || '?')}, driver ${esc(f.ibtMeta.driver || '?')}${f.ibtMeta.sectorsPct.length ? ', ' + f.ibtMeta.sectorsPct.length + ' official sectors' : ''}.
+      <div class="tbl-wrap" style="max-height:220px;margin-top:6px"><table class="tbl"><thead><tr><th class="l">Decoded channel</th><th class="l">Unit</th><th class="l">Role</th><th>Missing</th></tr></thead><tbody>${f.columnInfo.map(c => `<tr style="cursor:default"><td class="txt l">${esc(c.name)}</td><td class="txt l">${esc(c.unit || '')}</td><td class="txt l">${c.role ? esc(c.role) : ''}</td><td>${fmt(c.missingPct, 2)}%</td></tr>`).join('')}</tbody></table></div>
+      <details style="margin-top:6px"><summary class="muted" style="cursor:pointer">All ${f.ibtMeta.allChannels.length} channels in the file</summary><div class="note" style="font-family:var(--mono)">${esc(f.ibtMeta.allChannels.join(', '))}</div></details></div>`
+      : `<div style="margin:8px 0"><b>${esc(f.name)}</b> — delimiter ${esc(f.delimiter)}, header ${f.headerFound ? 'line ' + f.headerLine : 'not found (generic names)'}${f.unitsRow ? ', units row detected' : ''}, ${f.rows.toLocaleString()} rows × ${f.columns} columns, time ${esc(f.timeSource)} (${f.timeAbsolute ? 'absolute' : 'relative'}), ${f.comments} comment line(s), ${f.malformed.length} malformed row(s).
       <div class="tbl-wrap" style="max-height:260px;margin-top:6px"><table class="tbl"><thead><tr><th class="l">Column</th><th class="l">Unit</th><th class="l">Type</th><th class="l">Detected role</th><th>Missing</th></tr></thead><tbody>${f.columnInfo.map(c => `<tr style="cursor:default"><td class="txt l">${esc(c.name)}</td><td class="txt l">${esc(c.unit || '')}</td><td class="txt l">${c.type}</td><td class="txt l">${c.role ? esc(c.role) : '<span class="muted">unused</span>'}</td><td>${fmt(c.missingPct, 2)}%</td></tr>`).join('')}</tbody></table></div>
       ${f.malformed.length ? `<div class="note">Malformed rows (skipped, shown raw): ${f.malformed.slice(0, 10).map(m => `line ${m.line}: ${m.fields}/${m.expected} fields <code>${esc(m.text.slice(0, 60))}</code>`).join(' · ')}${f.malformed.length > 10 ? ' …' : ''}</div>` : ''}</div>`).join('');
     return `<div class="grid g-2">
@@ -1078,7 +1083,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
     setTimeout(() => {
       try {
         const R = E.analyze(files);
-        R.synthetic = files.some(f => /synthetic/i.test(f.text.slice(0, 600)) && /not real/i.test(f.text.slice(0, 600)));
+        R.synthetic = files.some(f => f.text ? (/synthetic/i.test(f.text.slice(0, 600)) && /not real/i.test(f.text.slice(0, 600))) : /synthetic/i.test(((R.trackMeta || {}).track || '') + ((R.trackMeta || {}).driver || '')));
         R.syntheticNote = 'The loaded file declares itself as synthetic test data (header comment).';
         window.__analysis = R;
         if (!R.sessionStats || !R.theo) {
@@ -1100,7 +1105,10 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
   function readFiles(list) {
     const arr = Array.from(list);
     if (!arr.length) return;
-    Promise.all(arr.map(f => f.text().then(text => ({ name: f.name, text })))).then(run);
+    // .ibt (and anything that looks binary) is read as bytes; the engine sniffs the format
+    Promise.all(arr.map(f => f.arrayBuffer().then(buffer => ({ name: f.name, buffer }))))
+      .then(files => files.map(f => (E.ibt.isIBT(f.buffer) || /\.ibt$/i.test(f.name)) ? f : { name: f.name, text: new TextDecoder('utf-8').decode(f.buffer) }))
+      .then(run).catch(e => showError('Could not read file: ' + e.message));
   }
 
   function boot() {
@@ -1127,7 +1135,8 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
       document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('active', cur && a.getAttribute('href') === '#' + cur.id));
     }, { passive: true });
     if (typeof Plotly === 'undefined') { showError('The charting library (Plotly) could not be loaded. Open this file with an internet connection, or rebuild it with the library inlined (tools/build_dashboard.py --inline-plotly).'); return; }
-    const embedded = Array.from(document.querySelectorAll('script[type="text/tab-separated-values"]')).map(s => ({ name: s.dataset.name || 'embedded.tsv', text: s.textContent.replace(/<\\\//g, '</').replace(/^\n/, '') }));
+    const embedded = Array.from(document.querySelectorAll('script[type="text/tab-separated-values"]')).map(s => ({ name: s.dataset.name || 'embedded.tsv', text: s.textContent.replace(/<\\\//g, '</').replace(/^\n/, '') }))
+      .concat(Array.from(document.querySelectorAll('script[type="application/x-ibt-base64"]')).map(s => ({ name: s.dataset.name || 'embedded.ibt', buffer: E.ibt.fromBase64(s.textContent) })));
     if (embedded.length) run(embedded);
     else { $('loading').classList.add('hide'); $('welcome').hidden = false; window.__dashboardReady = true; }
   }

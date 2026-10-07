@@ -1,28 +1,43 @@
 # Race telemetry analysis dashboard
 
-A self-contained HTML dashboard that takes raw racing telemetry (TSV) and produces a race-engineering analysis of a driver: lap-to-lap consistency, mistakes and off-tracks, corner-by-corner performance, best execution at each corner, the theoretical best lap, pace versus consistency, and coaching priorities.
+A self-contained HTML dashboard that takes raw racing telemetry (**iRacing `.ibt`** files or TSV exports) and produces a race-engineering analysis of a driver: lap-to-lap consistency, mistakes and off-tracks, corner-by-corner performance, best execution at each corner, the theoretical best lap, pace versus consistency, and coaching priorities.
 
-All analysis runs **in the browser** from the raw TSV. There is no server, and every number on the page is computed at load time.
+All analysis runs **in the browser** from the raw file. There is no server, and every number on the page is computed at load time.
 
 ## Use
 
 | File | What it is |
 |---|---|
-| `dist/dashboard.html` | Empty dashboard. Open it and drag-and-drop (or **Load TSV…**) one or more TSV files. |
+| `dist/dashboard.html` | Empty dashboard. Open it and drag-and-drop (or **Load .ibt / TSV…**) one or more iRacing `.ibt` or TSV files. |
 | `dist/sample_dashboard.html` | Dashboard with the synthetic demo session embedded (Plotly from the cdnjs CDN). |
 | `dist/sample_dashboard_offline.html` | Same, with Plotly inlined. Works with no internet. |
 
 To build a dashboard with your own data embedded:
 
 ```bash
+python3 tools/build_dashboard.py --ibt my_session.ibt --out dist/my_session.html   # iRacing telemetry (base64-embedded)
 python3 tools/build_dashboard.py --tsv my_session.tsv --out dist/my_session.html [--inline-plotly plotly.min.js]
 ```
 
 > `data/sample_session.tsv` is **synthetic** data from `tools/generate_sample_tsv.py`: a physics-based lap simulation with injected mistakes, off-tracks and data defects. Its known answers are in `data/sample_session.truth.json`. The dashboard shows a "SYNTHETIC DEMO DATA" badge when this file is loaded.
 
+## iRacing `.ibt` support
+
+`src/engine/ibt.js` reads the irsdk disk format directly in the browser: a 112-byte header, a 32-byte disk sub-header, 144-byte variable headers, the session-info YAML, then fixed-size sample records (usually 60 Hz). Only the channels the analysis needs are decoded, so long sessions stay fast. The reader uses:
+
+- `SessionTime`, `SessionNum`, `Lap`, `LapDist`, `Speed`, `Throttle`, `Brake`, `SteeringWheelAngle`, `Gear`, `RPM`, `LatAccel`, `LongAccel`, `Lat`/`Lon` (track map), `FuelLevel`
+- `LapLastLapTime`: iRacing's official lap times, used when they agree with the sampled timing
+- `PlayerTrackSurface`: OffTrack samples become high-confidence off-tracks; pit-approach samples, together with `OnPitRoad`, mark in- and out-laps, which are excluded from statistics
+- `IsOnTrack`: garage and not-driving frames are dropped and counted in the data-quality report
+- From the session-info YAML: track name and config, car, driver, session type, and the official sector splits (`SplitTimeInfo`)
+
+Truncated files (record count larger than the file) are read up to the last complete record and reported as such.
+
+`tools/tsv_to_ibt.py` writes a synthetic, spec-conformant `.ibt` from the sample session for testing (`python3 tools/tsv_to_ibt.py data/sample_session.tsv data/sample_session.truth.json /tmp/sample.ibt`).
+
 ## Pipeline (`src/engine/`)
 
-`RAW TSV → ingest.js → laps.js → track.js → features.js → mistakes.js → scoring.js → insights.js → analyze.js → src/app/app.js (dashboard)`
+`RAW .ibt / TSV → ibt.js | ingest.js → laps.js → track.js → features.js → mistakes.js → scoring.js → insights.js → analyze.js → src/app/app.js (dashboard)`
 
 - **ingest.js**: detects the delimiter, header, units row and malformed rows; types each column as numeric or categorical; maps each column to a role (lap, time, distance, speed, throttle, brake, steering, gear, RPM, accelerations, X/Y or GPS, sector, track limits, corner); normalises units; splits sessions; handles duplicate timestamps; reports sampling statistics and gaps.
 - **laps.js**: finds lap boundaries (lap channel, distance resets, or an X/Y start/finish gate); interpolates lap timing to the start/finish line; checks completeness and data quality; resamples each lap onto a common distance grid.
@@ -39,5 +54,7 @@ The **Method & data** section of the dashboard documents every formula and thres
 ```bash
 node tests/test_engine.js data/sample_session.tsv data/sample_session.truth.json   # ground-truth + invariant checks
 node tests/run_engine.js data/sample_session.tsv                                   # text report
+node tests/test_engine.js /tmp/sample.ibt data/sample_session.truth.json          # same checks through the .ibt reader
 node tests/browser_check.js dist/sample_dashboard.html                             # headless browser QA (Playwright)
+node tests/browser_upload.js dist/dashboard.html /tmp/sample.ibt                   # upload through the file picker
 ```
