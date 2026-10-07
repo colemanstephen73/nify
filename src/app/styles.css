@@ -279,3 +279,44 @@ input.excl, .tbl input[type=checkbox] { accent-color: var(--cyan); width: 14px; 
 .cons-elem b { color: var(--text); font-size: 18px; font-weight: 650; margin-right: 4px; }
 @media (max-width: 1100px) { .cons-head { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cons-head .cons-big { grid-column: span 2; } .cons-elems { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 720px) { .cons-head { grid-template-columns: 1fr; } .cons-head .cons-big { grid-column: auto; } .cons-elems { grid-template-columns: 1fr; } }
+
+/* ---------- replay dock ---------- */
+.dock { position: fixed; z-index: 60; right: 0; top: calc(52px + env(safe-area-inset-top, 0px)); bottom: 0; width: 440px; background: var(--panel); border-left: 1px solid var(--border-strong); display: flex; flex-direction: column; overflow-y: auto; box-shadow: -8px 0 24px rgba(0,0,0,.35); }
+body.dock-open main { margin-right: 440px; }
+.dock-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--panel); z-index: 2; }
+.dock-head b { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; }
+.sync-pill { font-size: 10.5px; padding: 1px 7px; border-radius: 10px; background: #3a2a0c; color: var(--warn); }
+.sync-pill.ok { background: #0f2a14; color: var(--good-text); }
+.sync-pill.none { background: var(--panel-3); color: var(--muted); }
+.dock-video { position: relative; background: #000; aspect-ratio: 16 / 9; flex: none; }
+.dock-video video, .dock-video canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.dock-video video { object-fit: contain; }
+.dock-video.has-video canvas { inset: auto 8px 8px auto; width: 34%; height: auto; aspect-ratio: 16 / 9; background: rgba(10,11,13,.75); border: 1px solid var(--border-strong); border-radius: 4px; }
+.rv-vmsg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; font-size: 12px; color: var(--text-2); background: rgba(10,11,13,.86); }
+.dock-transport { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 10px 4px; }
+.rv-follow { font-size: 11px; color: var(--text-2); display: inline-flex; align-items: center; gap: 4px; }
+.rv-scrub { position: relative; padding: 0 10px 6px; }
+.rv-scrub input { width: 100%; accent-color: var(--accent); }
+.rv-ticks { position: relative; height: 12px; margin: 0 7px; }
+.rv-ticks span { position: absolute; top: 0; font-size: 8.5px; color: var(--muted); transform: translateX(-50%); font-family: var(--mono); white-space: nowrap; }
+.rv-ticks span::after { content: ''; position: absolute; left: 50%; top: 10px; width: 1px; height: 6px; background: var(--border-strong); }
+.rv-live { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1px; background: var(--border); border-block: 1px solid var(--border); }
+.rv-live .c { background: var(--panel); padding: 6px 9px; min-width: 0; }
+.rv-live .c .k { font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.rv-live .c .v { font-size: 17px; font-weight: 650; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rv-live .c.wide { grid-column: span 3; }
+.rv-pedal { display: grid; grid-template-columns: 52px 1fr 36px; align-items: center; gap: 6px; font-size: 10.5px; color: var(--text-2); margin: 3px 0; }
+.rv-pedal .bar { height: 8px; }
+.rv-events { font-size: 11.5px; color: var(--text-2); }
+.rv-events .chip { margin: 2px 2px 0 0; }
+.rv-sync { padding: 6px 10px 10px; }
+.rv-sync summary { cursor: pointer; font-size: 12px; font-weight: 600; padding: 4px 0; }
+.rv-sync-body { display: flex; flex-direction: column; gap: 7px; }
+.rv-row { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.rv-row .btn { padding: 3px 7px; }
+.tm-cursor { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid var(--accent); pointer-events: none; z-index: 5; display: none; }
+@media (max-width: 1199px) {
+  .dock { top: auto; left: 0; width: auto; height: 52vh; border-left: 0; border-top: 1px solid var(--border-strong); }
+  body.dock-open main { margin-right: 0; padding-bottom: 54vh; }
+  .dock-video { max-height: 26vh; aspect-ratio: auto; height: 26vh; }
+}

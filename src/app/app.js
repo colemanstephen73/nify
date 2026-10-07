@@ -906,6 +906,7 @@
         else if (ev['xaxis.autorange']) { S.xr = null; renderMapRange(); }
       });
       el.on('plotly_clickannotation', ev => { const ci = ev.annotation && ev.annotation.cornerIndex; if (Number.isInteger(ci)) selectCorner(ci); });
+      el.on('plotly_click', ev => { if (ev.points && ev.points.length) replaySeekToDistance(ev.points[0].x); });
     }
   }
 
@@ -947,7 +948,7 @@
       annotations: R.corners.map(c => ({ x: c.dist.apex, y: 1, xref: 'x', yref: 'paper', yanchor: 'bottom', text: c.id, showarrow: false, font: { size: 9, color: COL.muted, family: MONO } })),
     }));
     const el = $('ch-speedcmp');
-    if (!el._wired) { el._wired = true; el.on('plotly_hover', ev => mapCursor(ev.xvals ? ev.xvals[0] : ev.points[0].x)); el.on('plotly_unhover', () => mapCursor(null)); }
+    if (!el._wired) { el._wired = true; el.on('plotly_hover', ev => mapCursor(ev.xvals ? ev.xvals[0] : ev.points[0].x)); el.on('plotly_unhover', () => mapCursor(null)); el.on('plotly_click', ev => { if (ev.points && ev.points.length) replaySeekToDistance(ev.points[0].x); }); }
   }
 
   function renderDeltaTable() {
@@ -1313,6 +1314,339 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
   }
 
   // ======================================================================
+  // REPLAY: video ↔ telemetry sync, live readouts, telemetry-only playback
+  //   session time  st = sync mapping of video time vt
+  //   0 sync points: st = vt + T0 (video assumed to start with the data)
+  //   1 point:       st = st0 + (vt − vt0)
+  //   2 points:      st = st0 + (vt − vt0)·rate, rate = Δst/Δvt (corrects drift)
+  // ======================================================================
+  const RP = { open: false, video: null, sync: [], baseOffset: null, playing: false, T: null, speed: 1, follow: true, raf: null, lastFrame: 0, session: null, mapCache: null, dragging: false };
+  const rpC = () => S.R._base.I.table;
+  function rpSessionRange() {
+    const C = rpC(); let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i < C.n; i++) if (C.session[i] === RP.session) { const t = C.t[i]; if (t < lo) lo = t; if (t > hi) hi = t; }
+    return [lo, hi];
+  }
+  function v2s(vt) {
+    const P = RP.sync;
+    if (!P.length) return vt + RP.baseOffset;
+    if (P.length === 1) return P[0].st + (vt - P[0].vt);
+    const [a, b] = P, r = (b.st - a.st) / (b.vt - a.vt);
+    return a.st + (vt - a.vt) * r;
+  }
+  function s2v(st) {
+    const P = RP.sync;
+    if (!P.length) return st - RP.baseOffset;
+    if (P.length === 1) return P[0].vt + (st - P[0].st);
+    const [a, b] = P, r = (b.st - a.st) / (b.vt - a.vt);
+    return a.vt + (st - a.st) / r;
+  }
+  function rpLapAt(T) {
+    return L().find(l => l.session === RP.session && T >= l.tStart && T < l.tEnd) || null;
+  }
+  function bsearch(arr, lo, hi, v) { // last index in [lo,hi] with arr[i] <= v
+    if (!(arr[lo] <= v)) return lo;
+    while (lo < hi) { const m = (lo + hi + 1) >> 1; if (arr[m] <= v) lo = m; else hi = m - 1; }
+    return lo;
+  }
+  function rpState(T) {
+    const lap = rpLapAt(T);
+    if (!lap) return { T, lap: null };
+    const C = rpC(), i = bsearch(C.t, lap.i0, lap.i1, T), tr = T - lap.tStart;
+    const gt = lap.grid.time, N = S.R.G.N;
+    let a = 0, b = N - 1; while (a < N && !Number.isFinite(gt[a])) a++; while (b > a && !Number.isFinite(gt[b])) b--;
+    let k = NaN;
+    if (a < b) { const j = Math.min(b - 1, bsearch(gt, a, b, tr)); const f = (tr - gt[j]) / ((gt[j + 1] - gt[j]) || 1); k = j + Math.max(0, Math.min(1, f)); }
+    return { T, lap, i, tr, k, dist: k * S.R.G.ds };
+  }
+  function rpPlaying() { const v = $('rv-video'); return RP.video ? !v.paused && !v.ended : RP.playing; }
+
+  function openReplay(withVideoPicker) {
+    if (!S.R) return;
+    RP.open = true;
+    RP.session = (L()[S.sel] || L()[0]).session;
+    const [t0] = rpSessionRange();
+    if (RP.baseOffset === null) RP.baseOffset = t0;
+    if (RP.T === null) { const l = L()[S.sel]; RP.T = l ? l.tStart : t0; }
+    $('dock').hidden = false; document.body.classList.add('dock-open');
+    rpBuild();
+    window.dispatchEvent(new Event('resize'));
+    if (!RP.raf) RP.raf = requestAnimationFrame(rpLoop);
+    if (withVideoPicker) $('rv-file').click();
+  }
+  function closeReplay() {
+    rpPause(); RP.open = false;
+    $('dock').hidden = true; document.body.classList.remove('dock-open');
+    if (RP.raf) cancelAnimationFrame(RP.raf); RP.raf = null;
+    document.querySelectorAll('.tm-cursor').forEach(c => c.style.display = 'none');
+    mapCursor(null);
+    window.dispatchEvent(new Event('resize'));
+  }
+  function rpBuild() {
+    const [t0, t1] = rpSessionRange();
+    const sc = $('rv-scrub'); sc.min = t0; sc.max = t1;
+    // lap markers on the scrub bar
+    $('rv-ticks').innerHTML = L().filter(l => l.session === RP.session).map(l => `<span style="left:${(100 * (l.tStart - t0) / (t1 - t0)).toFixed(2)}%">${esc(l.lapNoText)}</span>`).join('');
+    $('rv-synclap').innerHTML = L().filter(l => l.session === RP.session).map(l => `<option value="${l.index}">${esc(l.label)} start (t = ${l.tStart.toFixed(2)} s)</option>`).join('');
+    $('rv-live').innerHTML = `
+      <div class="c"><div class="k">Lap</div><div class="v" id="rl-lap">—</div></div>
+      <div class="c"><div class="k">Lap time</div><div class="v" id="rl-lt">—</div></div>
+      <div class="c"><div class="k" id="rl-dk">Δ ref</div><div class="v" id="rl-delta">—</div></div>
+      <div class="c"><div class="k">Speed km/h</div><div class="v" id="rl-speed">—</div></div>
+      <div class="c"><div class="k">Gear · RPM</div><div class="v" id="rl-gear">—</div></div>
+      <div class="c"><div class="k">Distance · corner</div><div class="v" id="rl-dist">—</div></div>
+      <div class="c wide">
+        <div class="rv-pedal"><span>Throttle</span><span class="bar"><i id="rl-thr" style="width:0;background:${COL.good}"></i></span><span class="mono" id="rl-thrv">—</span></div>
+        <div class="rv-pedal"><span>Brake</span><span class="bar"><i id="rl-brk" style="width:0;background:${COL.critical}"></i></span><span class="mono" id="rl-brkv">—</span></div>
+        <div class="rv-pedal"><span>Steering</span><span class="bar" style="position:relative"><i id="rl-str" style="left:50%;width:0;background:${COL.cyan}"></i></span><span class="mono" id="rl-strv">—</span></div>
+      </div>
+      <div class="c wide rv-events" id="rl-events"></div>`;
+    RP.mapCache = null;
+    rpVideoUI();
+  }
+  function rpVideoUI() {
+    const has = !!RP.video;
+    $('rv-video').hidden = !has;
+    document.querySelector('.dock-video').classList.toggle('has-video', has);
+    $('rv-setsync').disabled = !has;
+    const pill = $('rv-syncpill');
+    if (!has) { pill.textContent = 'telemetry only'; pill.className = 'sync-pill none'; }
+    else if (!RP.sync.length) { pill.textContent = 'not synced'; pill.className = 'sync-pill'; }
+    else { pill.textContent = RP.sync.length === 2 ? 'synced · drift-corrected' : 'synced'; pill.className = 'sync-pill ok'; }
+    $('rv-addvideo').textContent = has ? 'Change video…' : 'Add video…';
+    const info = $('rv-syncinfo');
+    if (!has) info.textContent = 'No video loaded: the clock is driven by the telemetry.';
+    else {
+      const rate = RP.sync.length === 2 ? (RP.sync[1].st - RP.sync[0].st) / (RP.sync[1].vt - RP.sync[0].vt) : 1;
+      info.innerHTML = `${esc(RP.video.name)}<br>video 0:00.00 = session ${v2s(0).toFixed(2)} s · rate ${rate.toFixed(4)}×` +
+        (RP.sync.length ? '<br>' + RP.sync.map((p, i) => `point ${i + 1}: video ${fmtClock(p.vt)} = ${esc(p.label)} start`).join('<br>') : '<br>Assumes the video starts with the data until you set a sync point.');
+    }
+  }
+  const fmtClock = t => { if (!Number.isFinite(t)) return '—'; const sg = t < 0 ? '−' : ''; t = Math.abs(t); const m = Math.floor(t / 60); return `${sg}${m}:${(t - 60 * m).toFixed(2).padStart(5, '0')}`; };
+  function syncKey() { return 'rpSync:' + storeKey() + ':' + (RP.video ? RP.video.name + ':' + RP.video.size : ''); }
+  function saveSync() { try { localStorage.setItem(syncKey(), JSON.stringify({ sync: RP.sync, base: RP.baseOffset })); } catch (e) { /* storage unavailable */ } }
+  function loadSync() { try { const v = JSON.parse(localStorage.getItem(syncKey()) || 'null'); if (v && Array.isArray(v.sync)) { RP.sync = v.sync; if (Number.isFinite(v.base)) RP.baseOffset = v.base; return true; } } catch (e) { /* ignore */ } return false; }
+
+  function rpLoadVideo(file) {
+    if (/\.rpy$/i.test(file.name)) { rpyHelp(); return; }
+    const v = $('rv-video');
+    if (RP.video) URL.revokeObjectURL(RP.video.url);
+    RP.video = { name: file.name, size: file.size, url: URL.createObjectURL(file) };
+    RP.sync = [];
+    const restored = loadSync();
+    $('rv-vmsg').hidden = true;
+    v.src = RP.video.url; v.playbackRate = RP.speed;
+    v.onloadedmetadata = () => {
+      // start the video where the telemetry clock currently is (or at 0)
+      const vt = s2v(RP.T); v.currentTime = Math.max(0, Math.min(v.duration || 0, Number.isFinite(vt) ? vt : 0));
+      rpVideoUI();
+      toast(restored ? 'Video loaded — your earlier sync was restored.' : 'Video loaded. Set a sync point so the telemetry lines up exactly.');
+      if (!restored) $('rv-syncbox').open = true;
+    };
+    v.onerror = () => {
+      const m = $('rv-vmsg'); m.hidden = false;
+      m.innerHTML = `This video can't be played here${v.error && v.error.message ? ` (${esc(v.error.message)})` : ''}.<br><br>Use MP4 (H.264) or WebM. OBS .mkv recordings can be converted with OBS → File → Remux Recordings. If this page is open inside a sandboxed viewer that blocks local video, download <b>dashboard.html</b> from the repository and open it directly in your browser.`;
+    };
+    v.onplay = () => setPlayBtn(true); v.onpause = () => setPlayBtn(false);
+    rpVideoUI();
+  }
+  function rpyHelp() {
+    $('modal-body').innerHTML = `<div style="display:flex;align-items:center"><h2 style="flex:1">iRacing replay files (.rpy) can't play in a browser</h2><button class="btn" id="modal-close">Close</button></div>
+      <p class="dim" style="font-size:13px;line-height:1.6">An <code>.rpy</code> file is not video. It stores the simulation state, and only the iRacing sim can render it. To watch it here alongside your telemetry:</p>
+      <ol class="dim" style="font-size:13px;line-height:1.7">
+        <li>Open the replay in iRacing and start a video recording of it, using iRacing's built-in video capture or a screen recorder such as OBS.</li>
+        <li>Save it as <b>MP4</b> (or WebM). For OBS .mkv files, use File → Remux Recordings to convert to MP4.</li>
+        <li>Load that video here with <b>Add video…</b>, pause on the frame where the car crosses the start/finish line, and press <b>Set sync point</b>.</li>
+      </ol>
+      <p class="dim" style="font-size:12.5px">Tip: record from a few seconds before a lap starts so the first sync point is easy to find. You can also play the telemetry on its own without any video.</p>
+      <div class="rv-row" style="margin-top:12px"><button class="btn primary" id="rpy-pick">Choose a video file…</button><button class="btn" id="rpy-tel">Play telemetry only</button></div>`;
+    $('modal').classList.add('on');
+    $('modal-close').onclick = () => $('modal').classList.remove('on');
+    $('rpy-pick').onclick = () => { $('modal').classList.remove('on'); openReplay(true); };
+    $('rpy-tel').onclick = () => { $('modal').classList.remove('on'); openReplay(false); };
+  }
+  function replayPrompt() {
+    const M = S.R.trackMeta;
+    $('modal-body').innerHTML = `<div style="display:flex;align-items:center"><h2 style="flex:1">Add a replay video?</h2><button class="btn" id="modal-close">Not now</button></div>
+      <p class="dim" style="font-size:13px;line-height:1.6">${M && M.track ? `Telemetry loaded for <b>${esc(M.track)}</b>${M.car ? ' · ' + esc(M.car) : ''}. ` : ''}You can play a recording of this session's replay in a panel beside the stats, synced to the telemetry: the charts, track map and live readouts follow the video, and clicking a chart jumps the video to that point.</p>
+      <p class="dim" style="font-size:12.5px">Load an <b>MP4 or WebM recording</b> of your iRacing replay. iRacing's own <code>.rpy</code> files can't play in a browser; choosing one will show how to record it.</p>
+      <div class="rv-row" style="margin-top:12px"><button class="btn primary" id="rp-pick">Choose replay video…</button><button class="btn" id="rp-tel">Play telemetry only</button><button class="btn" id="rp-later">Not now</button></div>`;
+    $('modal').classList.add('on');
+    const close = () => $('modal').classList.remove('on');
+    $('modal-close').onclick = close; $('rp-later').onclick = close;
+    $('rp-pick').onclick = () => { close(); openReplay(true); };
+    $('rp-tel').onclick = () => { close(); openReplay(false); };
+  }
+
+  function setPlayBtn(on) { const b = $('rv-play'); if (b) b.textContent = on ? '❚❚ Pause' : '▶ Play'; }
+  function rpPlay() {
+    const v = $('rv-video');
+    if (RP.video) { const p = v.play(); if (p && p.catch) p.catch(e => toast('Video could not start: ' + e.message)); }
+    else { const [, t1] = rpSessionRange(); if (RP.T >= t1) RP.T = rpSessionRange()[0]; RP.playing = true; setPlayBtn(true); }
+  }
+  function rpPause() { const v = $('rv-video'); if (RP.video) v.pause(); RP.playing = false; setPlayBtn(false); }
+  function rpSeek(T) {
+    const [t0, t1] = rpSessionRange(); T = Math.max(t0, Math.min(t1, T));
+    if (RP.video) { const v = $('rv-video'); const vt = s2v(T); if (Number.isFinite(v.duration)) v.currentTime = Math.max(0, Math.min(v.duration, vt)); RP.T = T; }
+    else RP.T = T;
+    rpUpdate(true);
+  }
+
+  function rpLoop(ts) {
+    if (!RP.open) { RP.raf = null; return; }
+    RP.raf = requestAnimationFrame(rpLoop);
+    const dt = RP.lastFrame ? Math.min(0.25, (ts - RP.lastFrame) / 1000) : 0; RP.lastFrame = ts;
+    const v = $('rv-video');
+    if (RP.video && v.readyState >= 1) RP.T = v2s(v.currentTime);
+    else if (RP.playing) { RP.T += dt * RP.speed; const [, t1] = rpSessionRange(); if (RP.T >= t1) { RP.T = t1; rpPause(); } }
+    rpUpdate(false);
+  }
+  let rpLastDraw = -1;
+  function rpUpdate(force) {
+    if (!RP.open || RP.T === null) return;
+    if (!force && RP.T === rpLastDraw) return;
+    rpLastDraw = RP.T;
+    const st = rpState(RP.T), C = rpC();
+    if (!RP.dragging) $('rv-scrub').value = RP.T;
+    const v = $('rv-video');
+    $('rv-time').textContent = RP.video ? `video ${fmtClock(v.currentTime)} · t ${RP.T.toFixed(2)} s` : `t ${RP.T.toFixed(2)} s`;
+    const set = (id, txt) => { const e = $(id); if (e && e.textContent !== txt) e.textContent = txt; };
+    if (!st.lap) {
+      set('rl-lap', 'pit / gap'); set('rl-lt', '—'); set('rl-delta', '—'); set('rl-speed', '—'); set('rl-gear', '—'); set('rl-dist', '—');
+      rpCursors(null); rpDrawMap(null); return;
+    }
+    const l = st.lap, i = st.i;
+    // follow the lap while playing
+    if (RP.follow && rpPlaying() && l.index !== S.sel) setState({ sel: l.index });
+    set('rl-lap', `${l.label}${l.status !== 'Valid' ? ' · ' + l.status : ''}`);
+    set('rl-lt', fmtClock(st.tr));
+    const ref = refTrace(), k = st.k;
+    if (Number.isFinite(k) && ref.time) {
+      const k0 = Math.floor(k), f = k - k0, rt = ref.time[k0] + (ref.time[Math.min(S.R.G.N - 1, k0 + 1)] - ref.time[k0]) * f;
+      const d = st.tr - rt;
+      set('rl-dk', `Δ ${ref.short}`); set('rl-delta', fmtD(d, 2));
+      $('rl-delta').style.color = d > 0.005 ? COL.slower : d < -0.005 ? COL.faster : COL.text;
+    } else set('rl-delta', '—');
+    set('rl-speed', Number.isFinite(C.speed[i]) ? (C.speed[i] * 3.6).toFixed(0) : '—');
+    set('rl-gear', `${Number.isFinite(C.gear[i]) ? C.gear[i].toFixed(0) : '—'} · ${Number.isFinite(C.rpm[i]) ? C.rpm[i].toFixed(0) : '—'}`);
+    const cn = S.R.corners.find(c => st.dist >= c.dist.start && st.dist <= c.dist.end);
+    set('rl-dist', `${Number.isFinite(st.dist) ? st.dist.toFixed(0) + ' m' : '—'}${cn ? ' · ' + cn.id : ''}`);
+    const pct = x => Math.max(0, Math.min(100, x));
+    const thr = C.throttle[i], brk = C.brake[i], str = C.steering[i];
+    $('rl-thr').style.width = Number.isFinite(thr) ? pct(thr) + '%' : '0'; set('rl-thrv', Number.isFinite(thr) ? thr.toFixed(0) + '%' : '—');
+    const bmax = Math.max(1, St.quantile(St.finite(Array.from(S.R.ref.brake || [100])), 0.99));
+    $('rl-brk').style.width = Number.isFinite(brk) ? pct(100 * brk / bmax) + '%' : '0'; set('rl-brkv', Number.isFinite(brk) ? brk.toFixed(0) : '—');
+    if (Number.isFinite(str)) { const w = Math.min(50, Math.abs(str) / 3); const e = $('rl-str'); e.style.width = w + '%'; e.style.left = (str >= 0 ? 50 - w : 50) + '%'; set('rl-strv', str.toFixed(0) + '°'); }
+    const near = S.R.incidents.filter(x => x.lap === l.index && Math.abs(x.dist - st.dist) < 90);
+    const evKey = near.map(x => x.id).join(',');
+    if ($('rl-events').dataset.k !== evKey) {
+      $('rl-events').dataset.k = evKey;
+      $('rl-events').innerHTML = near.length ? near.map(x => `<span class="chip" style="--cc:${LEVEL_COL[x.level]}"><span class="sw"></span>${esc(x.cornerId)} ${esc(x.type)} · L${x.level}${x.loss > 0.0005 ? ' · +' + x.loss.toFixed(2) + ' s' : ''}</span>`).join('') : '<span class="muted">No flagged events here.</span>';
+    }
+    rpCursors(l.index === S.sel ? st.dist : null);
+    rpDrawMap(st);
+  }
+  function rpCursors(dist) {
+    ['ch-telemetry', 'ch-speedcmp'].forEach(id => {
+      const el = $(id); if (!el || !el._fullLayout) return;
+      let c = el.querySelector(':scope > .tm-cursor');
+      if (!c) { c = document.createElement('div'); c.className = 'tm-cursor'; el.style.position = 'relative'; el.appendChild(c); }
+      const xa = el._fullLayout.xaxis;
+      if (dist === null || !Number.isFinite(dist)) { c.style.display = 'none'; return; }
+      const px = xa._offset + xa.l2p(dist);
+      if (px < xa._offset || px > xa._offset + xa._length) { c.style.display = 'none'; return; }
+      c.style.display = 'block'; c.style.left = px + 'px';
+    });
+    mapCursor(dist);
+  }
+  function rpDrawMap(st) {
+    const cv = $('rv-map'); if (!cv) return;
+    const R = S.R, dpr = window.devicePixelRatio || 1;
+    const W = Math.round(cv.clientWidth * dpr), H = Math.round(cv.clientHeight * dpr);
+    if (!W || !H) return;
+    if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; RP.mapCache = null; }
+    const ctx = cv.getContext('2d');
+    const hasXY = !!(R.ref.x && R.avail.position);
+    // projection: track outline (X/Y) or a distance strip
+    if (!RP.mapCache) {
+      const off = document.createElement('canvas'); off.width = W; off.height = H;
+      const o = off.getContext('2d'); o.fillStyle = '#0d0f12'; o.fillRect(0, 0, W, H);
+      let proj;
+      if (hasXY) {
+        const xs = St.finite(R.ref.x), ys = St.finite(R.ref.y);
+        const x0 = St.min(xs), x1 = St.max(xs), y0 = St.min(ys), y1 = St.max(ys);
+        const sc = Math.min((W - 24 * dpr) / (x1 - x0), (H - 24 * dpr) / (y1 - y0));
+        const ox = (W - sc * (x1 - x0)) / 2, oy = (H - sc * (y1 - y0)) / 2;
+        proj = (x, y) => [ox + (x - x0) * sc, H - (oy + (y - y0) * sc)];
+        o.strokeStyle = '#3a404a'; o.lineWidth = 5 * dpr; o.lineJoin = 'round'; o.beginPath();
+        for (let k = 0; k < R.G.N; k++) { const [px, py] = proj(R.ref.x[k], R.ref.y[k]); if (k) o.lineTo(px, py); else o.moveTo(px, py); }
+        o.closePath(); o.stroke();
+        o.font = `${10 * dpr}px ${MONO}`; o.fillStyle = COL.text2;
+        R.corners.forEach(c => { const [px, py] = proj(R.ref.x[c.apex], R.ref.y[c.apex]); o.fillText(c.id, px + 6 * dpr, py - 6 * dpr); });
+        const [sx, sy] = proj(R.ref.x[0], R.ref.y[0]); o.fillStyle = COL.accent; o.fillRect(sx - 3 * dpr, sy - 3 * dpr, 6 * dpr, 6 * dpr);
+      } else {
+        proj = d => [12 * dpr + (W - 24 * dpr) * d / R.G.L, H / 2];
+        o.strokeStyle = '#3a404a'; o.lineWidth = 6 * dpr; o.beginPath(); o.moveTo(12 * dpr, H / 2); o.lineTo(W - 12 * dpr, H / 2); o.stroke();
+        o.font = `${10 * dpr}px ${MONO}`; o.fillStyle = COL.text2;
+        R.corners.forEach(c => { const [px] = proj(c.dist.apex); o.fillText(c.id, px - 8 * dpr, H / 2 - 10 * dpr); });
+      }
+      RP.mapCache = { img: off, proj };
+    }
+    ctx.drawImage(RP.mapCache.img, 0, 0);
+    if (!st || !st.lap) return;
+    const C = rpC();
+    const p = hasXY ? (Number.isFinite(C.x[st.i]) ? RP.mapCache.proj(C.x[st.i], C.y[st.i]) : null) : (Number.isFinite(st.dist) ? RP.mapCache.proj(st.dist) : null);
+    if (!p) return;
+    ctx.beginPath(); ctx.arc(p[0], p[1], 6 * dpr, 0, Math.PI * 2); ctx.fillStyle = COL.cyan; ctx.fill();
+    ctx.lineWidth = 2 * dpr; ctx.strokeStyle = '#0a0b0d'; ctx.stroke();
+  }
+  function rpSetSync() {
+    const v = $('rv-video'); if (!RP.video || !Number.isFinite(v.currentTime)) return;
+    const lap = L()[+$('rv-synclap').value]; if (!lap) return;
+    const pt = { vt: v.currentTime, st: lap.tStart, label: lap.label };
+    if (RP.sync.length < 2) RP.sync.push(pt);
+    else { const j = Math.abs(RP.sync[0].vt - pt.vt) < Math.abs(RP.sync[1].vt - pt.vt) ? 0 : 1; RP.sync[j] = pt; }
+    RP.sync.sort((a, b) => a.vt - b.vt);
+    if (RP.sync.length === 2 && Math.abs(RP.sync[1].vt - RP.sync[0].vt) < 1) { RP.sync = [pt]; toast('Sync points must be at least 1 s apart; kept the latest one.'); }
+    if (RP.sync.length === 2) { const r = (RP.sync[1].st - RP.sync[0].st) / (RP.sync[1].vt - RP.sync[0].vt); if (!(r > 0.5 && r < 2)) { RP.sync = [pt]; toast('Those two points imply an implausible playback rate; kept the latest one. Check the lap numbers.'); } }
+    saveSync(); rpVideoUI(); rpUpdate(true);
+    toast(`Synced: video ${fmtClock(pt.vt)} = ${pt.label} start.`);
+  }
+  function rpNudge(d) {
+    if (RP.sync.length) RP.sync.forEach(p => { p.st += d; }); else RP.baseOffset += d;
+    saveSync(); rpVideoUI(); rpUpdate(true);
+  }
+  function wireReplay() {
+    $('btn-replay').onclick = () => (RP.open ? closeReplay() : openReplay(false));
+    $('rv-close').onclick = closeReplay;
+    $('rv-addvideo').onclick = () => $('rv-file').click();
+    $('rv-file').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) { if (!RP.open) openReplay(false); rpLoadVideo(f); } };
+    $('rv-play').onclick = () => (rpPlaying() ? rpPause() : rpPlay());
+    $('rv-back').onclick = () => rpSeek(RP.T - 5);
+    $('rv-fwd').onclick = () => rpSeek(RP.T + 5);
+    $('rv-speed').onchange = e => { RP.speed = +e.target.value; $('rv-video').playbackRate = RP.speed; };
+    $('rv-follow').onchange = e => { RP.follow = e.target.checked; };
+    const sc = $('rv-scrub');
+    sc.oninput = () => { RP.dragging = true; rpSeek(+sc.value); };
+    sc.onchange = () => { RP.dragging = false; };
+    $('rv-setsync').onclick = rpSetSync;
+    $('rv-clearsync').onclick = () => { RP.sync = []; saveSync(); rpVideoUI(); rpUpdate(true); toast('Sync cleared.'); };
+    document.querySelectorAll('[data-nudge]').forEach(b => b.onclick = () => rpNudge(+b.dataset.nudge));
+    document.addEventListener('keydown', e => {
+      if (!RP.open || /input|select|textarea/i.test(e.target.tagName)) return;
+      if (e.code === 'Space') { e.preventDefault(); rpPlaying() ? rpPause() : rpPlay(); }
+    });
+  }
+  // charts → replay: seek to a distance on the selected lap
+  function replaySeekToDistance(dist) {
+    if (!RP.open) return;
+    const lap = L()[S.sel]; if (!lap) return;
+    const k = Math.max(0, Math.min(S.R.G.N - 1, Math.round(dist / S.R.G.ds)));
+    const tr = lap.grid.time[k]; if (!Number.isFinite(tr)) return;
+    RP.session = lap.session; rpSeek(lap.tStart + tr);
+  }
+
+  // ======================================================================
   // BOOT
   // ======================================================================
   function renderAll(preserve) {
@@ -1336,6 +1670,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
       ['mapControls', renderMapControls], ['map', renderMap], ['mapMistakes', renderMapMistakes], ['insights', renderInsights], ['coaching', renderCoaching], ['method', renderMethod]].forEach(([n, f]) => safe(n, f));
     window.__dashboardReady = true;
   }
+  window.__replay = { RP, openReplay, closeReplay, rpSeek, rpState, v2s, s2v, rpSetSync, rpLoadVideo, replaySeekToDistance };
 
   function showError(msg) {
     $('loading').classList.add('hide');
@@ -1364,6 +1699,11 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
         S.R = R; S.sort = {};
         renderAll();
         if (R.excluded.length) toast(`Restored your earlier choice: ${R.excluded.length} lap(s) excluded.`);
+        // a new data set resets the replay; offer a replay video for iRacing telemetry
+        if (RP.open) closeReplay();
+        if (RP.video) { URL.revokeObjectURL(RP.video.url); RP.video = null; $('rv-video').removeAttribute('src'); }
+        RP.sync = []; RP.baseOffset = null; RP.T = null;
+        if (files.some(f => f.buffer && E.ibt.isIBT(f.buffer))) replayPrompt();
       } catch (e) {
         console.error(e);
         showError('Analysis failed: ' + e.message);
@@ -1374,7 +1714,11 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
   }
 
   function readFiles(list) {
-    const arr = Array.from(list);
+    let arr = Array.from(list);
+    if (!arr.length) return;
+    const vids = arr.filter(f => /\.(rpy|mp4|webm|mov|m4v|mkv)$/i.test(f.name) || /^video\//.test(f.type));
+    if (vids.length && S.R) { const v = vids[0]; if (!RP.open) openReplay(false); if (/\.rpy$/i.test(v.name)) rpyHelp(); else rpLoadVideo(v); }
+    arr = arr.filter(f => !vids.includes(f));
     if (!arr.length) return;
     // .ibt (and anything that looks binary) is read as bytes; the engine sniffs the format
     Promise.all(arr.map(f => f.arrayBuffer().then(buffer => ({ name: f.name, buffer }))))
@@ -1384,6 +1728,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
 
   function boot() {
     $('file-input').onchange = e => readFiles(e.target.files);
+    wireReplay();
     $('btn-dq').onclick = () => { if (S.R) openDQ(); };
     $('modal').onclick = e => { if (e.target === $('modal')) $('modal').classList.remove('on'); };
     document.addEventListener('keydown', e => {

@@ -22,6 +22,23 @@ python3 tools/build_dashboard.py --inline-plotly --tsv my_session.tsv --out dist
 
 > `data/sample_session.tsv` is **synthetic** data from `tools/generate_sample_tsv.py`: a physics-based lap simulation with injected mistakes, off-tracks and data defects. Its known answers are in `data/sample_session.truth.json`. The dashboard shows a "SYNTHETIC DEMO DATA" badge when this file is loaded.
 
+## Replay video sync
+
+After loading an iRacing `.ibt`, the dashboard asks whether to add a replay video. You can also open the panel at any time with **▶ Replay**. The panel docks beside the stats and shows:
+
+- the video, with a mini track map;
+- live speed, gear, RPM, throttle, brake and steering from the telemetry at the current video time;
+- the running lap time, and the live delta to the reference at the current distance;
+- the corner you're in, and any events flagged nearby.
+
+As the video plays, the telemetry charts and track map show a cursor at the car's position. With **Follow lap** on, the dashboard selects the lap being played. Clicking the telemetry or speed-comparison chart seeks the video to that point on the selected lap.
+
+**Sync:** pause on the frame where the car crosses the start/finish line, pick the lap, and press **Set sync point**. A second point on a later lap corrects any rate drift. Nudge buttons adjust in ±1 frame, ±0.1 s and ±1 s steps. Sync points are remembered per video in your browser.
+
+**iRacing `.rpy` replay files can't play in a browser**: they hold simulation state, not video. Record the replay to MP4/WebM with iRacing's video capture or OBS (remux OBS `.mkv` to MP4), then load that video. Without a video, the panel plays back the telemetry on its own (0.25–4×).
+
+`tools/make_test_replay_video.py` renders a synthetic test video, with the true session time burned into each frame, for `tests/replay_check.js`.
+
 ## Corner consistency (line & speed)
 
 The **Consistency** section scores, corner by corner, how repeatably the driver hits the same:
@@ -91,4 +108,6 @@ node tests/test_engine.js /tmp/sample.ibt data/sample_session.truth.json        
 node tests/browser_check.js dist/sample_dashboard.html                             # headless browser QA (Playwright)
 node tests/browser_upload.js dist/dashboard.html /tmp/sample.ibt                   # upload through the file picker
 node tests/validate_charts.js dist/sample_dashboard.html                           # every chart vs computed values (incl. consistency), before/after lap exclusion
+python3 tools/make_test_replay_video.py data/sample_session.tsv /tmp/replay.webm   # prints the video's true start time
+node tests/replay_check.js dist/sample_dashboard.html /tmp/replay.webm <start>      # video/telemetry sync, playback, seek, .rpy handling
 ```
