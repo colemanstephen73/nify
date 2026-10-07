@@ -1320,7 +1320,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
   //   1 point:       st = st0 + (vt − vt0)
   //   2 points:      st = st0 + (vt − vt0)·rate, rate = Δst/Δvt (corrects drift)
   // ======================================================================
-  const RP = { open: false, video: null, sync: [], baseOffset: null, playing: false, T: null, speed: 1, follow: true, raf: null, lastFrame: 0, session: null, mapCache: null, dragging: false };
+  const RP = { size: 'dock', dockW: 440, dockH: 52, mapOverlay: true, crop: null, cropEdit: null, open: false, video: null, sync: [], baseOffset: null, playing: false, T: null, speed: 1, follow: true, raf: null, lastFrame: 0, session: null, mapCache: null, dragging: false };
   const rpC = () => S.R._base.I.table;
   function rpSessionRange() {
     const C = rpC(); let lo = Infinity, hi = -Infinity;
@@ -1369,6 +1369,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
     if (RP.baseOffset === null) RP.baseOffset = t0;
     if (RP.T === null) { const l = L()[S.sel]; RP.T = l ? l.tStart : t0; }
     $('dock').hidden = false; document.body.classList.add('dock-open');
+    applyLayout();
     rpBuild();
     window.dispatchEvent(new Event('resize'));
     if (!RP.raf) RP.raf = requestAnimationFrame(rpLoop);
@@ -1376,7 +1377,9 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
   }
   function closeReplay() {
     rpPause(); RP.open = false;
-    $('dock').hidden = true; document.body.classList.remove('dock-open');
+    if (RP.cropEdit) exitCrop(false);
+    if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    $('dock').hidden = true; document.body.classList.remove('dock-open', 'dock-full');
     if (RP.raf) cancelAnimationFrame(RP.raf); RP.raf = null;
     document.querySelectorAll('.tm-cursor').forEach(c => c.style.display = 'none');
     mapCursor(null);
@@ -1436,7 +1439,9 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
     const restored = loadSync();
     $('rv-vmsg').hidden = true;
     v.src = RP.video.url; v.playbackRate = RP.speed;
+    loadCrop();
     v.onloadedmetadata = () => {
+      applyCrop();
       // start the video where the telemetry clock currently is (or at 0)
       const vt = s2v(RP.T); v.currentTime = Math.max(0, Math.min(v.duration || 0, Number.isFinite(vt) ? vt : 0));
       rpVideoUI();
@@ -1616,7 +1621,171 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
     if (RP.sync.length) RP.sync.forEach(p => { p.st += d; }); else RP.baseOffset += d;
     saveSync(); rpVideoUI(); rpUpdate(true);
   }
+  // ---------------------------------------------------------------- panel size, fullscreen, crop
+  function loadLayout() { try { const v = JSON.parse(localStorage.getItem('rpLayout') || 'null'); if (v) Object.assign(RP, { size: v.size || 'dock', dockW: v.dockW || 440, dockH: v.dockH || 52, mapOverlay: v.mapOverlay !== false }); } catch (e) { /* ignore */ } }
+  function saveLayout() { try { localStorage.setItem('rpLayout', JSON.stringify({ size: RP.size, dockW: RP.dockW, dockH: RP.dockH, mapOverlay: RP.mapOverlay })); } catch (e) { /* ignore */ } }
+  let relayoutTimer = null;
+  function relayoutCharts() { clearTimeout(relayoutTimer); relayoutTimer = setTimeout(() => { window.dispatchEvent(new Event('resize')); RP.mapCache = null; rpUpdate(true); }, 120); }
+  const clampW = w => Math.max(320, Math.min(window.innerWidth - 320, Math.round(w)));
+  function applyLayout() {
+    const dock = $('dock'), root = document.documentElement;
+    const full = RP.size === 'full';
+    const w = RP.size === 'large' ? clampW(window.innerWidth * 0.66) : clampW(RP.dockW);
+    root.style.setProperty('--dock-w', w + 'px');
+    root.style.setProperty('--dock-h', Math.max(25, Math.min(90, RP.dockH)) + 'vh');
+    dock.classList.toggle('full', full);
+    document.body.classList.toggle('dock-full', full && RP.open);
+    document.querySelectorAll('[data-size]').forEach(b => b.classList.toggle('on', b.dataset.size === RP.size));
+    $('rv-box').classList.toggle('no-map', !RP.mapOverlay);
+    $('rv-mapov').classList.toggle('on', RP.mapOverlay);
+    relayoutCharts();
+  }
+  function setSize(size) { RP.size = size; saveLayout(); applyLayout(); }
+  function wireResize() {
+    const h = $('rv-resize');
+    h.addEventListener('pointerdown', e => {
+      if (RP.size === 'full') return;
+      e.preventDefault(); h.setPointerCapture(e.pointerId);
+      document.body.classList.add('dock-resizing');
+      const narrow = window.innerWidth < 1200;
+      const move = ev => {
+        if (narrow) RP.dockH = Math.max(25, Math.min(90, 100 * (window.innerHeight - ev.clientY) / window.innerHeight));
+        else { RP.dockW = clampW(window.innerWidth - ev.clientX); RP.size = 'dock'; }
+        document.documentElement.style.setProperty(narrow ? '--dock-h' : '--dock-w', narrow ? RP.dockH + 'vh' : RP.dockW + 'px');
+        document.querySelectorAll('[data-size]').forEach(b => b.classList.toggle('on', b.dataset.size === RP.size));
+        RP.mapCache = null; rpUpdate(true);
+      };
+      const up = () => { h.removeEventListener('pointermove', move); h.removeEventListener('pointerup', up); h.removeEventListener('pointercancel', up); document.body.classList.remove('dock-resizing'); saveLayout(); relayoutCharts(); };
+      h.addEventListener('pointermove', move); h.addEventListener('pointerup', up); h.addEventListener('pointercancel', up);
+    });
+    h.addEventListener('keydown', e => {
+      const d = e.key === 'ArrowLeft' ? 40 : e.key === 'ArrowRight' ? -40 : 0; if (!d) return;
+      e.preventDefault(); RP.size = 'dock'; RP.dockW = clampW((RP.size === 'large' ? window.innerWidth * 0.66 : RP.dockW) + d); saveLayout(); applyLayout();
+    });
+    window.addEventListener('resize', () => { if (!RP.open) return; const w = RP.size === 'large' ? clampW(window.innerWidth * 0.66) : clampW(RP.dockW); document.documentElement.style.setProperty('--dock-w', w + 'px'); RP.mapCache = null; });
+  }
+  function toggleFullscreen() {
+    const dock = $('dock');
+    if (document.fullscreenElement) { document.exitFullscreen().catch(() => {}); return; }
+    if (!dock.requestFullscreen) { toast('Fullscreen is not available here — use the Full size instead.'); setSize('full'); return; }
+    dock.requestFullscreen().then(relayoutCharts).catch(() => { toast('This viewer does not allow fullscreen — switched to the Full size instead.'); setSize('full'); });
+  }
+  // crop: normalised rectangle {x, y, w, h} of the video frame; null = full frame
+  const cropKey = () => RP.video ? 'rpCrop:' + RP.video.name + ':' + RP.video.size : null;
+  function saveCrop() { try { const k = cropKey(); if (k) localStorage.setItem(k, JSON.stringify(RP.crop)); } catch (e) { /* ignore */ } }
+  function loadCrop() { try { const k = cropKey(); const v = k ? JSON.parse(localStorage.getItem(k) || 'null') : null; RP.crop = v && v.w > 0 && v.h > 0 ? v : null; } catch (e) { RP.crop = null; } }
+  function videoDims() { const v = $('rv-video'); return v.videoWidth && v.videoHeight ? [v.videoWidth, v.videoHeight] : [16, 9]; }
+  function applyCrop(c) {
+    const box = $('rv-box'), v = $('rv-video');
+    const [vw, vh] = videoDims();
+    if (!RP.video) { box.style.removeProperty('--crop-ar'); return; }
+    c = c || RP.crop || { x: 0, y: 0, w: 1, h: 1 };
+    box.style.setProperty('--crop-ar', ((vw * c.w) / (vh * c.h)).toFixed(5));
+    v.style.width = (100 / c.w) + '%'; v.style.height = (100 / c.h) + '%';
+    v.style.left = (-100 * c.x / c.w) + '%'; v.style.top = (-100 * c.y / c.h) + '%';
+    $('rv-cropreset').disabled = !RP.crop;
+    RP.mapCache = null;
+  }
+  function drawCropRect() {
+    const c = RP.cropEdit, r = $('rv-croprect'), [vw, vh] = videoDims();
+    r.style.left = 100 * c.x + '%'; r.style.top = 100 * c.y + '%'; r.style.width = 100 * c.w + '%'; r.style.height = 100 * c.h + '%';
+    const pw = Math.round(c.w * vw), ph = Math.round(c.h * vh);
+    $('rv-cropinfo').textContent = `${pw} × ${ph} px · ${(pw / ph).toFixed(2)}:1`;
+  }
+  function enterCrop() {
+    if (!RP.video || !$('rv-video').videoWidth) { toast('Load a video first to crop it.'); return; }
+    RP.cropEdit = { ...(RP.crop || { x: 0, y: 0, w: 1, h: 1 }) };
+    applyCrop({ x: 0, y: 0, w: 1, h: 1 }); // edit on the full frame
+    $('rv-box').classList.add('cropping'); $('rv-cropui').hidden = false; $('rv-cropbar').hidden = false; $('rv-crop').classList.add('on');
+    drawCropRect();
+  }
+  function exitCrop(apply) {
+    if (apply) {
+      const c = RP.cropEdit; const isFull = c.x <= 0.002 && c.y <= 0.002 && c.w >= 0.996 && c.h >= 0.996;
+      RP.crop = isFull ? null : { x: +c.x.toFixed(4), y: +c.y.toFixed(4), w: +c.w.toFixed(4), h: +c.h.toFixed(4) };
+      saveCrop(); toast(RP.crop ? 'Crop applied.' : 'Showing the full frame.');
+    }
+    RP.cropEdit = null;
+    $('rv-box').classList.remove('cropping'); $('rv-cropui').hidden = true; $('rv-cropbar').hidden = true; $('rv-crop').classList.remove('on');
+    applyCrop(); relayoutCharts();
+  }
+  function cropPreset(kind) {
+    const [vw, vh] = videoDims();
+    if (kind === 'full') RP.cropEdit = { x: 0, y: 0, w: 1, h: 1 };
+    else if (kind === '43') { const w = Math.min(1, (4 / 3) * vh / vw), h = Math.min(1, (3 / 4) * vw / vh); RP.cropEdit = { x: (1 - w) / 2, y: (1 - h) / 2, w, h }; }
+    else if (kind === 'top') RP.cropEdit = { x: 0, y: 0, w: 1, h: 2 / 3 };
+    else if (kind === 'auto') {
+      const r = detectBars();
+      if (!r) { toast('Could not read the video frame to detect black bars.'); return; }
+      RP.cropEdit = r;
+      toast(r.w > 0.995 && r.h > 0.995 ? 'No black bars found on this frame.' : 'Black bars detected and cropped.');
+    }
+    drawCropRect();
+  }
+  function detectBars() {
+    try {
+      const v = $('rv-video'), [vw, vh] = videoDims();
+      const W = 320, H = Math.max(2, Math.round(320 * vh / vw));
+      const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+      const ctx = cv.getContext('2d'); ctx.drawImage(v, 0, 0, W, H);
+      const d = ctx.getImageData(0, 0, W, H).data;
+      const lum = (x, y) => { const i = 4 * (y * W + x); return 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]; };
+      // a row (column) is a bar if it is uniformly dark within the current picture columns (rows);
+      // alternate twice so letterbox and pillar-box bars don't skew each other's averages
+      let t = 0, b = H - 1, l = 0, r = W - 1;
+      const dark = (n, s, mx) => s / Math.max(1, n) < 14 && mx < 40;
+      const rowDark = y => { let s = 0, mx = 0, n = 0; for (let x = l; x <= r; x += 2) { const v2 = lum(x, y); s += v2; mx = Math.max(mx, v2); n++; } return dark(n, s, mx); };
+      const colDark = x => { let s = 0, mx = 0, n = 0; for (let y = t; y <= b; y += 2) { const v2 = lum(x, y); s += v2; mx = Math.max(mx, v2); n++; } return dark(n, s, mx); };
+      for (let it = 0; it < 2; it++) {
+        t = 0; b = H - 1; while (t < H / 2 && rowDark(t)) t++; while (b > H / 2 && rowDark(b)) b--;
+        l = 0; r = W - 1; while (l < W / 2 && colDark(l)) l++; while (r > W / 2 && colDark(r)) r--;
+      }
+      return { x: l / W, y: t / H, w: (r - l + 1) / W, h: (b - t + 1) / H };
+    } catch (e) { return null; }
+  }
+  function wireCrop() {
+    const ui = $('rv-cropui');
+    ui.addEventListener('pointerdown', e => {
+      if (!RP.cropEdit) return;
+      e.preventDefault(); ui.setPointerCapture(e.pointerId);
+      const box = ui.getBoundingClientRect();
+      const P = ev => [Math.max(0, Math.min(1, (ev.clientX - box.left) / box.width)), Math.max(0, Math.min(1, (ev.clientY - box.top) / box.height))];
+      const [px, py] = P(e), c0 = { ...RP.cropEdit };
+      const handle = e.target.dataset && e.target.dataset.h;
+      const inside = px > c0.x && px < c0.x + c0.w && py > c0.y && py < c0.y + c0.h;
+      // on an uncropped (full-frame) rectangle a drag draws a new crop; Shift+drag always draws
+      const isFull = c0.w > 0.98 && c0.h > 0.98;
+      const mode = handle ? 'resize' : (inside && !isFull && !e.shiftKey) ? 'move' : 'draw';
+      const MIN = 0.05;
+      const move = ev => {
+        const [qx, qy] = P(ev);
+        let c;
+        if (mode === 'move') { const dx = qx - px, dy = qy - py; c = { ...c0, x: Math.max(0, Math.min(1 - c0.w, c0.x + dx)), y: Math.max(0, Math.min(1 - c0.h, c0.y + dy)) }; }
+        else if (mode === 'draw') { c = { x: Math.min(px, qx), y: Math.min(py, qy), w: Math.max(MIN, Math.abs(qx - px)), h: Math.max(MIN, Math.abs(qy - py)) }; c.x = Math.min(c.x, 1 - c.w); c.y = Math.min(c.y, 1 - c.h); }
+        else {
+          let x0 = c0.x, y0 = c0.y, x1 = c0.x + c0.w, y1 = c0.y + c0.h;
+          if (handle.includes('w')) x0 = Math.min(qx, x1 - MIN); if (handle.includes('e')) x1 = Math.max(qx, x0 + MIN);
+          if (handle.includes('n')) y0 = Math.min(qy, y1 - MIN); if (handle.includes('s')) y1 = Math.max(qy, y0 + MIN);
+          c = { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+        }
+        RP.cropEdit = c; drawCropRect();
+      };
+      const up = () => { ui.removeEventListener('pointermove', move); ui.removeEventListener('pointerup', up); ui.removeEventListener('pointercancel', up); };
+      ui.addEventListener('pointermove', move); ui.addEventListener('pointerup', up); ui.addEventListener('pointercancel', up);
+    });
+    $('rv-crop').onclick = () => (RP.cropEdit ? exitCrop(false) : enterCrop());
+    $('rv-cropreset').onclick = () => { RP.crop = null; saveCrop(); if (RP.cropEdit) exitCrop(false); applyCrop(); relayoutCharts(); toast('Showing the full frame.'); };
+    $('rv-cropapply').onclick = () => exitCrop(true);
+    $('rv-cropcancel').onclick = () => exitCrop(false);
+    document.querySelectorAll('[data-crop]').forEach(b => b.onclick = () => cropPreset(b.dataset.crop));
+    $('rv-mapov').onclick = () => { RP.mapOverlay = !RP.mapOverlay; saveLayout(); applyLayout(); };
+    document.querySelectorAll('[data-size]').forEach(b => b.onclick = () => setSize(b.dataset.size));
+    $('rv-fs').onclick = toggleFullscreen;
+    document.addEventListener('fullscreenchange', () => { $('rv-fs').classList.toggle('on', !!document.fullscreenElement); RP.mapCache = null; relayoutCharts(); });
+  }
+
   function wireReplay() {
+    loadLayout(); wireResize(); wireCrop();
     $('btn-replay').onclick = () => (RP.open ? closeReplay() : openReplay(false));
     $('rv-close').onclick = closeReplay;
     $('rv-addvideo').onclick = () => $('rv-file').click();
@@ -1635,6 +1804,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
     document.addEventListener('keydown', e => {
       if (!RP.open || /input|select|textarea/i.test(e.target.tagName)) return;
       if (e.code === 'Space') { e.preventDefault(); rpPlaying() ? rpPause() : rpPlay(); }
+      if (e.key === 'Escape') { if (RP.cropEdit) exitCrop(false); else if (RP.size === 'full' && !document.fullscreenElement) setSize('dock'); }
     });
   }
   // charts → replay: seek to a distance on the selected lap
@@ -1670,7 +1840,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
       ['mapControls', renderMapControls], ['map', renderMap], ['mapMistakes', renderMapMistakes], ['insights', renderInsights], ['coaching', renderCoaching], ['method', renderMethod]].forEach(([n, f]) => safe(n, f));
     window.__dashboardReady = true;
   }
-  window.__replay = { RP, openReplay, closeReplay, rpSeek, rpState, v2s, s2v, rpSetSync, rpLoadVideo, replaySeekToDistance };
+  window.__replay = { RP, setSize, applyCrop, enterCrop, exitCrop, cropPreset, detectBars, openReplay, closeReplay, rpSeek, rpState, v2s, s2v, rpSetSync, rpLoadVideo, replaySeekToDistance };
 
   function showError(msg) {
     $('loading').classList.add('hide');
@@ -1701,7 +1871,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
         if (R.excluded.length) toast(`Restored your earlier choice: ${R.excluded.length} lap(s) excluded.`);
         // a new data set resets the replay; offer a replay video for iRacing telemetry
         if (RP.open) closeReplay();
-        if (RP.video) { URL.revokeObjectURL(RP.video.url); RP.video = null; $('rv-video').removeAttribute('src'); }
+        if (RP.video) { URL.revokeObjectURL(RP.video.url); RP.video = null; $('rv-video').removeAttribute('src'); RP.crop = null; applyCrop(); }
         RP.sync = []; RP.baseOffset = null; RP.T = null;
         if (files.some(f => f.buffer && E.ibt.isIBT(f.buffer))) replayPrompt();
       } catch (e) {

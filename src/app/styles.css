@@ -281,18 +281,45 @@ input.excl, .tbl input[type=checkbox] { accent-color: var(--cyan); width: 14px; 
 @media (max-width: 720px) { .cons-head { grid-template-columns: 1fr; } .cons-head .cons-big { grid-column: auto; } .cons-elems { grid-template-columns: 1fr; } }
 
 /* ---------- replay dock ---------- */
-.dock { position: fixed; z-index: 60; right: 0; top: calc(52px + env(safe-area-inset-top, 0px)); bottom: 0; width: 440px; background: var(--panel); border-left: 1px solid var(--border-strong); display: flex; flex-direction: column; overflow-y: auto; box-shadow: -8px 0 24px rgba(0,0,0,.35); }
-body.dock-open main { margin-right: 440px; }
-.dock-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--panel); z-index: 2; }
+:root { --dock-w: 440px; --dock-h: 52vh; --crop-ar: 1.7778; }
+.dock { position: fixed; z-index: 60; right: 0; top: calc(52px + env(safe-area-inset-top, 0px)); bottom: 0; width: var(--dock-w); background: var(--panel); border-left: 1px solid var(--border-strong); display: flex; flex-direction: column; overflow-y: auto; box-shadow: -8px 0 24px rgba(0,0,0,.35); container-type: inline-size; container-name: dock; }
+body.dock-open main { margin-right: var(--dock-w); }
+body.dock-full main { margin-right: 0; }
+.dock.full { left: 10px; right: 10px; top: calc(60px + env(safe-area-inset-top, 0px)); bottom: 10px; width: auto; border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,.6); }
+.dock.full .dock-resize { display: none; }
+.dock:fullscreen { width: 100vw; height: 100vh; top: 0; left: 0; right: 0; bottom: 0; border: 0; border-radius: 0; }
+body.dock-full::before { content: ''; position: fixed; inset: 0; z-index: 55; background: rgba(5,6,8,.6); }
+.dock-resize { position: absolute; left: -4px; top: 0; bottom: 0; width: 9px; cursor: ew-resize; z-index: 5; }
+.dock-resize::after { content: ''; position: absolute; left: 3px; top: 50%; width: 3px; height: 46px; transform: translateY(-50%); border-radius: 2px; background: var(--border-strong); }
+.dock-resize:hover::after, .dock-resize:focus-visible::after, body.dock-resizing .dock-resize::after { background: var(--cyan); }
+body.dock-resizing { cursor: ew-resize; user-select: none; }
+body.dock-resizing iframe, body.dock-resizing .chart { pointer-events: none; }
+.dock-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--panel); z-index: 3; }
 .dock-head b { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; }
+.dock-tools { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 6px 10px; border-bottom: 1px solid var(--border); }
 .sync-pill { font-size: 10.5px; padding: 1px 7px; border-radius: 10px; background: #3a2a0c; color: var(--warn); }
 .sync-pill.ok { background: #0f2a14; color: var(--good-text); }
 .sync-pill.none { background: var(--panel-3); color: var(--muted); }
-.dock-video { position: relative; background: #000; aspect-ratio: 16 / 9; flex: none; }
-.dock-video video, .dock-video canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-.dock-video video { object-fit: contain; }
-.dock-video.has-video canvas { inset: auto 8px 8px auto; width: 34%; height: auto; aspect-ratio: 16 / 9; background: rgba(10,11,13,.75); border: 1px solid var(--border-strong); border-radius: 4px; }
-.rv-vmsg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; font-size: 12px; color: var(--text-2); background: rgba(10,11,13,.86); }
+.dock-body { display: grid; grid-template-columns: minmax(0, 1fr); flex: 1 0 auto; min-height: 0; }
+.dock-main, .dock-side { min-width: 0; }
+
+/* video box keeps the (cropped) aspect ratio and never exceeds the available height */
+.dock-video { --vmax: 62vh; position: relative; background: #000; aspect-ratio: var(--crop-ar); width: min(100%, calc(var(--vmax) * var(--crop-ar))); margin-inline: auto; flex: none; overflow: hidden; }
+.dock.full .dock-video, .dock:fullscreen .dock-video { --vmax: calc(100vh - 210px); }
+.rv-frame { position: absolute; inset: 0; overflow: hidden; }
+.rv-frame video { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: fill; }
+.dock-video:not(.has-video) .rv-frame { display: none; }
+#rv-map { position: absolute; inset: 0; width: 100%; height: 100%; }
+.dock-video.has-video #rv-map { inset: auto 8px 8px auto; width: min(34%, 260px); height: auto; aspect-ratio: 16 / 9; background: rgba(10,11,13,.75); border: 1px solid var(--border-strong); border-radius: 4px; }
+.dock-video.has-video.no-map #rv-map { display: none; }
+.dock-video.cropping #rv-map { display: none; }
+.rv-vmsg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center; padding: 20px; font-size: 12px; color: var(--text-2); background: rgba(10,11,13,.86); z-index: 4; }
+.crop-ui { position: absolute; inset: 0; z-index: 3; cursor: crosshair; touch-action: none; }
+.crop-rect { position: absolute; border: 2px solid var(--cyan); box-shadow: 0 0 0 9999px rgba(0,0,0,.55); cursor: move; }
+.crop-rect i { position: absolute; width: 12px; height: 12px; background: var(--cyan); border: 2px solid #0a0b0d; border-radius: 2px; }
+.crop-rect i[data-h="nw"] { left: -7px; top: -7px; cursor: nwse-resize; } .crop-rect i[data-h="se"] { right: -7px; bottom: -7px; cursor: nwse-resize; }
+.crop-rect i[data-h="ne"] { right: -7px; top: -7px; cursor: nesw-resize; } .crop-rect i[data-h="sw"] { left: -7px; bottom: -7px; cursor: nesw-resize; }
+.crop-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 10px; background: var(--panel-2); border-bottom: 1px solid var(--border); font-size: 11.5px; }
 .dock-transport { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 10px 4px; }
 .rv-follow { font-size: 11px; color: var(--text-2); display: inline-flex; align-items: center; gap: 4px; }
 .rv-scrub { position: relative; padding: 0 10px 6px; }
@@ -305,6 +332,7 @@ body.dock-open main { margin-right: 440px; }
 .rv-live .c .k { font-size: 9.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
 .rv-live .c .v { font-size: 17px; font-weight: 650; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rv-live .c.wide { grid-column: span 3; }
+.dock.full .rv-live .c .v, .dock:fullscreen .rv-live .c .v { font-size: 22px; }
 .rv-pedal { display: grid; grid-template-columns: 52px 1fr 36px; align-items: center; gap: 6px; font-size: 10.5px; color: var(--text-2); margin: 3px 0; }
 .rv-pedal .bar { height: 8px; }
 .rv-events { font-size: 11.5px; color: var(--text-2); }
@@ -316,7 +344,17 @@ body.dock-open main { margin-right: 440px; }
 .rv-row .btn { padding: 3px 7px; }
 .tm-cursor { position: absolute; top: 0; bottom: 0; width: 0; border-left: 2px solid var(--accent); pointer-events: none; z-index: 5; display: none; }
 @media (max-width: 1199px) {
-  .dock { top: auto; left: 0; width: auto; height: 52vh; border-left: 0; border-top: 1px solid var(--border-strong); }
-  body.dock-open main { margin-right: 0; padding-bottom: 54vh; }
-  .dock-video { max-height: 26vh; aspect-ratio: auto; height: 26vh; }
+  .dock:not(.full) { top: auto; left: 0; width: auto; height: var(--dock-h); border-left: 0; border-top: 1px solid var(--border-strong); }
+  .dock:not(.full) .dock-resize { left: 0; right: 0; top: -4px; bottom: auto; width: auto; height: 9px; cursor: ns-resize; }
+  .dock:not(.full) .dock-resize::after { left: 50%; top: 3px; width: 46px; height: 3px; transform: translateX(-50%); }
+  body.dock-open main { margin-right: 0; padding-bottom: calc(var(--dock-h) + 8px); }
+  body.dock-resizing { cursor: ns-resize; }
+  .dock:not(.full) .dock-video { --vmax: calc(var(--dock-h) * 0.5); }
+}
+/* wide replay panel: video left, readouts right (after the base rules so it wins) */
+@container dock (min-width: 760px) {
+  .dock-body { grid-template-columns: minmax(0, 1fr) 330px; }
+  .dock-side { border-left: 1px solid var(--border); overflow-y: auto; }
+  .rv-live { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rv-live .c.wide { grid-column: span 2; }
 }

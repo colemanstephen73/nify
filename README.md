@@ -33,6 +33,14 @@ After loading an iRacing `.ibt`, the dashboard asks whether to add a replay vide
 
 As the video plays, the telemetry charts and track map show a cursor at the car's position. With **Follow lap** on, the dashboard selects the lap being played. Clicking the telemetry or speed-comparison chart seeks the video to that point on the selected lap.
 
+**Panel size and crop:**
+- **Resize:** drag the panel's left edge (top edge on narrow screens) to resize it; the stats re-flow beside it.
+- **Size presets:** **Dock**, **Large** (two thirds of the screen) and **Full** (near full screen; Escape returns to Dock). ⛶ switches to browser fullscreen. When the panel is wide, the readouts move into a side column.
+- **Crop:** **Crop…** shows the full frame. Drag to draw a crop, drag inside it to move it, or drag a corner to resize it. Shift+drag redraws.
+- **Crop presets:** full frame, centre 4:3, top ⅔, and **Auto**, which detects and removes black letterbox or pillar-box bars from the current frame.
+- The cropped area fills the panel at its true aspect ratio. **Uncrop** restores the full frame.
+- Panel size and crop are remembered; the crop is stored per video.
+
 **Sync:** pause on the frame where the car crosses the start/finish line, pick the lap, and press **Set sync point**. A second point on a later lap corrects any rate drift. Nudge buttons adjust in ±1 frame, ±0.1 s and ±1 s steps. Sync points are remembered per video in your browser.
 
 **iRacing `.rpy` replay files can't play in a browser**: they hold simulation state, not video. Record the replay to MP4/WebM with iRacing's video capture or OBS (remux OBS `.mkv` to MP4), then load that video. Without a video, the panel plays back the telemetry on its own (0.25–4×).
@@ -110,4 +118,5 @@ node tests/browser_upload.js dist/dashboard.html /tmp/sample.ibt                
 node tests/validate_charts.js dist/sample_dashboard.html                           # every chart vs computed values (incl. consistency), before/after lap exclusion
 python3 tools/make_test_replay_video.py data/sample_session.tsv /tmp/replay.webm   # prints the video's true start time
 node tests/replay_check.js dist/sample_dashboard.html /tmp/replay.webm <start>      # video/telemetry sync, playback, seek, .rpy handling
+node tests/replay_layout_check.js dist/sample_dashboard.html /tmp/replay.webm <letterboxed.webm>  # resize, size presets, fullscreen, crop, auto bars
 ```

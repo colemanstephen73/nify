@@ -38,35 +38,72 @@
 <div id="drop">Drop iRacing .ibt or TSV file(s) to analyse</div>
 <div id="toast" role="status" aria-live="polite"></div>
 <aside id="dock" class="dock" hidden aria-label="Replay">
+  <div class="dock-resize" id="rv-resize" title="Drag to resize the replay panel" role="separator" aria-orientation="vertical" tabindex="0"></div>
   <div class="dock-head">
     <b>Replay</b><span id="rv-syncpill" class="sync-pill">not synced</span><span style="flex:1"></span>
     <button class="btn" id="rv-addvideo" title="Load a replay video (exported from iRacing or recorded with OBS)">Add video…</button>
     <button class="btn" id="rv-close" title="Close the replay panel" aria-label="Close replay panel">✕</button>
   </div>
-  <div class="dock-video">
-    <video id="rv-video" playsinline preload="metadata"></video>
-    <canvas id="rv-map" width="400" height="225" aria-label="Live car position"></canvas>
-    <div id="rv-vmsg" class="rv-vmsg" hidden></div>
-  </div>
-  <div class="dock-transport">
-    <button class="btn" id="rv-back" title="Back 5 s">−5s</button>
-    <button class="btn primary" id="rv-play" title="Play / pause (space)">▶ Play</button>
-    <button class="btn" id="rv-fwd" title="Forward 5 s">+5s</button>
-    <select id="rv-speed" aria-label="Playback speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select>
-    <label class="rv-follow"><input type="checkbox" id="rv-follow" checked> Follow lap</label>
-    <span class="mono dim" id="rv-time" style="margin-left:auto"></span>
-  </div>
-  <div class="rv-scrub"><div id="rv-ticks" class="rv-ticks"></div><input type="range" id="rv-scrub" min="0" max="1" step="0.05" value="0" aria-label="Session time"></div>
-  <div class="rv-live" id="rv-live"></div>
-  <details class="rv-sync" id="rv-syncbox">
-    <summary>Video ↔ telemetry sync</summary>
-    <div class="rv-sync-body">
-      <div class="dim" style="font-size:11.5px">Pause the video on the frame where the car crosses the start/finish line, pick that lap and press <b>Set sync point</b>. Add a second point on a later lap to correct any drift.</div>
-      <div class="rv-row"><select id="rv-synclap" aria-label="Lap starting at this frame"></select><button class="btn" id="rv-setsync">Set sync point</button><button class="btn" id="rv-clearsync">Clear</button></div>
-      <div class="rv-row"><span class="dim">Nudge</span><button class="btn" data-nudge="-1">−1 s</button><button class="btn" data-nudge="-0.1">−0.1</button><button class="btn" data-nudge="-0.0167">−1 frame</button><button class="btn" data-nudge="0.0167">+1 frame</button><button class="btn" data-nudge="0.1">+0.1</button><button class="btn" data-nudge="1">+1 s</button></div>
-      <div class="mono dim" id="rv-syncinfo" style="font-size:11px"></div>
+  <div class="dock-tools">
+    <div class="chips" role="group" aria-label="Panel size">
+      <button class="chip" data-size="dock" title="Docked beside the stats (drag the edge to resize)">Dock</button>
+      <button class="chip" data-size="large" title="About two thirds of the screen">Large</button>
+      <button class="chip" data-size="full" title="Almost full screen, readouts beside the video">Full</button>
+      <button class="chip" id="rv-fs" title="Browser fullscreen">⛶</button>
     </div>
-  </details>
+    <div class="chips" role="group" aria-label="Video">
+      <button class="chip" id="rv-crop" title="Crop the video: drag a rectangle on the frame">Crop…</button>
+      <button class="chip" id="rv-cropreset" title="Show the full frame">Uncrop</button>
+      <button class="chip on" id="rv-mapov" title="Show the mini track map over the video">Map overlay</button>
+    </div>
+  </div>
+  <div class="dock-body">
+    <div class="dock-main">
+      <div class="dock-video" id="rv-box">
+        <div class="rv-frame" id="rv-frame">
+          <video id="rv-video" playsinline preload="metadata"></video>
+        </div>
+        <canvas id="rv-map" width="400" height="225" aria-label="Live car position"></canvas>
+        <div class="crop-ui" id="rv-cropui" hidden>
+          <div class="crop-rect" id="rv-croprect"><i data-h="nw"></i><i data-h="ne"></i><i data-h="sw"></i><i data-h="se"></i></div>
+        </div>
+        <div id="rv-vmsg" class="rv-vmsg" hidden></div>
+      </div>
+      <div class="crop-bar" id="rv-cropbar" hidden>
+        <span class="dim">Drag on the frame to draw the crop (Shift+drag to redraw); drag inside to move it, corners to resize.</span>
+        <div class="chips">
+          <button class="chip" data-crop="full">Full frame</button>
+          <button class="chip" data-crop="43">Centre 4:3</button>
+          <button class="chip" data-crop="top">Top ⅔</button>
+          <button class="chip" data-crop="auto" title="Detect and remove black bars from the current frame">Auto (remove bars)</button>
+        </div>
+        <span class="mono dim" id="rv-cropinfo"></span>
+        <span style="flex:1"></span>
+        <button class="btn" id="rv-cropcancel">Cancel</button><button class="btn primary" id="rv-cropapply">Apply crop</button>
+      </div>
+      <div class="dock-transport">
+        <button class="btn" id="rv-back" title="Back 5 s">−5s</button>
+        <button class="btn primary" id="rv-play" title="Play / pause (space)">▶ Play</button>
+        <button class="btn" id="rv-fwd" title="Forward 5 s">+5s</button>
+        <select id="rv-speed" aria-label="Playback speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select>
+        <label class="rv-follow"><input type="checkbox" id="rv-follow" checked> Follow lap</label>
+        <span class="mono dim" id="rv-time" style="margin-left:auto"></span>
+      </div>
+      <div class="rv-scrub"><div id="rv-ticks" class="rv-ticks"></div><input type="range" id="rv-scrub" min="0" max="1" step="0.05" value="0" aria-label="Session time"></div>
+    </div>
+    <div class="dock-side">
+      <div class="rv-live" id="rv-live"></div>
+      <details class="rv-sync" id="rv-syncbox">
+        <summary>Video ↔ telemetry sync</summary>
+        <div class="rv-sync-body">
+          <div class="dim" style="font-size:11.5px">Pause the video on the frame where the car crosses the start/finish line, pick that lap and press <b>Set sync point</b>. Add a second point on a later lap to correct any drift.</div>
+          <div class="rv-row"><select id="rv-synclap" aria-label="Lap starting at this frame"></select><button class="btn" id="rv-setsync">Set sync point</button><button class="btn" id="rv-clearsync">Clear</button></div>
+          <div class="rv-row"><span class="dim">Nudge</span><button class="btn" data-nudge="-1">−1 s</button><button class="btn" data-nudge="-0.1">−0.1</button><button class="btn" data-nudge="-0.0167">−1 frame</button><button class="btn" data-nudge="0.0167">+1 frame</button><button class="btn" data-nudge="0.1">+0.1</button><button class="btn" data-nudge="1">+1 s</button></div>
+          <div class="mono dim" id="rv-syncinfo" style="font-size:11px"></div>
+        </div>
+      </details>
+    </div>
+  </div>
   <input type="file" id="rv-file" accept="video/*,.mp4,.webm,.mov,.m4v,.mkv,.rpy" hidden>
 </aside>
 <div class="modal-bg" id="modal"><div class="modal" id="modal-body"></div></div>
