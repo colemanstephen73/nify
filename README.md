@@ -33,6 +33,8 @@ After loading an iRacing `.ibt`, the dashboard asks whether to add a replay vide
 
 As the video plays, the telemetry charts and track map show a cursor at the car's position. With **Follow lap** on, the dashboard selects the lap being played. Clicking the telemetry or speed-comparison chart seeks the video to that point on the selected lap.
 
+**Corner clicks jump the video:** while the panel is open, clicking a corner anywhere seeks the replay to that corner on the selected lap, starting a lead-in (0–5 s, default 2 s) before the braking point. That includes the corner table, consistency heatmap, pace/consistency matrix, track-map labels, telemetry Jump chips, insights and coaching. A mistake entry jumps to its own lap and corner. If the selected lap isn't in the video, the nearest lap the video covers is used, and the dashboard says so. Playback that was running resumes from the lead-in point. Untick **Jump to clicked corner** to turn this off.
+
 **Panel size and crop:**
 - **Resize:** drag the panel's left edge (top edge on narrow screens) to resize it; the stats re-flow beside it.
 - **Size presets:** **Dock**, **Large** (two thirds of the screen) and **Full** (near full screen; Escape returns to Dock). ⛶ switches to browser fullscreen. When the panel is wide, the readouts move into a side column.
@@ -118,5 +120,6 @@ node tests/browser_upload.js dist/dashboard.html /tmp/sample.ibt                
 node tests/validate_charts.js dist/sample_dashboard.html                           # every chart vs computed values (incl. consistency), before/after lap exclusion
 python3 tools/make_test_replay_video.py data/sample_session.tsv /tmp/replay.webm   # prints the video's true start time
 node tests/replay_check.js dist/sample_dashboard.html /tmp/replay.webm <start>      # video/telemetry sync, playback, seek, .rpy handling
+node tests/replay_corner_check.js dist/sample_dashboard.html /tmp/replay.webm <start>  # corner click → video jump from every entry point
 node tests/replay_layout_check.js dist/sample_dashboard.html /tmp/replay.webm <letterboxed.webm>  # resize, size presets, fullscreen, crop, auto bars
 ```

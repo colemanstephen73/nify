@@ -1278,13 +1278,14 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
     setState({ corner: ci });
     const pad = 70;
     zoomTelemetry([Math.max(0, c.dist.start - pad), Math.min(S.R.G.L, c.dist.end + pad + 40)]);
+    replayToCorner(ci);
   }
   function focusIncident(id) {
     const i = S.R.incidents[id];
     setState({ sel: i.lap, corner: i.corner });
     const c = S.R.corners[i.corner];
     zoomTelemetry([Math.max(0, c.dist.start - 70), Math.min(S.R.G.L, c.dist.end + 110)]);
-    document.getElementById('telemetry').scrollIntoView({ behavior: 'smooth' });
+    if (!replayToCorner(i.corner, i.lap)) document.getElementById('telemetry').scrollIntoView({ behavior: 'smooth' });
   }
 
   const deps = {
@@ -1320,7 +1321,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
   //   1 point:       st = st0 + (vt − vt0)
   //   2 points:      st = st0 + (vt − vt0)·rate, rate = Δst/Δvt (corrects drift)
   // ======================================================================
-  const RP = { size: 'dock', dockW: 440, dockH: 52, mapOverlay: true, crop: null, cropEdit: null, open: false, video: null, sync: [], baseOffset: null, playing: false, T: null, speed: 1, follow: true, raf: null, lastFrame: 0, session: null, mapCache: null, dragging: false };
+  const RP = { cornerJump: true, lead: 2, size: 'dock', dockW: 440, dockH: 52, mapOverlay: true, crop: null, cropEdit: null, open: false, video: null, sync: [], baseOffset: null, playing: false, T: null, speed: 1, follow: true, raf: null, lastFrame: 0, session: null, mapCache: null, dragging: false };
   const rpC = () => S.R._base.I.table;
   function rpSessionRange() {
     const C = rpC(); let lo = Infinity, hi = -Infinity;
@@ -1622,8 +1623,8 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
     saveSync(); rpVideoUI(); rpUpdate(true);
   }
   // ---------------------------------------------------------------- panel size, fullscreen, crop
-  function loadLayout() { try { const v = JSON.parse(localStorage.getItem('rpLayout') || 'null'); if (v) Object.assign(RP, { size: v.size || 'dock', dockW: v.dockW || 440, dockH: v.dockH || 52, mapOverlay: v.mapOverlay !== false }); } catch (e) { /* ignore */ } }
-  function saveLayout() { try { localStorage.setItem('rpLayout', JSON.stringify({ size: RP.size, dockW: RP.dockW, dockH: RP.dockH, mapOverlay: RP.mapOverlay })); } catch (e) { /* ignore */ } }
+  function loadLayout() { try { const v = JSON.parse(localStorage.getItem('rpLayout') || 'null'); if (v) Object.assign(RP, { size: v.size || 'dock', dockW: v.dockW || 440, dockH: v.dockH || 52, mapOverlay: v.mapOverlay !== false, cornerJump: v.cornerJump !== false, lead: Number.isFinite(v.lead) ? v.lead : 2 }); } catch (e) { /* ignore */ } }
+  function saveLayout() { try { localStorage.setItem('rpLayout', JSON.stringify({ size: RP.size, dockW: RP.dockW, dockH: RP.dockH, mapOverlay: RP.mapOverlay, cornerJump: RP.cornerJump, lead: RP.lead })); } catch (e) { /* ignore */ } }
   let relayoutTimer = null;
   function relayoutCharts() { clearTimeout(relayoutTimer); relayoutTimer = setTimeout(() => { window.dispatchEvent(new Event('resize')); RP.mapCache = null; rpUpdate(true); }, 120); }
   const clampW = w => Math.max(320, Math.min(window.innerWidth - 320, Math.round(w)));
@@ -1786,6 +1787,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
 
   function wireReplay() {
     loadLayout(); wireResize(); wireCrop();
+    $('rv-cornerjump').checked = RP.cornerJump; $('rv-lead').value = String(RP.lead);
     $('btn-replay').onclick = () => (RP.open ? closeReplay() : openReplay(false));
     $('rv-close').onclick = closeReplay;
     $('rv-addvideo').onclick = () => $('rv-file').click();
@@ -1795,6 +1797,8 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
     $('rv-fwd').onclick = () => rpSeek(RP.T + 5);
     $('rv-speed').onchange = e => { RP.speed = +e.target.value; $('rv-video').playbackRate = RP.speed; };
     $('rv-follow').onchange = e => { RP.follow = e.target.checked; };
+    $('rv-cornerjump').onchange = e => { RP.cornerJump = e.target.checked; saveLayout(); };
+    $('rv-lead').onchange = e => { RP.lead = +e.target.value; saveLayout(); };
     const sc = $('rv-scrub');
     sc.oninput = () => { RP.dragging = true; rpSeek(+sc.value); };
     sc.onchange = () => { RP.dragging = false; };
@@ -1807,6 +1811,43 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
       if (e.key === 'Escape') { if (RP.cropEdit) exitCrop(false); else if (RP.size === 'full' && !document.fullscreenElement) setSize('dock'); }
     });
   }
+  // corner click → replay: jump to the corner (lead-in before the braking point) on the selected lap,
+  // or on the nearest lap the video covers. Returns true when the replay moved.
+  function replayToCorner(ci, lapIdx) {
+    if (!RP.open || !RP.cornerJump || !S.R) return false;
+    const c = S.R.corners[ci]; if (!c) return false;
+    const G = S.R.G;
+    const entry = Number.isFinite(c.dist.brake) ? Math.min(c.dist.brake, c.dist.start) : c.dist.start;
+    const k = Math.max(0, Math.min(G.N - 1, Math.round(entry / G.ds)));
+    const target = lap => {
+      if (!lap || lap.session !== RP.session) return NaN;
+      const tr = lap.grid.time[k]; return Number.isFinite(tr) ? lap.tStart + tr - RP.lead : NaN;
+    };
+    const v = $('rv-video'), [s0, s1] = rpSessionRange();
+    const inRange = T => {
+      if (!Number.isFinite(T) || T < s0 - RP.lead || T > s1) return false;
+      if (!RP.video) return true;
+      const vt = s2v(T); return vt >= -0.05 && (!Number.isFinite(v.duration) || vt <= v.duration);
+    };
+    let lap = L()[lapIdx !== undefined ? lapIdx : S.sel], T = target(lap), note = '';
+    if (!inRange(T)) {
+      const want = lap;
+      const alt = L().filter(l => l.session === RP.session).map(l => ({ l, T: target(l) })).filter(o => inRange(o.T))
+        .sort((a, b) => Math.abs(a.T - RP.T) - Math.abs(b.T - RP.T))[0];
+      if (!alt) { toast(`${RP.video ? 'The video does not cover' : 'No telemetry for'} ${c.id}${want ? ' on ' + want.label : ''}.`); return false; }
+      note = want ? ` (${want.label} is not in the video)` : '';
+      lap = alt.l; T = alt.T;
+    }
+    // hold playback while the dashboard redraws for the new corner/lap, then resume from the lead-in point
+    const wasPlaying = rpPlaying();
+    if (wasPlaying) rpPause();
+    if (lap.index !== S.sel) setState({ sel: lap.index });
+    rpSeek(T);
+    if (wasPlaying) setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(() => { rpSeek(T); rpPlay(); })), 0);
+    toast(`Replay → ${c.id} on ${lap.label}${RP.lead ? `, ${RP.lead} s before braking` : ''}${note}${RP.video && !RP.sync.length ? ' — video not synced yet' : ''}`);
+    return true;
+  }
+
   // charts → replay: seek to a distance on the selected lap
   function replaySeekToDistance(dist) {
     if (!RP.open) return;
@@ -1840,7 +1881,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
       ['mapControls', renderMapControls], ['map', renderMap], ['mapMistakes', renderMapMistakes], ['insights', renderInsights], ['coaching', renderCoaching], ['method', renderMethod]].forEach(([n, f]) => safe(n, f));
     window.__dashboardReady = true;
   }
-  window.__replay = { RP, setSize, applyCrop, enterCrop, exitCrop, cropPreset, detectBars, openReplay, closeReplay, rpSeek, rpState, v2s, s2v, rpSetSync, rpLoadVideo, replaySeekToDistance };
+  window.__replay = { RP, replayToCorner, setSize, applyCrop, enterCrop, exitCrop, cropPreset, detectBars, openReplay, closeReplay, rpSeek, rpState, v2s, s2v, rpSetSync, rpLoadVideo, replaySeekToDistance };
 
   function showError(msg) {
     $('loading').classList.add('hide');
