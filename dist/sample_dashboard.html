@@ -48760,7 +48760,7 @@ Time [s]	Lap	Distance [m]	Speed [km/h]	Throttle [%]	Brake [bar]	Steering [deg]	G
   // WebGL is optional: some viewers/hosts disable it, so fall back to SVG traces
   const HAS_WEBGL = (() => { try { const c = document.createElement('canvas'); return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl'))); } catch (e) { return false; } })();
   const GL = HAS_WEBGL ? 'scattergl' : 'scatter';
-  const CFG = { displaylogo: false, responsive: true, displayModeBar: 'hover', modeBarButtonsToRemove: ['lasso2d', 'select2d', 'autoScale2d', 'toggleSpikelines', 'hoverClosestCartesian', 'hoverCompareCartesian'] };
+  const CFG = { displaylogo: false, responsive: true, displayModeBar: 'hover', modeBarButtonsToRemove: ['toImage', 'lasso2d', 'select2d', 'autoScale2d', 'toggleSpikelines', 'hoverClosestCartesian', 'hoverCompareCartesian'] };
   const CFG_STATIC = { displaylogo: false, responsive: true, displayModeBar: false };
 
   // ---------------------------------------------------------------- helpers
