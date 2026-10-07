@@ -34,6 +34,7 @@
 
 <div id="loading"><div class="spin"></div><div class="dim" id="loading-msg">Analysing telemetry…</div></div>
 <div id="drop">Drop iRacing .ibt or TSV file(s) to analyse</div>
+<div id="toast" role="status" aria-live="polite"></div>
 <div class="modal-bg" id="modal"><div class="modal" id="modal-body"></div></div>
 
 <main id="app">
@@ -71,7 +72,8 @@
     </section>
 
     <section id="laps">
-      <div class="sec-title"><h2>Lap explorer</h2><span class="sub">Every lap accounted for · click to inspect · shift-click to add to comparison</span></div>
+      <div class="sec-title"><h2>Lap explorer</h2><span class="sub">Every lap accounted for · click to inspect · shift-click to compare · untick “Use” to remove a lap from the analysis</span></div>
+      <div class="excl-bar" id="lap-excl"></div>
       <div class="strip" id="lap-strip"></div>
       <div class="grid g-main">
         <div class="panel"><h3>Lap timeline</h3><div class="tbl-wrap" style="max-height:440px"><table class="tbl" id="tbl-laps"></table></div></div>

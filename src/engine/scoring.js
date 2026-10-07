@@ -9,7 +9,7 @@
 
   const LEVEL_POINTS = [0, 6, 18, 35, 55];
   const CONF_W = { High: 1, Medium: 0.75, Low: 0.4 };
-  const STATUS_ORDER = ['Incomplete', 'Data-quality issue', 'Invalid', 'Off-track', 'Major mistake', 'Significant mistake', 'Minor mistake', 'Valid'];
+  const STATUS_ORDER = ['Excluded', 'Incomplete', 'Data-quality issue', 'Invalid', 'Off-track', 'Major mistake', 'Significant mistake', 'Minor mistake', 'Valid'];
 
   // --------------------------------------------------------------------------
   // Lap scoring
@@ -66,7 +66,8 @@
       lap.largestEvent = worst ? worst.id : null;
       // status hierarchy: validity first, then execution
       let status;
-      if (!lap.complete) status = 'Incomplete';
+      if (lap.excluded) status = 'Excluded';
+      else if (!lap.complete) status = 'Incomplete';
       else if (lap.dqSevere) status = 'Data-quality issue';
       else if (lap.trackLimitViolation) status = 'Invalid';
       else if (lap.offTracks) status = 'Off-track';
@@ -76,10 +77,10 @@
       else status = 'Valid';
       lap.status = status;
       lap.execLevel = lap.offTracks ? 4 : lap.maxLevel;
-      lap.validity = !lap.complete ? 'Incomplete' : lap.dqSevere ? 'Data issue' : lap.trackLimitViolation ? 'Invalid' : 'Valid';
+      lap.validity = lap.excluded ? 'Excluded by you' : !lap.complete ? 'Incomplete' : lap.dqSevere ? 'Data issue' : lap.trackLimitViolation ? 'Invalid' : 'Valid';
       lap.usableForPace = lap.analysable && !lap.trackLimitViolation && !lap.offTracks;
       lap.clean = lap.usableForPace && lap.maxLevel <= 1;
-      lap.color = { Valid: 'clean', 'Minor mistake': 'minor', 'Significant mistake': 'sig', 'Major mistake': 'major', 'Off-track': 'major', Invalid: 'major', 'Data-quality issue': 'na', Incomplete: 'na' }[status];
+      lap.color = { Valid: 'clean', 'Minor mistake': 'minor', 'Significant mistake': 'sig', 'Major mistake': 'major', 'Off-track': 'major', Invalid: 'major', 'Data-quality issue': 'na', Incomplete: 'na', Excluded: 'na' }[status];
     }
   }
 

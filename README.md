@@ -21,6 +21,10 @@ python3 tools/build_dashboard.py --tsv my_session.tsv --out dist/my_session.html
 
 > `data/sample_session.tsv` is **synthetic** data from `tools/generate_sample_tsv.py`: a physics-based lap simulation with injected mistakes, off-tracks and data defects. Its known answers are in `data/sample_session.truth.json`. The dashboard shows a "SYNTHETIC DEMO DATA" badge when this file is loaded.
 
+## Excluding laps
+
+Untick **Use** for a lap in the lap table, or press **Exclude lap** in the lap assessment, to remove that lap from the analysis. Pace, consistency, the mistake baselines, corner statistics, the theoretical best, insights and every chart are then recomputed in about 0.1 s, because the parsed data is reused. Excluded laps stay listed and their telemetry can still be viewed. They can be restored one at a time, or all at once with **Restore all**. The track model (corners and segments) always uses every complete lap, so corner IDs don't change when laps are excluded. At least 3 laps must stay in the analysis. Exclusions are remembered in your browser for the same file.
+
 ## iRacing `.ibt` support
 
 `src/engine/ibt.js` reads the irsdk disk format directly in the browser: a 112-byte header, a 32-byte disk sub-header, 144-byte variable headers, the session-info YAML, then fixed-size sample records (usually 60 Hz). Only the channels the analysis needs are decoded, so long sessions stay fast. The reader uses:
@@ -57,4 +61,5 @@ node tests/run_engine.js data/sample_session.tsv                                
 node tests/test_engine.js /tmp/sample.ibt data/sample_session.truth.json          # same checks through the .ibt reader
 node tests/browser_check.js dist/sample_dashboard.html                             # headless browser QA (Playwright)
 node tests/browser_upload.js dist/dashboard.html /tmp/sample.ibt                   # upload through the file picker
+node tests/validate_charts.js dist/sample_dashboard.html                           # every chart vs computed values, before/after lap exclusion
 ```

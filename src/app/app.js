@@ -55,7 +55,7 @@
   }
 
   // ---------------------------------------------------------------- state
-  const S = { R: null, sel: null, cmp: [], ref: 'theo', corner: null, ch: null, ov: { corners: true, brake: true, apex: true, mistakes: true }, mapColor: 'speed', xr: null, diffMetric: null, sort: {} };
+  const S = { R: null, files: null, sel: null, cmp: [], ref: 'theo', corner: null, ch: null, ov: { corners: true, brake: true, apex: true, mistakes: true }, mapColor: 'speed', xr: null, diffMetric: null, sort: {} };
   const L = () => S.R.laps;
   const ana = () => S.R.laps.filter(l => l.analysable);
   const lapCol = idx => { const order = [S.sel, ...S.cmp]; const i = order.indexOf(idx); return i >= 0 ? COL.laps[i] : COL.muted; };
@@ -191,6 +191,7 @@
     el.on('plotly_click', ev => { const p = ev.points.find(p => p.customdata && Array.isArray(p.customdata)); if (p) selectLap(p.customdata[0], ev.event && ev.event.shiftKey); });
     $('lg-status').innerHTML = [['clean', 'Clean'], ['minor', 'Minor'], ['sig', 'Significant'], ['major', 'Major / off-track']].map(([c, t]) => `<span class="li"><span class="dot c-${c}"></span>${t}</span>`).join('') +
       `<span class="li"><span class="dot" style="border:1.5px solid ${COL.text2};border-radius:50%;background:none"></span>est. clean time (lap time − flagged losses)</span>` +
+      (L().some(l => l.excluded) ? `<span class="li"><span class="dot c-na"></span>Excluded by you: ${L().filter(l => l.excluded).map(l => l.label).join(', ')}</span>` : '') +
       (L().some(l => !l.complete) ? `<span class="li muted">Not plotted (incomplete): ${L().filter(l => !l.complete).map(l => l.label).join(', ')}</span>` : '');
   }
 
@@ -291,10 +292,16 @@
   // ======================================================================
   function renderStrip() {
     const SS = S.R.sessionStats;
+    const ex = L().filter(l => l.excluded);
+    $('lap-excl').innerHTML = ex.length
+      ? `<span><b>${ex.length}</b> lap${ex.length > 1 ? 's' : ''} excluded from the analysis: ${ex.map(l => `<button class="chip" data-restore="${esc(l.key)}" title="Restore ${esc(l.label)}">${esc(l.label)} ↺</button>`).join(' ')}</span><button class="btn" id="btn-restore-all">Restore all</button>`
+      : `<span class="muted">All complete laps are included. Untick a lap in the table, or use “Exclude lap” in the lap assessment, to remove it from every statistic.</span>`;
+    $('lap-excl').querySelectorAll('[data-restore]').forEach(b => b.onclick = () => setExcluded(S.R.excluded.filter(k => k !== b.dataset.restore)));
+    const ra = $('btn-restore-all'); if (ra) ra.onclick = () => setExcluded([]);
     $('lap-strip').innerHTML = L().map(l => {
       const ci = [S.sel, ...S.cmp].indexOf(l.index);
-      return `<div class="cell ${l.index === S.sel ? 'sel' : ''} ${ci > 0 ? 'cmp' : ''}" style="--sc:${STATUS_COL[l.color]};${ci > 0 ? '--cc:' + COL.laps[ci] : ''}" data-lap="${l.index}" tabindex="0" title="${esc(l.label)} · ${esc(l.status)}${l.complete ? ' · ' + fmtLap(l.lapTime) : ' · ' + esc(l.partialReason || '')}">
-        <span class="n">${esc(l.label)}</span><span class="t">${l.complete ? fmtD(l.lapTime - SS.best, 2) : (l.kind === 'out' ? 'OUT' : l.kind === 'in' ? 'IN' : '—')}</span></div>`;
+      return `<div class="cell ${l.index === S.sel ? 'sel' : ''} ${ci > 0 ? 'cmp' : ''} ${l.excluded ? 'excl' : ''}" style="--sc:${STATUS_COL[l.color]};${ci > 0 ? '--cc:' + COL.laps[ci] : ''}" data-lap="${l.index}" tabindex="0" title="${esc(l.label)} · ${esc(l.status)}${l.complete ? ' · ' + fmtLap(l.lapTime) : ' · ' + esc(l.partialReason || '')}">
+        <span class="n">${esc(l.label)}</span><span class="t">${l.excluded ? 'EXCL' : l.complete ? fmtD(l.lapTime - SS.best, 2) : (l.kind === 'out' ? 'OUT' : l.kind === 'in' ? 'IN' : '—')}</span></div>`;
     }).join('');
     $('lap-strip').querySelectorAll('.cell').forEach(el => {
       el.onclick = ev => { if (ev.shiftKey && window.getSelection) window.getSelection().removeAllRanges(); selectLap(+el.dataset.lap, ev.shiftKey); };
@@ -332,13 +339,15 @@
 
   function renderLapTable() {
     const R = S.R, SS = R.sessionStats;
-    const rows = L().map(l => ({ ...l, _id: l.index, _dim: !l.complete }));
+    const rows = L().map(l => ({ ...l, _id: l.index, _dim: !l.analysable }));
     const bar = (v, col) => Number.isFinite(v) ? `<span style="display:inline-flex;align-items:center;gap:6px"><span class="bar" style="width:46px"><i style="width:${v}%;background:${col}"></i></span>${v.toFixed(0)}</span>` : '—';
     const mcol = v => v < 20 ? COL.good : v < 40 ? COL.warn : v < 60 ? COL.serious : COL.critical;
     const cols = [
+      { k: 'use', h: 'Use', l: true, txt: true, title: 'include this lap in the analysis', sv: r => r.analysable ? 1 : 0,
+        f: r => r.complete && !r.dqSevere ? `<input type="checkbox" class="excl" data-key="${esc(r.key)}" ${r.excluded ? '' : 'checked'} aria-label="Include ${esc(r.label)} in the analysis">` : `<input type="checkbox" disabled title="${esc(r.partialReason || 'data-quality issue')} — excluded automatically" aria-label="${esc(r.label)} excluded automatically">` },
       { k: 'index', h: 'Lap', l: true, txt: true, f: r => `<span class="pill"><span class="dot c-${r.color}"></span>${esc(r.label)}</span>` },
-      { k: 'lapTime', h: 'Lap time', f: r => r.complete ? fmtLap(r.lapTime) : `<span class="muted">${r.kind === 'out' ? 'out lap' : r.kind === 'in' ? 'in lap' : 'partial'}</span>` },
-      { k: 'gap', h: 'Δ best', sv: r => r.lapTime - SS.best, f: r => r.complete ? fmtD(r.lapTime - SS.best) : '' },
+      { k: 'lapTime', h: 'Lap time', f: r => r.complete ? (r.excluded ? `<s class="muted">${fmtLap(r.lapTime)}</s>` : fmtLap(r.lapTime)) : `<span class="muted">${r.kind === 'out' ? 'out lap' : r.kind === 'in' ? 'in lap' : 'partial'}</span>` },
+      { k: 'gap', h: 'Δ best', sv: r => r.excluded ? NaN : r.lapTime - SS.best, f: r => r.complete && !r.excluded ? fmtD(r.lapTime - SS.best) : '' },
       { k: 'validity', h: 'Validity', txt: true, f: r => `<span class="${r.validity === 'Valid' ? 'dim' : 't-warn'}">${esc(r.validity)}</span>` },
       { k: 'status', h: 'Execution', txt: true, sv: r => r.execLevel, f: r => esc(r.status) },
       { k: 'mistakeScore', h: 'Mistake score', title: '0 = clean · 100 = severely compromised', f: r => bar(r.mistakeScore, mcol(r.mistakeScore)) },
@@ -346,9 +355,16 @@
       { k: 'estCleanTime', h: 'Est. clean', title: 'lap time minus estimated loss from flagged mistakes (level ≥ 2)', f: r => r.complete && r.analysable ? fmtLap(r.estCleanTime) : '—' },
       { k: 'mistakes', h: 'Mistakes', f: r => r.analysable ? r.mistakes : '—' },
       { k: 'offTracks', h: 'Off-trk', f: r => r.analysable ? (r.offTracks ? `<span class="t-crit">${r.offTracks}</span>` : 0) : '—' },
-      { k: 'timeLost', h: 'Largest loss', l: true, txt: true, sv: r => r.largestEvent !== null ? R.incidents[r.largestEvent].loss : -1, f: r => { if (r.largestEvent === null) return r.analysable ? '<span class="muted">—</span>' : `<span class="muted">${esc(r.partialReason || (r.dq[0] || {}).text || '')}</span>`; const i = R.incidents[r.largestEvent]; return `${esc(i.cornerId)} ${esc(i.type.toLowerCase())} <span class="mono t-bad">${fmtD(i.loss, 2)}</span>`; } },
+      { k: 'timeLost', h: 'Largest loss', l: true, txt: true, sv: r => r.largestEvent !== null ? R.incidents[r.largestEvent].loss : -1, f: r => { if (r.largestEvent === null) return r.analysable ? '<span class="muted">—</span>' : `<span class="muted">${r.excluded ? 'excluded by you' : esc(r.partialReason || (r.dq[0] || {}).text || '')}</span>`; const i = R.incidents[r.largestEvent]; return `${esc(i.cornerId)} ${esc(i.type.toLowerCase())} <span class="mono t-bad">${fmtD(i.loss, 2)}</span>`; } },
     ];
-    sortable('tbl-laps', cols, rows, (id, ev) => selectLap(id, ev.shiftKey), r => r.index === S.sel, { k: 'index', asc: true });
+    sortable('tbl-laps', cols, rows, (id, ev) => {
+      if (ev.target && ev.target.classList && ev.target.classList.contains('excl')) return; // handled by the checkbox
+      selectLap(id, ev.shiftKey);
+    }, r => r.index === S.sel, S.sort['tbl-laps'] || { k: 'index', asc: true });
+    $('tbl-laps').querySelectorAll('input.excl').forEach(cb => {
+      cb.onclick = ev => ev.stopPropagation();
+      cb.onchange = () => toggleExclude(cb.dataset.key, !cb.checked, cb);
+    });
   }
 
   function renderLapDetail() {
@@ -359,7 +375,8 @@
     const rank = pace.findIndex(x => x.index === l.index);
     const inc = R.incidents.filter(i => i.lap === l.index).sort((a, b) => b.level - a.level || b.loss - a.loss);
     let assess;
-    if (!l.complete) assess = `<b>${esc(l.label)}</b> is an <b>incomplete ${l.kind === 'out' ? 'out-lap' : l.kind === 'in' ? 'in-lap' : 'lap'}</b> (${esc(l.partialReason)}). It is shown in the telemetry for reference but excluded from pace, consistency and corner statistics.`;
+    if (l.excluded) assess = `<b>${esc(l.label)}</b> (${fmtLap(l.lapTime)}) is <b>excluded from the analysis</b> by you. It is not used for pace, consistency, corner statistics, mistake baselines or the theoretical best. Its telemetry is still shown for reference.`;
+    else if (!l.complete) assess = `<b>${esc(l.label)}</b> is an <b>incomplete ${l.kind === 'out' ? 'out-lap' : l.kind === 'in' ? 'in-lap' : 'lap'}</b> (${esc(l.partialReason)}). It is shown in the telemetry for reference but excluded from pace, consistency and corner statistics.`;
     else if (!l.analysable) assess = `<b>${esc(l.label)}</b> has a <b>data-quality issue</b>: ${esc(l.dq.map(d => d.text).join('; '))}. Excluded from statistics.`;
     else {
       const parts = [];
@@ -369,12 +386,14 @@
       if (l.complete && inc.length === 0 && l.lapTime - SS.best > 0.3) parts.push(`<span class="dim">Slower than best without any abnormal event — a clean but slower lap (pace, not execution).</span>`);
       assess = parts.join('<br>');
     }
-    el.innerHTML = `<h3>${esc(l.label)} — lap assessment <span class="r"><span class="pill"><span class="dot c-${l.color}"></span>${esc(l.status)}</span></span></h3>
+    const canToggle = l.complete && !l.dqSevere;
+    el.innerHTML = `<h3>${esc(l.label)} — lap assessment <span class="r" style="display:flex;gap:10px;align-items:center"><span class="pill"><span class="dot c-${l.color}"></span>${esc(l.status)}</span>${canToggle ? `<button class="btn" id="btn-excl-lap">${l.excluded ? 'Restore lap' : 'Exclude lap'}</button>` : ''}</span></h3>
       <div class="assess">${assess}</div>
       ${l.analysable ? '<div class="chart" id="ch-lapseg" style="height:190px;min-height:0"></div>' : ''}
       <h3 style="margin-top:10px">Flagged events</h3>
       <div class="incidents">${inc.length ? inc.map(incHtml).join('') : '<div class="empty">No mistakes or off-tracks detected on this lap.</div>'}</div>`;
     el.querySelectorAll('.inc').forEach(d => d.onclick = () => focusIncident(+d.dataset.inc));
+    const bx = $('btn-excl-lap'); if (bx) bx.onclick = () => toggleExclude(l.key, !l.excluded);
     if (l.analysable) {
       const F = R.features.get(l.index);
       const best = R.theo.segments.map(s => s.time);
@@ -1009,6 +1028,45 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
   }
 
   // ======================================================================
+  // LAP EXCLUSION
+  // ======================================================================
+  function storeKey() { return 'lapExcl:' + (S.files || []).map(f => f.name + ':' + (f.text ? f.text.length : f.buffer.byteLength)).join('|'); }
+  function saveExcluded(keys) { try { localStorage.setItem(storeKey(), JSON.stringify(keys)); } catch (e) { /* storage unavailable */ } }
+  function loadExcluded() { try { const v = JSON.parse(localStorage.getItem(storeKey()) || '[]'); return Array.isArray(v) ? v : []; } catch (e) { return []; } }
+  function toggleExclude(key, exclude, checkbox) {
+    const cur = new Set(S.R.excluded);
+    if (exclude) cur.add(key); else cur.delete(key);
+    const remaining = L().filter(l => l.complete && !l.dqSevere && !cur.has(l.key)).length;
+    if (remaining < 3) {
+      if (checkbox) checkbox.checked = true;
+      toast('At least 3 complete laps must stay in the analysis.');
+      return;
+    }
+    setExcluded(Array.from(cur));
+  }
+  function setExcluded(keys) {
+    $('loading').classList.remove('hide');
+    $('loading-msg').textContent = 'Recomputing analysis…';
+    setTimeout(() => {
+      try {
+        const R = E.analyze(S.files, { base: S.R._base, exclude: keys });
+        R.synthetic = S.R.synthetic; R.syntheticNote = S.R.syntheticNote;
+        S.R = R; window.__analysis = R;
+        saveExcluded(keys);
+        renderAll(true);
+        const n = keys.length;
+        toast(n ? `${n} lap${n > 1 ? 's' : ''} excluded — all charts and statistics recomputed.` : 'All laps restored — analysis recomputed.');
+      } catch (e) { console.error(e); toast('Could not recompute: ' + e.message); }
+      finally { $('loading').classList.add('hide'); }
+    }, 20);
+  }
+  let toastTimer = null;
+  function toast(msg) {
+    const t = $('toast'); t.textContent = msg; t.classList.add('on');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 3200);
+  }
+
+  // ======================================================================
   // SELECTION / LINKING
   // ======================================================================
   function selectLap(idx, addToCompare) {
@@ -1057,11 +1115,20 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
   // ======================================================================
   // BOOT
   // ======================================================================
-  function renderAll() {
+  function renderAll(preserve) {
     $('welcome').hidden = true; $('report').hidden = false; $('welcome-err').innerHTML = '';
     const R = S.R;
-    S.sel = R.sessionStats.bestLap; S.cmp = []; S.ref = 'theo'; S.ch = null; S.xr = null;
-    S.corner = R.coaching.length ? R.coaching[0].corner : (R.corners.length ? 0 : null);
+    if (preserve) {
+      // keep the user's view; laps keep their indices across a re-run
+      if (!R.laps[S.sel]) S.sel = R.sessionStats.bestLap;
+      S.cmp = S.cmp.filter(i => R.laps[i] && i !== S.sel);
+      const refLap = String(S.ref).startsWith('lap:') ? R.laps[+String(S.ref).slice(4)] : null;
+      if (refLap && !refLap.analysable) S.ref = 'theo';
+      if (S.corner === null || S.corner >= R.corners.length) S.corner = R.corners.length ? 0 : null;
+    } else {
+      S.sel = R.sessionStats.bestLap; S.cmp = []; S.ref = 'theo'; S.ch = null; S.xr = null;
+      S.corner = R.coaching.length ? R.coaching[0].corner : (R.corners.length ? 0 : null);
+    }
     [['header', renderHeader], ['verdict', renderVerdict], ['kpis', renderKPIs], ['progress', renderProgress], ['budget', renderBudget], ['dist', renderDist], ['trends', renderTrends],
       ['consBreak', renderConsBreak], ['paceBreak', renderPaceBreak], ['strip', renderStrip], ['lapTable', renderLapTable], ['lapDetail', renderLapDetail],
       ['cornerTable', renderCornerTable], ['cornerDetail', renderCornerDetail], ['matrix', renderMatrix], ['cornerLaps', renderCornerLaps], ['cornerDiff', renderCornerDiff], ['heat', renderHeat],
@@ -1082,7 +1149,10 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
     $('loading-msg').textContent = `Analysing ${files.map(f => f.name).join(', ')}…`;
     setTimeout(() => {
       try {
-        const R = E.analyze(files);
+        S.files = files;
+        let R = E.analyze(files);
+        const saved = loadExcluded().filter(k => R.laps.some(l => l.key === k && l.complete));
+        if (saved.length && R.laps.filter(l => l.complete && !l.dqSevere && !saved.includes(l.key)).length >= 3) R = E.analyze(files, { base: R._base, exclude: saved });
         R.synthetic = files.some(f => f.text ? (/synthetic/i.test(f.text.slice(0, 600)) && /not real/i.test(f.text.slice(0, 600))) : /synthetic/i.test(((R.trackMeta || {}).track || '') + ((R.trackMeta || {}).driver || '')));
         R.syntheticNote = 'The loaded file declares itself as synthetic test data (header comment).';
         window.__analysis = R;
@@ -1093,6 +1163,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
         }
         S.R = R; S.sort = {};
         renderAll();
+        if (R.excluded.length) toast(`Restored your earlier choice: ${R.excluded.length} lap(s) excluded.`);
       } catch (e) {
         console.error(e);
         showError('Analysis failed: ' + e.message);

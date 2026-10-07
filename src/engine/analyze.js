@@ -8,26 +8,43 @@
   const NS = root.TelemetryEngine = root.TelemetryEngine || {};
   const St = NS.stats;
 
-  function analyze(files) {
+  /**
+   * @param files  [{name, text} | {name, buffer}]
+   * @param opts   { exclude: ['session:lapNo', ...]  laps removed from the analysis by the user,
+   *                 base: model._base                   reuse parsed/resampled data (fast re-run) }
+   */
+  function analyze(files, opts = {}) {
     const t0 = Date.now();
-    const I = NS.ingest.buildSamples(files);
-    const lapInfo = NS.laps.detectLaps(I);
-    const G = NS.laps.resampleLaps(I, lapInfo);
-    G.grid = G.grid; G.L = lapInfo.L;
+    let I, lapInfo, G;
+    if (opts.base) ({ I, lapInfo, G } = opts.base);
+    else {
+      I = NS.ingest.buildSamples(files);
+      lapInfo = NS.laps.detectLaps(I);
+      G = NS.laps.resampleLaps(I, lapInfo);
+      G.L = lapInfo.L;
+    }
     const laps = lapInfo.laps;
     const unavailable = [];
-    // analysable = complete, no severe data problem, enough samples
-    laps.forEach(l => { l.analysable = l.complete && !l.dqSevere && I.avail.time !== undefined; });
+    const exclude = new Set(opts.exclude || []);
+    // analysable = complete, no severe data problem, not excluded by the user
+    laps.forEach(l => {
+      l.key = `${l.session}:${l.lapNo}`;
+      l.excluded = exclude.has(l.key);
+      l.analysable = l.complete && !l.dqSevere && !l.excluded && I.avail.time !== undefined;
+      delete l.rollingSpread; delete l.rollingMedian;
+    });
     const ana = laps.filter(l => l.analysable);
-    // Reference model from analysable laps (robust median; mistakes do not dominate)
-    const ref = NS.track.buildReference(ana.length ? ana : laps.filter(l => l.complete), G, I.avail);
-    const explicit = NS.track.explicitCornerRanges(ana, G, I);
-    const trackModel = ana.length >= 2 ? NS.track.detectCorners(ref, G, I.avail, explicit) : { corners: [], notes: ['Fewer than two analysable laps — corner model unavailable.'], inferred: true };
+    // The track model (reference line, corners, segments) uses every complete, valid lap, so corner
+    // IDs stay stable when the user excludes laps; medians keep single bad laps from dominating.
+    const trackLaps = laps.filter(l => l.complete && !l.dqSevere);
+    const ref = NS.track.buildReference(trackLaps.length ? trackLaps : laps.filter(l => l.complete), G, I.avail);
+    const explicit = NS.track.explicitCornerRanges(trackLaps, G, I);
+    const trackModel = trackLaps.length >= 2 ? NS.track.detectCorners(ref, G, I.avail, explicit) : { corners: [], notes: ['Fewer than two complete laps — corner model unavailable.'], inferred: true };
     const corners = trackModel.corners;
     const segs = NS.track.buildSegments(corners, ref, G);
-    const sectors = NS.track.buildSectors(ana, segs, G, I);
+    const sectors = NS.track.buildSectors(trackLaps, segs, G, I);
     // lateral deviation (needs reference line)
-    if (I.avail.position) for (const l of laps) if (l.complete) l.dev = NS.features.lateralDeviation(l, ref, G);
+    if (I.avail.position && !opts.base) for (const l of laps) if (l.complete) l.dev = NS.features.lateralDeviation(l, ref, G);
     const brakeThr = I.avail.brake ? Math.max(0.06 * St.quantile(St.finite(Array.from(ref.brake || [])), 0.99), 1) : NaN;
     const model = { I, laps, G, ref, corners, segs, sectors, avail: I.avail, brakeThr };
     model.features = NS.features.extract(model);
@@ -71,6 +88,8 @@
     if (I.sampling.inconsistent) issues.push('Sampling interval varies by more than 50% between P5 and P95.');
     laps.filter(l => !l.complete).forEach(l => issues.push(`${l.label}: incomplete — ${l.partialReason}.`));
     laps.filter(l => l.dq.length).forEach(l => l.dq.forEach(d => issues.push(`${l.label}: ${d.text}.`)));
+    const ex = laps.filter(l => l.excluded);
+    if (ex.length) issues.push(`${ex.length} lap(s) excluded from the analysis by the user: ${ex.map(l => l.label).join(', ')}.`);
     if (I.dq.filledValues) issues.push(`${I.dq.filledValues} isolated missing channel value(s) linearly interpolated for analysis (raw values untouched).`);
     I.notes.forEach(n => issues.push(n));
     const missingAll = Object.values(I.dq.missingPct);
@@ -83,6 +102,8 @@
       cornerSource: trackModel.inferred ? 'inferred' : 'explicit', curvatureSource: trackModel.curv ? trackModel.curv.source : (corners.length ? 'speed minima' : 'none'),
       devThr: det.devThr, brakeThr, gridStep: G.ds, lapLength: G.L,
     };
+    model._base = { I, lapInfo, G };
+    model.excluded = laps.filter(l => l.excluded).map(l => l.key);
     model.trackMeta = I.meta && I.meta.length ? I.meta[0] : null;
     model.elapsedMs = Date.now() - t0;
     model.version = '1.0.0';
