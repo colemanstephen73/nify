@@ -129,7 +129,7 @@
     const coach = R.coaching[0];
     const q = [
       ['How fast?', `Best ${fmtLap(SS.best)}`, `${R.laps[SS.bestLap].label} · clean median ${fmtLap(SS.medianClean)}`, 'overview'],
-      ['How consistent?', `${cons.toFixed(0)}/100 — ${rating}`, `clean-lap IQR ${fmt(SS.lapTimeStats.cleanIqr)} s · σ ${fmt(SS.lapTimeStats.std)} s`, 'overview'],
+      ['How consistent?', `${cons.toFixed(0)}/100 — ${rating}`, `line & speed ${SS.execCons ? SS.execCons.overall.toFixed(0) + '/100 (weakest: ' + SS.execCons.elements[SS.execCons.weakestElement].label.toLowerCase() + ')' : 'n/a'} · clean-lap IQR ${fmt(SS.lapTimeStats.cleanIqr)} s`, 'consistency'],
       ['Which laps have mistakes?', `${sigLaps.length} of ${SS.counts.analysable} laps`, sigLaps.slice(0, 8).map(l => l.label).join(' ') + (sigLaps.length > 8 ? ' …' : ''), 'laps'],
       ['Where are the mistakes?', hot.length ? hot.map(h => `${h[0]}×${h[1]}`).join('  ') : 'No significant mistakes', `${R.incidents.filter(i => i.level >= 2).length} significant+ incidents · ${SS.counts.offTracks} off-track`, 'track'],
       ['Strongest / weakest corner', `${strongest ? strongest.id : '—'} / ${weakC ? weakC.id : '—'}`, `${strongest ? strongest.id + ' IQR ' + fmt(strongest.iqr) + ' s' : ''}${weakC ? ' · ' + weakC.id + ' −' + fmt(weakC.repeatGap) + ' s vs best' : ''}`, 'corners'],
@@ -443,7 +443,8 @@
       { k: 'bestPickup', h: 'Best pickup', title: 'earliest clean throttle pickup (m)', sv: r => r.bestPickup.v, f: r => fmt(r.bestPickup.v, 0) },
       { k: 'lineSd', h: 'Line σ', title: 'robust spread of apex placement from GPS (m)', sv: r => r.line ? r.line.spreadApex : NaN, f: r => r.line ? `${r.line.spreadApex.toFixed(1)}${r.line.finding.strong ? ' <span title="line choice correlates with time" style="color:var(--lap3)">●</span>' : ''}` : '—' },
       { k: 'avgLoss', h: 'Avg loss', title: 'mean − best segment time (s/lap)', f: r => `<span class="t-bad">${fmt(r.avgLoss)}</span>` },
-      { k: 'consistency', h: 'Consist.', f: r => `<span style="display:inline-flex;align-items:center;gap:6px"><span class="bar" style="width:40px"><i style="width:${r.consistency}%;background:${r.consistency >= 70 ? COL.good : r.consistency >= 50 ? COL.warn : COL.serious}"></i></span>${fmt(r.consistency, 0)}</span>` },
+      { k: 'exec', h: 'Line & speed', title: 'line & speed consistency: driving line (GPS), entry, minimum and exit speed', sv: r => r.exec ? r.exec.overall : NaN, f: r => r.exec ? `<span style="display:inline-flex;align-items:center;gap:6px"><span class="bar" style="width:40px"><i style="width:${r.exec.overall}%;background:${consCol(r.exec.overall)}"></i></span>${r.exec.overall.toFixed(0)}</span>` : '—' },
+      { k: 'consistency', h: 'Timing cons.', title: 'timing consistency: robust spread of segment time, brake point, minimum speed, throttle pickup and exit speed', f: r => `<span style="display:inline-flex;align-items:center;gap:6px"><span class="bar" style="width:40px"><i style="width:${r.consistency}%;background:${r.consistency >= 70 ? COL.good : r.consistency >= 50 ? COL.warn : COL.serious}"></i></span>${fmt(r.consistency, 0)}</span>` },
       { k: 'paceClass', h: 'Pace', txt: true, f: r => `<span class="cls ${r.paceClass === 'n/a' ? 'na' : r.paceClass}">${r.paceClass}</span>` },
       { k: 'consClass', h: 'Consistency', txt: true, f: r => `<span class="cls ${r.consClass}">${r.consClass}</span>` },
       { k: 'priority', h: 'Priority', txt: true, sv: r => ({ Low: 0, Medium: 1, High: 2, Critical: 3 }[r.priority]), f: r => `<span class="prio ${r.priority}">${r.priority}</span>` },
@@ -467,7 +468,8 @@
           <div class="dim" style="font-size:12px;margin:2px 0 8px">best segment time · median ${fmt(c.median)} s · gap to best ${fmtD(c.repeatGap)} s</div>
           <div style="font-size:12px;line-height:1.6">${c.why.length ? c.why.map(w => `<div><span class="${w.good ? 't-good' : 'dim'}">${w.good ? '▲' : '•'}</span> ${esc(w.text)}</div>`).join('') : '<span class="muted">No metric differs from the session median by more than its noise floor — the gain is spread across small differences.</span>'}</div>
           <dl class="kv" style="margin-top:10px">
-            <dt>Consistency</dt><dd>${fmt(c.consistency, 0)}/100 · <span class="cls ${c.consClass}">${c.consClass}</span></dd>
+            <dt>Line &amp; speed</dt><dd>${c.exec ? `${c.exec.overall.toFixed(0)}/100 · ${ELEM_ORDER.filter(k => c.exec.parts[k]).map(k => c.exec.parts[k].label.split(' ')[0].toLowerCase() + ' ' + c.exec.parts[k].score.toFixed(0)).join(' · ')}` : '—'}</dd>
+            <dt>Timing cons.</dt><dd>${fmt(c.consistency, 0)}/100 · <span class="cls ${c.consClass}">${c.consClass}</span></dd>
             <dt>Pace</dt><dd>${Number.isFinite(c.util) ? (100 * c.util).toFixed(0) + '% grip use' : 'n/a'} · <span class="cls ${c.paceClass === 'n/a' ? 'na' : c.paceClass}">${c.paceClass}</span></dd>
             <dt>Priority</dt><dd><span class="prio ${c.priority}">${c.priority}</span> · ≈${fmt(c.opportunity, 3)} s/lap</dd>
             <dt>Robust σ</dt><dd>t ${fmt(c.dispersion.segTime)} s · brake ${fmt(c.dispersion.brakePoint, 1)} m · min ${fmt(c.dispersion.minSpeed, 1)} km/h · pickup ${fmt(c.dispersion.pickup, 1)} m</dd>
@@ -552,6 +554,81 @@
       annotations: [{ xref: 'paper', yref: 'paper', x: 0.01, y: 0.98, xanchor: 'left', yanchor: 'top', showarrow: false, text: `Spearman ρ = ${Number.isFinite(sp.rho) ? sp.rho.toFixed(2) : '—'} · n = ${sp.n}${Number.isFinite(lr.slope) ? ` · slope ${lr.slope.toFixed(4)} s/unit` : ''}`, font: { size: 10, family: MONO, color: COL.text2 } }] }), CFG_STATIC);
     const el = $('ch-corner-diff'); el.removeAllListeners && el.removeAllListeners('plotly_click');
     el.on('plotly_click', ev => { const p = ev.points[0]; if (p.customdata) selectLap(p.customdata[0]); });
+  }
+
+  // ---------------------------------------------------------------- corner consistency (line / entry / min / exit)
+  const consCol = v => v >= 75 ? COL.good : v >= 50 ? COL.warn : v >= 30 ? COL.serious : COL.critical;
+  const ELEM_ORDER = ['line', 'entry', 'min', 'exit'];
+  const fmtSpread = p => p.unit === 'm' ? `±${p.sd.toFixed(2)} m` : `±${p.sd.toFixed(1)} km/h (${(100 * p.sdRel).toFixed(1)}%)`;
+  function renderCons() {
+    const R = S.R, X = R.sessionStats.execCons, CL = R.cornerStats.list;
+    if (!X) {
+      $('cons-head').innerHTML = '<div class="empty">Corner consistency needs at least 4 analysable laps at each corner. Restore laps to see it.</div>';
+      const h = $('ch-cons-heat'); if (h.data) Plotly.purge(h); h.innerHTML = '';
+      return;
+    }
+    const elemNames = { line: 'Driving line (GPS)', entry: 'Entry speed', min: 'Minimum speed', exit: 'Exit speed' };
+    $('cons-head').innerHTML = `<div class="cons-big"><div class="k">Line &amp; speed consistency · all corners</div><div class="v" style="color:${consCol(X.overall)}">${X.overall.toFixed(0)}<small> / 100</small></div>
+        <div class="s">Most consistent ${esc(CL[X.best].id)} (${CL[X.best].exec.overall.toFixed(0)}) · least consistent ${esc(CL[X.worst].id)} (${CL[X.worst].exec.overall.toFixed(0)})${X.elements.line ? '' : ' · no GPS: line not scored'}</div></div>` +
+      ELEM_ORDER.map(k => {
+        const e = X.elements[k];
+        if (!e) return `<div class="cons-tile"><div class="k">${elemNames[k]}</div><div class="v muted">n/a</div><div class="s">needs GPS or X/Y position data</div></div>`;
+        return `<div class="cons-tile ${k === X.weakestElement ? 'weak' : ''}"><div class="k">${elemNames[k]}${k === X.weakestElement ? ' · weakest' : ''}</div><div class="v" style="color:${consCol(e.score)}">${e.score.toFixed(0)}</div>
+          <div class="bar"><i style="width:${e.score}%;background:${consCol(e.score)}"></i></div>
+          <div class="s">${(100 * e.within).toFixed(0)}% of laps in tolerance · worst ${esc(CL[e.worst].id)}</div></div>`;
+      }).join('');
+    // heatmap: rows = overall + elements, columns = corners
+    const rows = [['overall', 'Overall'], ...ELEM_ORDER.filter(k => X.elements[k]).map(k => [k, elemNames[k]])];
+    const z = rows.map(([k]) => CL.map(c => c.exec ? (k === 'overall' ? c.exec.overall : (c.exec.parts[k] ? c.exec.parts[k].score : null)) : null));
+    const txt = rows.map(([k]) => CL.map(c => { if (!c.exec) return ''; if (k === 'overall') return c.exec.overall.toFixed(0); const p = c.exec.parts[k]; return p ? p.score.toFixed(0) : ''; }));
+    const hov = rows.map(([k, name]) => CL.map(c => { if (!c.exec) return ''; if (k === 'overall') return `${c.id} overall ${c.exec.overall.toFixed(0)}/100 · weakest: ${c.exec.parts[c.exec.weakest].label.toLowerCase()}`; const p = c.exec.parts[k]; return p ? `${c.id} ${name}: ${p.score.toFixed(0)}/100<br>spread ${fmtSpread(p)} · ${(100 * p.within).toFixed(0)}% of laps in tolerance (n=${p.n})` : ''; }));
+    react('ch-cons-heat', [{
+      type: 'heatmap', z, x: CL.map(c => c.id), y: rows.map(r => r[1]), zmin: 0, zmax: 100, text: txt, texttemplate: '%{text}', textfont: { family: MONO, size: 11, color: '#0a0b0d' },
+      customdata: hov, hovertemplate: '%{customdata}<extra></extra>', xgap: 3, ygap: 3,
+      colorscale: [[0, COL.critical], [0.3, COL.serious], [0.5, COL.warn], [0.75, '#7fbf3f'], [1, COL.good]],
+      colorbar: { thickness: 10, len: 0.9, tickfont: { family: MONO, size: 9 }, outlinewidth: 0, tickvals: [0, 25, 50, 75, 100] },
+    }], baseLayout({ margin: { l: 130, r: 10, t: 6, b: 28 }, yaxis: { autorange: 'reversed', gridcolor: 'rgba(0,0,0,0)', tickfont: { size: 11 } }, xaxis: { side: 'bottom', gridcolor: 'rgba(0,0,0,0)', tickfont: { family: MONO, size: 11 } },
+      shapes: S.corner !== null ? [{ type: 'rect', xref: 'x', yref: 'paper', x0: S.corner - 0.5, x1: S.corner + 0.5, y0: 0, y1: 1, line: { color: COL.cyan, width: 2 } }] : [] }), CFG_STATIC);
+    const el = $('ch-cons-heat'); el.removeAllListeners && el.removeAllListeners('plotly_click');
+    el.on('plotly_click', ev => { const ci = CL.findIndex(c => c.id === ev.points[0].x); if (ci >= 0) selectCorner(ci); });
+  }
+
+  function renderConsCorner() {
+    const R = S.R, ci = S.corner;
+    if (ci === null || ci === undefined) return;
+    const c = R.cornerStats.list[ci], X = c.exec;
+    if (!X) {
+      $('cons-corner-title').textContent = `${c.id} — line & speed consistency`;
+      $('cons-elems').innerHTML = '<div class="empty">Not enough laps at this corner (at least 4 needed).</div>';
+      ['ch-cons-line', 'ch-cons-entry', 'ch-cons-min', 'ch-cons-exit'].forEach(id => { const el = $(id); if (el.data) Plotly.purge(el); el.innerHTML = ''; });
+      return;
+    }
+    $('cons-corner-title').innerHTML = `${esc(c.id)} ${esc(c.dir)} — line &amp; speed consistency <span style="color:${consCol(X.overall)};font-size:13px;margin-left:6px">${X.overall.toFixed(0)}/100</span><span class="r">weakest: ${esc(X.parts[X.weakest].label.toLowerCase())} · strongest: ${esc(X.parts[X.strongest].label.toLowerCase())}</span>`;
+    const ids = { line: 'ch-cons-line', entry: 'ch-cons-entry', min: 'ch-cons-min', exit: 'ch-cons-exit' };
+    $('cons-elems').innerHTML = ELEM_ORDER.map(k => {
+      const p = X.parts[k];
+      if (!p) return `<div class="cons-elem"><b class="muted">n/a</b> ${k === 'line' ? 'Driving line — needs GPS or X/Y' : ''}</div>`;
+      return `<div class="cons-elem"><b style="color:${consCol(p.score)}">${p.score.toFixed(0)}</b>${esc(p.label)}<br><span class="muted">${p.unit === 'm' ? `spread ±${p.sd.toFixed(2)} m from median line` : `median ${p.med.toFixed(1)} km/h, spread ${fmtSpread(p)}`} · ${(100 * p.within).toFixed(0)}% in tolerance</span></div>`;
+    }).join('');
+    ELEM_ORDER.forEach(k => {
+      const p = X.parts[k], el = $(ids[k]);
+      if (!p) { if (el.data) Plotly.purge(el); el.innerHTML = `<div class="empty">${k === 'line' ? 'Driving-line consistency needs GPS or X/Y data.' : 'Not available.'}</div>`; return; }
+      const vals = p.values, laps = vals.map(o => R.laps[o.lap]);
+      const isLine = p.unit === 'm';
+      const lo = isLine ? 0 : p.med - p.tol, hi = isLine ? p.tol : p.med + p.tol;
+      const inBand = vals.map(o => o.v >= lo && o.v <= hi);
+      react(ids[k], [{
+        type: 'scatter', mode: 'markers', x: laps.map(l => l.label), y: vals.map(o => o.v), customdata: vals.map(o => o.lap),
+        marker: { size: laps.map(l => l.index === S.sel ? 12 : 8), color: inBand.map(b => b ? hexA(COL.laps[0], 0.9) : COL.serious), line: { color: laps.map(l => l.index === S.sel ? COL.text : '#0a0b0d'), width: laps.map(l => l.index === S.sel ? 2 : 1) } },
+        hovertemplate: `%{x}: %{y:.${isLine ? 2 : 1}f} ${p.unit}<extra></extra>`,
+      }], baseLayout({ margin: { l: 44, r: 8, t: 24, b: 30 },
+        title: { text: `${p.label} · ${p.score.toFixed(0)}/100`, font: { size: 11, color: COL.text2 }, x: 0.02, xanchor: 'left', y: 0.98 },
+        xaxis: { type: 'category', tickfont: { family: MONO, size: 8 } }, yaxis: { title: { text: isLine ? 'RMS from median line (m)' : 'km/h' }, rangemode: isLine ? 'tozero' : 'normal' },
+        shapes: [{ type: 'rect', xref: 'paper', x0: 0, x1: 1, y0: lo, y1: hi, fillcolor: hexA(COL.good, 0.10), line: { width: 0 }, layer: 'below' },
+          ...(isLine ? [] : [{ type: 'line', xref: 'paper', x0: 0, x1: 1, y0: p.med, y1: p.med, line: { color: COL.text2, width: 1, dash: 'dot' } }])] }), CFG_STATIC);
+      el.removeAllListeners && el.removeAllListeners('plotly_click');
+      el.on('plotly_click', ev => { const li = ev.points[0].customdata; if (Number.isInteger(li)) selectLap(li); });
+    });
   }
 
   // ---------------------------------------------------------------- racing line (GPS / X-Y)
@@ -1114,6 +1191,14 @@ L3 Major mistake         — loss ≥ max(0.30 s, 5σ_seg), ≥3 channel groups,
 L4 Compromised           — off-track with ≥0.5 s loss, track-limit violation, or spin signature
 Confidence: High = ≥2 independent channel groups agree and loss z ≥ 2 (or explicit channel);
             Medium = one strong channel (|z| ≥ 4) with loss, or ≥ 2 groups; Low = otherwise ("possible").</div>`),
+      sec('Corner consistency (line & speed)', `For every corner, four elements are scored from the analysable laps (laps with an off-track at that corner are excluded):<br>
+        <b>Entry speed</b> (at turn-in), <b>minimum speed</b> and <b>exit speed</b> (at the corner's exit point): spread = robust σ (1.4826 × MAD) divided by the median, so the same km/h variation weighs more in a slow corner. Tolerance 1.5%.<br>
+        <b>Driving line</b> (needs GPS or X/Y): at every point through the corner window, the robust σ of the laps' lateral offsets is taken; the spread is the median of those values. Tolerance 0.6 m. The per-lap value plotted is the lap's RMS distance from the median line through the corner.
+        <div class="formula">element score  = 100 / (1 + (spread / tolerance)²)        → 100 = identical every lap · 50 = spread equals tolerance · 20 = twice the tolerance
+corner score   = mean of the available element scores (line, entry, minimum, exit — equal weights)
+in tolerance   = share of laps within median ± tolerance (speeds) or within 0.6 m RMS of the median line
+track-wide     = mean of the corner scores; element averages = mean of that element across corners</div>
+        This is separate from the timing consistency score (segment time, brake point, pickup) and from the driver consistency score, which are unchanged.`),
       sec('Racing line (GPS)', R.avail.position ? `Each lap's position (${esc(R.avail.position)}) is compared with the session's median line at the same lap distance. The signed perpendicular offset is converted to "toward the inside of the corner" (+) or "wide" (−) using the corner's direction. For each corner the window runs from 40 m before turn-in to 40 m after the exit point. Measures: offset at turn-in, at the lap's own apex (minimum speed) and at the exit point; closest approach to the inside and where it happens; track width used (max − min offset); path length versus the median line (both smoothed over 8 m, so smoothing does not bias the comparison); tightest radius (heading change over a ±8 m chord).<br>
         For each measure, a Spearman correlation with segment time is computed over the analysable laps (off-track laps at that corner are excluded). A line finding is reported only if it is significant after a Bonferroni correction for the 7 measures tested (Fisher z, two-sided p &lt; 0.05/7) and worth at least 0.01 s across the interquartile range. Otherwise the dashboard says the line is not the differentiator. The median line is the average driven line, not the track centreline; track width is not known from the data.` : 'No GPS or X/Y channels in this data, so racing-line comparison is unavailable.'),
       sec('Lap status & mistake score', `Lap status separates <b>validity</b> (complete / data quality / track limits), <b>execution</b> (worst event level) and <b>pace</b> (lap time). A slow lap with no abnormal telemetry stays <b>Valid</b>.
@@ -1202,14 +1287,14 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
   }
 
   const deps = {
-    sel: ['strip', 'lapTable', 'lapDetail', 'progress', 'trends', 'cornerDetail', 'cornerLaps', 'cornerDiff', 'line', 'heat', 'tmControls', 'telemetry', 'speedCmp', 'delta', 'mapControls', 'map'],
+    sel: ['strip', 'lapTable', 'lapDetail', 'progress', 'trends', 'consCorner', 'cornerDetail', 'cornerLaps', 'cornerDiff', 'line', 'heat', 'tmControls', 'telemetry', 'speedCmp', 'delta', 'mapControls', 'map'],
     cmp: ['strip', 'tmControls', 'telemetry', 'line'],
     ref: ['tmControls', 'telemetry', 'speedCmp', 'delta', 'mapControls', 'map'],
-    corner: ['cornerTable', 'cornerDetail', 'matrix', 'cornerLaps', 'cornerDiff', 'line', 'heat', 'tmControls', 'telemetry', 'speedCmp', 'map', 'mapMistakes', 'coaching'],
+    corner: ['cons', 'consCorner', 'cornerTable', 'cornerDetail', 'matrix', 'cornerLaps', 'cornerDiff', 'line', 'heat', 'tmControls', 'telemetry', 'speedCmp', 'map', 'mapMistakes', 'coaching'],
     ch: ['tmControls', 'telemetry'], ov: ['tmControls', 'telemetry'],
   };
   const renderers = {
-    strip: renderStrip, lapTable: renderLapTable, lapDetail: renderLapDetail, progress: renderProgress, trends: renderTrends,
+    cons: renderCons, consCorner: renderConsCorner, strip: renderStrip, lapTable: renderLapTable, lapDetail: renderLapDetail, progress: renderProgress, trends: renderTrends,
     cornerTable: renderCornerTable, cornerDetail: renderCornerDetail, matrix: renderMatrix, cornerLaps: renderCornerLaps, cornerDiff: renderCornerDiff, line: renderLine, heat: renderHeat,
     tmControls: renderTmControls, telemetry: renderTelemetry, speedCmp: renderSpeedCmp, delta: renderDeltaTable, mapControls: renderMapControls, map: renderMap, mapMistakes: renderMapMistakes, coaching: renderCoaching,
   };
@@ -1217,7 +1302,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
     const todo = new Set(); keys.forEach(k => (deps[k] || []).forEach(r => todo.add(r)));
     for (const r of Object.keys(renderers)) if (todo.has(r)) safe(r, renderers[r]);
   }
-  const CHART_OF = { progress: 'ch-progress', budget: 'ch-budget', dist: 'ch-dist', trends: 'ch-mtrend', lapDetail: 'ch-lapseg', cornerDetail: 'ch-corner-speed', matrix: 'ch-matrix', cornerLaps: 'ch-corner-laps', cornerDiff: 'ch-corner-diff', line: 'ch-line-map', heat: 'ch-heat', theo: 'ch-theo', telemetry: 'ch-telemetry', speedCmp: 'ch-speedcmp', map: 'ch-map' };
+  const CHART_OF = { cons: 'ch-cons-heat', progress: 'ch-progress', budget: 'ch-budget', dist: 'ch-dist', trends: 'ch-mtrend', lapDetail: 'ch-lapseg', cornerDetail: 'ch-corner-speed', matrix: 'ch-matrix', cornerLaps: 'ch-corner-laps', cornerDiff: 'ch-corner-diff', line: 'ch-line-map', heat: 'ch-heat', theo: 'ch-theo', telemetry: 'ch-telemetry', speedCmp: 'ch-speedcmp', map: 'ch-map' };
   function safe(name, fn) {
     try { fn(); }
     catch (e) {
@@ -1245,7 +1330,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
       S.corner = R.coaching.length ? R.coaching[0].corner : (R.corners.length ? 0 : null);
     }
     [['header', renderHeader], ['verdict', renderVerdict], ['kpis', renderKPIs], ['progress', renderProgress], ['budget', renderBudget], ['dist', renderDist], ['trends', renderTrends],
-      ['consBreak', renderConsBreak], ['paceBreak', renderPaceBreak], ['strip', renderStrip], ['lapTable', renderLapTable], ['lapDetail', renderLapDetail],
+      ['consBreak', renderConsBreak], ['paceBreak', renderPaceBreak], ['cons', renderCons], ['consCorner', renderConsCorner], ['strip', renderStrip], ['lapTable', renderLapTable], ['lapDetail', renderLapDetail],
       ['cornerTable', renderCornerTable], ['cornerDetail', renderCornerDetail], ['matrix', renderMatrix], ['cornerLaps', renderCornerLaps], ['cornerDiff', renderCornerDiff], ['line', renderLine], ['heat', renderHeat],
       ['theo', renderTheo], ['tmControls', renderTmControls], ['telemetry', renderTelemetry], ['speedCmp', renderSpeedCmp], ['delta', renderDeltaTable],
       ['mapControls', renderMapControls], ['map', renderMap], ['mapMistakes', renderMapMistakes], ['insights', renderInsights], ['coaching', renderCoaching], ['method', renderMethod]].forEach(([n, f]) => safe(n, f));

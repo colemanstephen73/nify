@@ -102,6 +102,17 @@
         value: p.paceGap,
       });
     }
+    // 5a. Execution consistency (line / entry / minimum / exit) — corner by corner
+    if (S.execCons) {
+      const X = S.execCons, el = X.elements[X.weakestElement], wc = CL[X.worst], bc = CL[X.best];
+      const wp = wc.exec.parts[wc.exec.weakest];
+      const fmtSpread = p => p.unit === 'm' ? `±${p.sd.toFixed(2)} m` : `±${p.sd.toFixed(1)} km/h (${(100 * p.sdRel).toFixed(1)}%)`;
+      out.push({
+        kind: 'diagnosis', corner: wc.index, title: `Consistency — least repeatable: ${el.label.toLowerCase()}`,
+        text: `Track-wide line & speed consistency is ${X.overall.toFixed(0)}/100. ${Object.values(X.elements).map(e => `${e.label} ${e.score.toFixed(0)}`).join(' · ')}. ${el.label} is the least repeatable element: on average only ${(100 * el.within).toFixed(0)}% of laps land inside its tolerance band. The least consistent corner is ${wc.id} (${wc.exec.overall.toFixed(0)}/100), driven by ${wp.label.toLowerCase()} ${fmtSpread(wp)}; the most consistent is ${bc.id} (${bc.exec.overall.toFixed(0)}/100).`,
+        value: X.overall,
+      });
+    }
     // 5b. Racing line (GPS): strongest line-vs-time relationship across corners
     const lineC = CL.filter(c => c.line && c.line.finding.strong).sort((a, b) => b.line.metrics[b.line.finding.metric].effect - a.line.metrics[a.line.finding.metric].effect);
     if (lineC.length) {
@@ -181,6 +192,12 @@
         problem = `Exit speed varies and carries down the following straight.`;
         evidence = `Exit speed P25–P75 ${d.q25.toFixed(1)}–${d.q75.toFixed(1)} km/h (ρ = ${d.rho.toFixed(2)}); best ${c.bestExit.v.toFixed(1)} km/h.`;
         objective = `Sacrifice a little entry speed if needed to straighten the exit and reach full throttle earlier.`;
+      } else if (c.exec && c.exec.overall < 50 && (!d || Math.abs(d.rho) < 0.6)) {
+        const p = c.exec.parts[c.exec.weakest];
+        title = `${c.id} — Make the ${p.label.toLowerCase()} repeatable`;
+        problem = `${c.id} line & speed consistency is ${c.exec.overall.toFixed(0)}/100; ${p.label.toLowerCase()} is the least repeatable element.`;
+        evidence = `${p.label}: ${p.unit === 'm' ? `±${p.sd.toFixed(2)} m from the median line` : `±${p.sd.toFixed(1)} km/h (${(100 * p.sdRel).toFixed(1)}%) around ${p.med.toFixed(1)} km/h`}; only ${(100 * p.within).toFixed(0)}% of laps inside the tolerance band. ${Object.values(c.exec.parts).map(x => `${x.label} ${x.score.toFixed(0)}`).join(' · ')}.`;
+        objective = p.unit === 'm' ? `Pick fixed turn-in and apex references and hit the same line every lap before trying a different one.` : `Hit the same ${p.label.toLowerCase()} every lap (${p.med.toFixed(0)} ± ${p.tol.toFixed(1)} km/h) before pushing for more.`;
       } else if (c.line && c.line.finding.strong && c.line.metrics[c.line.finding.metric].effect >= Math.max(0.02, d ? d.effect * 0.8 : 0)) {
         const lm = c.line.metrics[c.line.finding.metric];
         const better = lm.rho < 0 ? lm.higher : lm.lower;

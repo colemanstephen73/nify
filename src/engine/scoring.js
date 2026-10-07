@@ -219,8 +219,9 @@
       }
       const mist = incidents.filter(i => i.corner === ci);
       const line = lineAnalysis(rows.filter(r => !offAt(r.lap, ci)), bestRow, c.id);
+      const exec = execConsistency(rows.filter(r => !offAt(r.lap, ci)), laps, c, model.G);
       return {
-        line,
+        line, exec,
         index: ci, id: c.id, dir: c.dir, dist: c.dist, n: rows.length,
         best, bestLap: bestRow ? bestRow.lap : null, median: med, mean: St.mean(times), std: St.std(times), iqr: St.iqr(times),
         q25: St.quantile(times, 0.25), q75: St.quantile(times, 0.75),
@@ -252,6 +253,56 @@
       c.opportunity = 0.5 * c.repeatGap + (Number.isFinite(c.paceGap) ? c.paceGap : 0) + c.mistakeLoss / Math.max(1, c.n);
     });
     return { list: out, envelope: env };
+  }
+
+  // --------------------------------------------------------------------------
+  // Execution consistency per corner: driving line (GPS), entry, minimum and exit speed.
+  // Score per element = 100 / (1 + (spread / tolerance)^2)  → 50 when spread = tolerance.
+  //   speeds: spread = robust σ / median (relative), tolerance 1.5 %
+  //   line:   spread = median over the corner window of the robust σ of lateral offset, tolerance 0.6 m
+  // "within" = share of laps inside the tolerance band around the median (hit rate).
+  // --------------------------------------------------------------------------
+  const EXEC = {
+    line: { label: 'Driving line', unit: 'm', tol: 0.6, d: 2 },
+    entry: { label: 'Entry speed', key: 'entrySpeed', unit: 'km/h', tolRel: 0.015, d: 1 },
+    min: { label: 'Minimum speed', key: 'minSpeed', unit: 'km/h', tolRel: 0.015, d: 1 },
+    exit: { label: 'Exit speed', key: 'exitSpeed', unit: 'km/h', tolRel: 0.015, d: 1 },
+  };
+  const consScore = (spread, tol) => Number.isFinite(spread) ? 100 / (1 + Math.pow(spread / tol, 2)) : NaN;
+  function execConsistency(rows, laps, c, G) {
+    const parts = {};
+    for (const k of ['entry', 'min', 'exit']) {
+      const def = EXEC[k];
+      const vals = rows.map(r => ({ lap: r.lap, v: r.f[def.key] })).filter(o => Number.isFinite(o.v));
+      if (vals.length < 4) continue;
+      const v = vals.map(o => o.v), med = St.median(v), sd = St.robustScale(v, 0), tol = def.tolRel * med;
+      parts[k] = { ...def, med, sd, sdRel: sd / med, tol, score: consScore(sd / med, def.tolRel), within: v.filter(x => Math.abs(x - med) <= tol).length / v.length, n: v.length, values: vals, iqr: St.iqr(v), range: St.max(v) - St.min(v) };
+    }
+    // driving line: per-point spread of lateral offset across laps through the corner window
+    const L = rows.map(r => laps[r.lap]).filter(l => l.off);
+    if (L.length >= 4 && rows[0].f.lineWin) {
+      const [w0, w1] = rows[0].f.lineWin;
+      const medOff = [], spread = [];
+      for (let k = w0; k <= w1; k++) {
+        const v = L.map(l => l.off[k]).filter(Number.isFinite);
+        medOff.push(St.median(v)); spread.push(St.robustScale(v, 0));
+      }
+      const sd = St.median(spread);
+      // per lap: RMS distance from the median line through the corner (m)
+      const vals = L.map(l => {
+        let s2 = 0, n = 0;
+        for (let k = w0; k <= w1; k++) { const d = l.off[k] - medOff[k - w0]; if (Number.isFinite(d)) { s2 += d * d; n++; } }
+        return { lap: l.index, v: n ? Math.sqrt(s2 / n) : NaN };
+      }).filter(o => Number.isFinite(o.v));
+      const def = EXEC.line;
+      parts.line = { ...def, med: St.median(vals.map(o => o.v)), sd, tol: def.tol, score: consScore(sd, def.tol), within: vals.filter(o => o.v <= def.tol).length / vals.length, n: vals.length, values: vals, spreadTrace: spread, window: [w0, w1] };
+    }
+    const keys = Object.keys(parts);
+    if (!keys.length) return null;
+    const overall = keys.reduce((a, k) => a + parts[k].score, 0) / keys.length;
+    const weakest = keys.slice().sort((a, b) => parts[a].score - parts[b].score)[0];
+    const strongest = keys.slice().sort((a, b) => parts[b].score - parts[a].score)[0];
+    return { overall, parts, weakest, strongest, hasLine: !!parts.line };
   }
 
   // --------------------------------------------------------------------------
@@ -354,7 +405,16 @@
     });
     // rolling consistency (robust spread of last 5 usable laps)
     pace.forEach((l, k) => { const w = pace.slice(Math.max(0, k - 4), k + 1).map(x => x.lapTime); l.rollingSpread = w.length >= 3 ? St.iqr(w) : NaN; l.rollingMedian = St.median(w); });
+    // track-wide execution consistency (mean over corners) and per-element averages
+    const ex = cornerStats.list.filter(c => c.exec);
+    const elem = {};
+    for (const k of ['line', 'entry', 'min', 'exit']) {
+      const p = ex.filter(c => c.exec.parts[k]).map(c => c.exec.parts[k]);
+      if (p.length) elem[k] = { label: p[0].label, score: St.mean(p.map(x => x.score)), within: St.mean(p.map(x => x.within)), worst: ex.filter(c => c.exec.parts[k]).sort((a, b) => a.exec.parts[k].score - b.exec.parts[k].score)[0].index };
+    }
+    const execCons = ex.length ? { overall: St.mean(ex.map(c => c.exec.overall)), elements: elem, weakestElement: Object.keys(elem).sort((a, b) => elem[a].score - elem[b].score)[0], best: ex.slice().sort((a, b) => b.exec.overall - a.exec.overall)[0].index, worst: ex.slice().sort((a, b) => a.exec.overall - b.exec.overall)[0].index } : null;
     return {
+      execCons,
       best, bestLap: pace.find(l => l.lapTime === best)?.index ?? null, median: med, medianClean: medClean,
       bestClean: ltClean.length ? St.min(ltClean) : NaN, meanClean: St.mean(ltClean),
       lapTimeStats: { n: lt.length, std: St.std(lt), mad: St.mad(lt), iqr: St.iqr(lt), cvRobust: cvR, cv: cvS, cleanSpread: ltClean.length > 1 ? St.max(ltClean) - St.min(ltClean) : NaN, cleanIqr: St.iqr(ltClean), q25: St.quantile(lt, 0.25), q75: St.quantile(lt, 0.75) },
@@ -364,5 +424,5 @@
     };
   }
 
-  NS.scoring = { scoreLaps, theoretical, corners, session, STATUS_ORDER, LINE_METRICS };
+  NS.scoring = { scoreLaps, theoretical, corners, session, STATUS_ORDER, LINE_METRICS, EXEC };
 })(typeof window !== 'undefined' ? window : globalThis);

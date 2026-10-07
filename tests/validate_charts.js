@@ -11,11 +11,13 @@ const ok = (c, m) => { console.log((c ? '  PASS ' : '  FAIL ') + m); if (!c) fai
 async function validate(p, label) {
   console.log(`\n== ${label}`);
   const r = await p.evaluate(() => {
-    const R = window.__analysis, out = {}, near = (a, b, t = 1e-6) => Math.abs(a - b) <= t;
+    const R = window.__analysis, E = window.TelemetryEngine.stats, out = {}, near = (a, b, t = 1e-6) => Math.abs(a - b) <= t;
     const g = id => document.getElementById(id);
-    const charts = ['ch-progress', 'ch-budget', 'ch-dist', 'ch-mtrend', 'ch-ctrend', 'ch-lapseg', 'ch-corner-speed', 'ch-matrix', 'ch-corner-laps', 'ch-corner-diff', 'ch-heat', 'ch-theo', 'ch-telemetry', 'ch-speedcmp', 'ch-map', 'ch-line-map', 'ch-line-offset'];
+    const noCons = !R.sessionStats.execCons;
+    const charts = ['ch-progress', 'ch-budget', 'ch-dist', 'ch-mtrend', 'ch-ctrend', 'ch-lapseg', 'ch-corner-speed', 'ch-matrix', 'ch-corner-laps', 'ch-corner-diff', 'ch-heat', 'ch-theo', 'ch-telemetry', 'ch-speedcmp', 'ch-map', 'ch-line-map', 'ch-line-offset', 'ch-cons-heat', 'ch-cons-line', 'ch-cons-entry', 'ch-cons-min', 'ch-cons-exit'];
     out.render = charts.map(id => {
       const el = g(id);
+      if (noCons && id.startsWith('ch-cons')) return [id, !(el && el.data && el.data.length), 'cleared: not enough laps to score consistency (by design)'];
       if (!el) { const selLap = R.laps[+g('tm-lap').value]; return id === 'ch-lapseg' && !selLap.analysable ? [id, true, 'hidden: selected lap is not analysable (by design)'] : [id, false, 'missing element']; }
       const pts = (el.data || []).reduce((s, t) => s + ((t.y && t.y.length) || (t.z && t.z.length) || (t.x && t.x.length) || 0), 0);
       const svg = el.querySelector('.main-svg'); const bb = svg ? svg.getBoundingClientRect() : { width: 0, height: 0 };
@@ -74,6 +76,18 @@ async function validate(p, label) {
       out.lineOffset = !!lo && lo.y.every((v, i) => Math.abs(v - best.off[k0 + i] * (c.sign || 1)) < 1e-4);
       out.lineTable = document.querySelectorAll('#line-table tbody tr').length === 7 && !!document.getElementById('line-finding').textContent;
     }
+    // corner consistency: heatmap = engine scores; per-lap dots = engine values; scores follow the formula
+    {
+      const CL = R.cornerStats.list, hz = noCons ? null : g('ch-cons-heat').data[0];
+      const order = ['overall', 'line', 'entry', 'min', 'exit'].filter(k => k === 'overall' || CL.some(c => c.exec && c.exec.parts[k]));
+      const want = (c, k) => !c.exec ? null : k === 'overall' ? c.exec.overall : (c.exec.parts[k] ? c.exec.parts[k].score : null);
+      out.consHeat = noCons ? !g('ch-cons-heat').data || !g('ch-cons-heat').data.length : order.every((k, r) => CL.every((c, j) => want(c, k) === null ? hz.z[r][j] === null : near(hz.z[r][j], want(c, k))));
+      const X = CL[ci].exec || { parts: {}, overall: NaN }, ids = { line: 'ch-cons-line', entry: 'ch-cons-entry', min: 'ch-cons-min', exit: 'ch-cons-exit' };
+      out.consDots = noCons || Object.entries(X.parts).every(([k, p]) => { const d = g(ids[k]).data[0]; return d.y.length === p.values.length && p.values.every((o, i) => near(d.y[i], o.v)); });
+      out.consFormula = Object.values(X.parts).every(p => near(p.score, 100 / (1 + Math.pow((p.unit === 'm' ? p.sd : p.sd / p.med) / (p.unit === 'm' ? 0.6 : 0.015), 2)), 1e-9)) && (!CL[ci].exec || near(X.overall, Object.values(X.parts).reduce((a, p) => a + p.score, 0) / Object.keys(X.parts).length));
+      const speedOk = !CL[ci].exec || ['entry', 'min', 'exit'].every(k => { const p = X.parts[k]; const v = R.laps.filter(l => l.analysable && !R.incidents.some(i => i.lap === l.index && i.corner === ci && i.offTrack)).map(l => R.features.get(l.index).corners[ci][p.key]); return near(p.med, E.median(v)); });
+      out.consValues = speedOk;
+    }
     // KPIs
     const kv = Array.from(document.querySelectorAll('.kpi .v')).map(e => e.textContent);
     const fl = t => { const m = Math.floor(t / 60); return `${m}:${(t - 60 * m).toFixed(3).padStart(6, '0')}`; };
@@ -85,7 +99,7 @@ async function validate(p, label) {
     return out;
   });
   r.render.forEach(([id, good, info]) => ok(good, `${id} rendered (${info})`));
-  for (const k of ['progress', 'progressOrder', 'progressExcludedGrey', 'budget', 'dist', 'trends', 'heat', 'theo', 'theoNoExcluded', 'matrix', 'cornerLaps', 'lapseg', 'telemetrySpeed', 'telemetryDelta', 'deltaSign', 'speedcmpDelta', 'map', 'lineOffset', 'lineTable', 'kpi', 'table'])
+  for (const k of ['progress', 'progressOrder', 'progressExcludedGrey', 'budget', 'dist', 'trends', 'heat', 'theo', 'theoNoExcluded', 'matrix', 'cornerLaps', 'lapseg', 'telemetrySpeed', 'telemetryDelta', 'deltaSign', 'speedcmpDelta', 'map', 'lineOffset', 'lineTable', 'consHeat', 'consDots', 'consFormula', 'consValues', 'kpi', 'table'])
     ok(r[k], `${k} values match the analysis`);
   console.log('  state:', JSON.stringify(r.state));
   return r.state;

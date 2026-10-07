@@ -17,6 +17,7 @@
   <div class="brand"><span class="mark"></span><span>Telemetry<span class="full"> · Race Engineering</span></span></div>
   <nav class="nav" id="nav">
     <a href="#overview">Overview</a>
+    <a href="#consistency">Consistency</a>
     <a href="#laps">Laps</a>
     <a href="#corners">Corners</a>
     <a href="#theoretical">Theoretical best</a>
@@ -68,6 +69,23 @@
       <div class="grid g-2" style="margin-top:12px">
         <div class="panel"><h3>Driver consistency score — components</h3><div id="cons-break"></div></div>
         <div class="panel"><h3>Pace — raw vs clean vs theoretical</h3><div id="pace-break"></div></div>
+      </div>
+    </section>
+
+    <section id="consistency">
+      <div class="sec-title"><h2>Corner consistency</h2><span class="sub">How repeatably the driver hits the same line, entry, minimum and exit speed at every corner · click a corner</span></div>
+      <div class="cons-head" id="cons-head"></div>
+      <div class="panel" style="margin-top:12px"><h3>Consistency by corner <span class="r">score 0–100 · 50 = spread equal to the tolerance</span></h3><div class="chart" id="ch-cons-heat" style="height:250px"></div></div>
+      <div class="panel" style="margin-top:12px">
+        <h3 id="cons-corner-title">Corner detail</h3>
+        <div class="cons-elems" id="cons-elems"></div>
+        <div class="grid g-4" id="cons-multiples">
+          <div><div class="chart" id="ch-cons-line" style="height:210px"></div></div>
+          <div><div class="chart" id="ch-cons-entry" style="height:210px"></div></div>
+          <div><div class="chart" id="ch-cons-min" style="height:210px"></div></div>
+          <div><div class="chart" id="ch-cons-exit" style="height:210px"></div></div>
+        </div>
+        <div class="note">Each dot is one lap (off-track laps at this corner excluded). Shaded band = tolerance around the session median (±1.5% for speeds, ≤ 0.6 m from the median line for the driving line). Dots outside the band are highlighted. Click a dot to inspect that lap.</div>
       </div>
     </section>
 

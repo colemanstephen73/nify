@@ -22,6 +22,23 @@ python3 tools/build_dashboard.py --inline-plotly --tsv my_session.tsv --out dist
 
 > `data/sample_session.tsv` is **synthetic** data from `tools/generate_sample_tsv.py`: a physics-based lap simulation with injected mistakes, off-tracks and data defects. Its known answers are in `data/sample_session.truth.json`. The dashboard shows a "SYNTHETIC DEMO DATA" badge when this file is loaded.
 
+## Corner consistency (line & speed)
+
+The **Consistency** section scores, corner by corner, how repeatably the driver hits the same:
+
+- **Driving line**: GPS / X-Y lateral offset from the median line through the whole corner. Tolerance 0.6 m.
+- **Entry speed**: at turn-in. Tolerance 1.5% of the median.
+- **Minimum speed**: tolerance 1.5%.
+- **Exit speed**: at the exit point. Tolerance 1.5%.
+
+Each element's score is `100 / (1 + (spread / tolerance)^2)`, where spread is the robust σ (MAD-based); 50 means the spread equals the tolerance. The corner score is the mean of the available elements; without GPS, the line is left out. The section shows:
+
+- a track-wide headline score and per-element averages, with the share of laps inside tolerance;
+- a corner × element heatmap;
+- per-lap strip charts for the selected corner, with the tolerance band.
+
+The scores also appear in the corner table ("Line & speed"), the verdict, the insights and the coaching. The existing timing consistency and driver consistency scores are unchanged.
+
 ## Racing line (GPS)
 
 When the data has GPS latitude/longitude (iRacing `.ibt` files do) or X/Y position, the corner analysis includes a racing-line comparison for the selected corner:
@@ -73,5 +90,5 @@ node tests/run_engine.js data/sample_session.tsv                                
 node tests/test_engine.js /tmp/sample.ibt data/sample_session.truth.json          # same checks through the .ibt reader
 node tests/browser_check.js dist/sample_dashboard.html                             # headless browser QA (Playwright)
 node tests/browser_upload.js dist/dashboard.html /tmp/sample.ibt                   # upload through the file picker
-node tests/validate_charts.js dist/sample_dashboard.html                           # every chart vs computed values, before/after lap exclusion
+node tests/validate_charts.js dist/sample_dashboard.html                           # every chart vs computed values (incl. consistency), before/after lap exclusion
 ```
