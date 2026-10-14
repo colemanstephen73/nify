@@ -315,7 +315,8 @@
   // --------------------------------------------------------------------------
   const CHANNELS = ['speed', 'throttle', 'brake', 'steering', 'gear', 'rpm', 'latG', 'lonG'];
 
-  function buildSamples(files) {
+  function buildSamples(files, opts = {}) {
+    let gpsOrigin = opts.gpsOrigin || null;
     const notes = [];
     const per = [];
     let sessionCounter = 0;
@@ -384,8 +385,10 @@
       else if (R.gpsLat && R.gpsLon) {
         const la = St.finite(R.gpsLat.values), lo = St.finite(R.gpsLon.values);
         if (la.length && Math.abs(St.median(la)) <= 90 && Math.abs(St.median(lo)) <= 180) {
-          const lat0 = St.median(la) * Math.PI / 180, lon0 = St.median(lo);
-          const la0 = St.median(la);
+          // a shared origin (e.g. the main session's) keeps a reference session in the same X/Y frame
+          if (!gpsOrigin) gpsOrigin = { lat: St.median(la), lon: St.median(lo) };
+          const lat0 = gpsOrigin.lat * Math.PI / 180, lon0 = gpsOrigin.lon;
+          const la0 = gpsOrigin.lat;
           xv = Float64Array.from(R.gpsLon.values, v => (v - lon0) * Math.PI / 180 * 6371000 * Math.cos(lat0));
           yv = Float64Array.from(R.gpsLat.values, v => (v - la0) * Math.PI / 180 * 6371000);
           posSource = 'GPS lat/lon (equirectangular projection)';
@@ -549,7 +552,7 @@
 
     const sessions = Array.from(new Set(Array.from(C.session))).sort((a, b) => a - b);
     return {
-      table: C, avail, channelUnits, notes, files: fileReports, sessions, meta: metas,
+      table: C, avail, channelUnits, notes, files: fileReports, sessions, meta: metas, gpsOrigin,
       sampling: {
         medianDt: mdt, hz: 1 / mdt, minDt: dts.length ? St.min(dts) : NaN, maxDt: dts.length ? St.max(dts) : NaN,
         p05: St.quantile(dts, 0.05), p95: St.quantile(dts, 0.95), jitterPct: dts.length ? 100 * St.mad(dts) * 1.4826 / mdt : NaN,

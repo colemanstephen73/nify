@@ -77,6 +77,30 @@ When the data has GPS latitude/longitude (iRacing `.ibt` files do) or X/Y positi
 
 Significant line findings also feed into the insights and coaching. The corner table shows each corner's apex-placement spread (Line σ).
 
+## Benchmark (reference session)
+
+Press **Reference…** in the header and load a second session (TSV or `.ibt`) recorded on the same track and layout. That session becomes the target: it **scores 100** for pace and for consistency, and your session is scored against it.
+
+- **Pace score** = 100 − 1000 × (your time − reference time) / reference time. Each 0.1 % slower costs 1 point, so 1 % slower gives 90. It is computed for the best lap, the race pace (median clean lap) and the theoretical best. The headline pace is the mean of the best-lap and race-pace scores.
+- **Consistency score** = 100 × reference spread / your spread for each element:
+  - lap time (35 %), using a robust spread of 0.5·1.4826·MAD + 0.5·σ;
+  - corner time (15 %);
+  - line and speed execution (15 %);
+  - mistake rate (25 %);
+  - repeatability (10 %).
+  If your spread is half the reference's, that element scores 200, which is capped.
+- Every score is capped to 0–150. Above 100 means better than the benchmark. **Overall** is the mean of pace and consistency.
+- The reference is analysed on *your* track model: the same distance grid, corners, segments, sectors and line reference, with a shared GPS projection origin. Corner T7 means the same piece of track in both sessions, and line offsets are directly comparable. A reference whose lap length differs by 4 % or more is refused as a different track or layout. A reference with fewer than 3 usable laps is also refused.
+- The **Benchmark** section shows the score tiles, a pace and consistency breakdown by session and sector, and the time gap per corner (median and best). It also has a sortable per-corner table with entry, minimum and exit speed, brake and pickup deltas, line differences, and the likely cause of each loss. Click a corner to select it everywhere.
+- Elsewhere in the dashboard:
+  - the telemetry and speed traces default to the benchmark's best lap as the reference, and can be switched to its theoretical best;
+  - the racing-line panel draws the benchmark lap;
+  - the consistency heatmap gets a **vs benchmark** mode;
+  - insights and coaching include benchmark items.
+- Lap exclusions recompute the comparison immediately. **Remove reference** goes back to the self-referenced analysis.
+
+`data/reference_session.tsv` is a synthetic "pro" session on the sample track, about 1.3 s quicker on best lap (1.9 s on race pace) and much more consistent, for trying the feature. It was generated with `python3 tools/generate_sample_tsv.py --profile pro --seed 21 --out data/reference_session.tsv --truth data/reference_session.truth.json`.
+
 ## Excluding laps
 
 Untick **Use** for a lap in the lap table, or press **Exclude lap** in the lap assessment, to remove that lap from the analysis. Pace, consistency, the mistake baselines, corner statistics, the theoretical best, insights and every chart are then recomputed in about 0.1 s, because the parsed data is reused. Excluded laps stay listed and their telemetry can still be viewed. They can be restored one at a time, or all at once with **Restore all**. The track model (corners and segments) always uses every complete lap, so corner IDs don't change when laps are excluded. At least 3 laps must stay in the analysis. Exclusions are remembered in your browser for the same file.
@@ -106,6 +130,7 @@ Truncated files (record count larger than the file) are read up to the last comp
 - **mistakes.js**: flags events using robust z-scores against the driver's own distribution at each corner. Severity runs from L0 to L4; confidence is High, Medium or Low.
 - **scoring.js**: lap status (validity vs execution vs pace), mistake score, consistency score, theoretical best, corner analysis, a grip-utilisation pace benchmark, and the priority matrix.
 - **insights.js**: insight text and coaching built from the computed numbers only.
+- **benchmark.js**: analyses a reference session on the main session's track model and scores pace and consistency against it (reference = 100).
 
 The **Method & data** section of the dashboard documents every formula and threshold.
 
@@ -122,4 +147,5 @@ python3 tools/make_test_replay_video.py data/sample_session.tsv /tmp/replay.webm
 node tests/replay_check.js dist/sample_dashboard.html /tmp/replay.webm <start>      # video/telemetry sync, playback, seek, .rpy handling
 node tests/replay_corner_check.js dist/sample_dashboard.html /tmp/replay.webm <start>  # corner click → video jump from every entry point
 node tests/replay_layout_check.js dist/sample_dashboard.html /tmp/replay.webm <letterboxed.webm>  # resize, size presets, fullscreen, crop, auto bars
+node tests/benchmark_check.js dist/sample_dashboard.html data/sample_session.tsv data/reference_session.tsv <main.ibt> <reference.ibt> <other-track.tsv> <too-short.tsv>  # reference session: self = 100, formulas, refusals, UI
 ```

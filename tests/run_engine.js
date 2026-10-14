@@ -1,7 +1,7 @@
 // Node harness: loads the engine modules in pipeline order and analyses TSV files.
 const fs = require('fs');
 const path = require('path');
-const ORDER = ['stats', 'ibt', 'ingest', 'laps', 'track', 'features', 'mistakes', 'scoring', 'insights', 'analyze'];
+const ORDER = ['stats', 'ibt', 'ingest', 'laps', 'track', 'features', 'mistakes', 'scoring', 'insights', 'analyze', 'benchmark'];
 function loadEngine() {
   delete globalThis.TelemetryEngine;
   for (const m of ORDER) require(path.join(__dirname, '..', 'src', 'engine', m + '.js'));

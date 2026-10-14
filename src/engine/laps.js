@@ -227,10 +227,12 @@
   }
 
   /** Resample each lap onto a common distance grid (distance-normalised to the reference length). */
-  function resampleLaps(I, lapInfo) {
+  function resampleLaps(I, lapInfo, forced) {
     const C = I.table;
-    const { laps, L } = lapInfo;
-    const ds = St.clamp(Math.round(L / 2200), 1, 5);
+    const { laps } = lapInfo;
+    // a reference session is resampled onto the main session's grid (same length and step)
+    const L = forced ? forced.L : lapInfo.L;
+    const ds = forced ? forced.ds : St.clamp(Math.round(L / 2200), 1, 5);
     const N = Math.ceil(L / ds - 1e-9) + 1; // last grid point is exactly the finish line
     const grid = new Float64Array(N); for (let k = 0; k < N; k++) grid[k] = Math.min(k * ds, L);
     const has = {}; CH.forEach(c => has[c] = !!I.avail[c]);

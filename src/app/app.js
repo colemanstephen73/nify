@@ -14,7 +14,7 @@
   const COL = {
     text: V('--text'), text2: V('--text-2'), muted: V('--muted'), border: V('--border'), border2: V('--border-strong'), panel2: V('--panel-2'),
     good: V('--good'), warn: V('--warn'), serious: V('--serious'), critical: V('--critical'), na: V('--na'),
-    laps: [V('--lap1'), V('--lap2'), V('--lap3'), V('--lap4')], ref: V('--ref'), faster: V('--faster'), slower: V('--slower'), cyan: V('--cyan'), accent: V('--accent'),
+    laps: [V('--lap1'), V('--lap2'), V('--lap3'), V('--lap4')], ref: V('--ref'), faster: V('--faster'), slower: V('--slower'), cyan: V('--cyan'), accent: V('--accent'), bench: V('--bench'),
   };
   const STATUS_COL = { clean: COL.good, minor: COL.warn, sig: COL.serious, major: COL.critical, na: COL.na };
   const LEVEL_COL = [COL.na, COL.warn, COL.serious, COL.critical, '#8f1d1d'];
@@ -58,7 +58,7 @@
   }
 
   // ---------------------------------------------------------------- state
-  const S = { R: null, files: null, lineAll: true, lineX: 5, sel: null, cmp: [], ref: 'theo', corner: null, ch: null, ov: { corners: true, brake: true, apex: true, mistakes: true }, mapColor: 'speed', xr: null, diffMetric: null, sort: {} };
+  const S = { bench: null, consMode: 'abs', R: null, files: null, lineAll: true, lineX: 5, sel: null, cmp: [], ref: 'theo', corner: null, ch: null, ov: { corners: true, brake: true, apex: true, mistakes: true }, mapColor: 'speed', xr: null, diffMetric: null, sort: {} };
   const L = () => S.R.laps;
   const ana = () => S.R.laps.filter(l => l.analysable);
   const lapCol = idx => { const order = [S.sel, ...S.cmp]; const i = order.indexOf(idx); return i >= 0 ? COL.laps[i] : COL.muted; };
@@ -75,6 +75,8 @@
     const R = S.R;
     if (S.ref === 'theo' && R.theo) return { label: 'Theoretical best', short: 'Theo', time: R.theo.trace.time, g: R.theo.trace };
     if (S.ref === 'median') return { label: 'Median trace', short: 'Median', time: R.ref.time, g: R.ref };
+    if (S.ref === 'bench-best' && S.bench) { const t = S.bench.cmp.traces; return { label: `Benchmark best (${t.bestLabel})`, short: 'Bench', time: t.best.time, g: t.best, bench: true }; }
+    if (S.ref === 'bench-theo' && S.bench) { const t = S.bench.cmp.traces; return { label: 'Benchmark theoretical', short: 'Bench theo', time: t.theo.time, g: t.theo, bench: true }; }
     let idx = S.ref === 'best' ? R.sessionStats.bestLap : +String(S.ref).replace('lap:', '');
     const lap = R.laps[idx];
     if (!lap || !lap.complete) { const b = R.laps[R.sessionStats.bestLap]; return { label: `Best lap ${b.label}`, short: b.label, time: b.grid.time, g: b.grid, lap: b.index }; }
@@ -102,6 +104,7 @@
     b.push(`<span class="badge">${D.parsedRows.toLocaleString()} ${M ? 'samples' : 'rows'}</span>`);
     b.push(`<span class="badge">${D.laps} laps · ${D.completeLaps} complete</span>`);
     if (D.sessions > 1) b.push(`<span class="badge">${D.sessions} sessions</span>`);
+    if (S.bench) b.push(`<span class="badge btnlike" id="badge-bench" style="color:var(--bench);border-color:#5a4a14">Benchmark: ${esc(S.bench.cmp.name)} · pace ${S.bench.cmp.pace.score.toFixed(0)} · consistency ${S.bench.cmp.cons.score.toFixed(0)}</span>`);
     b.push(`<span class="badge">${fmt(D.sampling.hz, 1)} Hz</span>`);
     b.push(`<span class="badge">Lap ${fmt(D.lapLength, 0)} m</span>`);
     b.push(`<span class="badge">${S.R.corners.length} corners ${D.cornerSource === 'inferred' ? '<span class="tag inferred">inferred</span>' : ''}</span>`);
@@ -109,6 +112,7 @@
     if (D.unavailable.length) b.push(`<span class="badge btnlike" id="badge-unav" title="${esc(D.unavailable.map(u => u.channel).join(', '))}">${D.unavailable.length} analyses limited by missing channels</span>`);
     $('session-badges').innerHTML = b.join('');
     const dq = $('badge-dq'); if (dq) dq.onclick = openDQ;
+    const bb = $('badge-bench'); if (bb) bb.onclick = () => $('benchmark').scrollIntoView({ behavior: 'smooth' });
     const un = $('badge-unav'); if (un) un.onclick = openDQ;
     void synth;
   }
@@ -128,7 +132,8 @@
     const rating = cons >= 85 ? 'Very consistent' : cons >= 70 ? 'Consistent' : cons >= 55 ? 'Moderately consistent' : 'Inconsistent';
     const coach = R.coaching[0];
     const q = [
-      ['How fast?', `Best ${fmtLap(SS.best)}`, `${R.laps[SS.bestLap].label} · clean median ${fmtLap(SS.medianClean)}`, 'overview'],
+      S.bench ? ['How fast vs the benchmark?', `Pace ${S.bench.cmp.pace.score.toFixed(0)}/100 · best ${fmtLap(SS.best)}`, `${fmtD(S.bench.cmp.pace.best.gap)} s best lap · ${fmtD(S.bench.cmp.pace.race.gap)} s race pace vs reference`, 'benchmark']
+        : ['How fast?', `Best ${fmtLap(SS.best)}`, `${R.laps[SS.bestLap].label} · clean median ${fmtLap(SS.medianClean)}`, 'overview'],
       ['How consistent?', `${cons.toFixed(0)}/100 — ${rating}`, `line & speed ${SS.execCons ? SS.execCons.overall.toFixed(0) + '/100 (weakest: ' + SS.execCons.elements[SS.execCons.weakestElement].label.toLowerCase() + ')' : 'n/a'} · clean-lap IQR ${fmt(SS.lapTimeStats.cleanIqr)} s`, 'consistency'],
       ['Which laps have mistakes?', `${sigLaps.length} of ${SS.counts.analysable} laps`, sigLaps.slice(0, 8).map(l => l.label).join(' ') + (sigLaps.length > 8 ? ' …' : ''), 'laps'],
       ['Where are the mistakes?', hot.length ? hot.map(h => `${h[0]}×${h[1]}`).join('  ') : 'No significant mistakes', `${R.incidents.filter(i => i.level >= 2).length} significant+ incidents · ${SS.counts.offTracks} off-track`, 'track'],
@@ -148,7 +153,7 @@
     const R = S.R, SS = R.sessionStats;
     const cons = SS.consistency.overall;
     const k = [
-      ['Best lap', fmtLap(SS.best), `${R.laps[SS.bestLap].label} · raw pace`, COL.cyan],
+      ['Best lap', fmtLap(SS.best), S.bench ? `${fmtD(S.bench.cmp.pace.best.gap)} s vs benchmark · pace ${S.bench.cmp.pace.best.score.toFixed(0)}` : `${R.laps[SS.bestLap].label} · raw pace`, COL.cyan],
       ['Median clean lap', fmtLap(SS.medianClean), `${SS.counts.clean} clean laps · best clean ${fmtLap(SS.bestClean)}`, COL.good],
       ['Theoretical best', fmtLap(R.theo.total), `${R.segs.length} segments · ${R.theo.distinctLaps} laps`, COL.laps[2]],
       ['Theoretical potential', `+${fmt(R.theo.potential)}<small> s</small>`, 'best lap − theoretical', COL.laps[2]],
@@ -468,6 +473,7 @@
           <div class="dim" style="font-size:12px;margin:2px 0 8px">best segment time · median ${fmt(c.median)} s · gap to best ${fmtD(c.repeatGap)} s</div>
           <div style="font-size:12px;line-height:1.6">${c.why.length ? c.why.map(w => `<div><span class="${w.good ? 't-good' : 'dim'}">${w.good ? '▲' : '•'}</span> ${esc(w.text)}</div>`).join('') : '<span class="muted">No metric differs from the session median by more than its noise floor — the gain is spread across small differences.</span>'}</div>
           <dl class="kv" style="margin-top:10px">
+            ${S.bench ? `<dt>vs benchmark</dt><dd style="color:var(--bench)">${(() => { const b = S.bench.cmp.corners[ci]; return `${fmtD(b.median.gap)} s median · pace ${b.median.score.toFixed(0)}${b.causes.length ? ' · ' + esc(b.causes.map(x => x.text).join(', ')) : ''}`; })()}</dd>` : ''}
             <dt>Line &amp; speed</dt><dd>${c.exec ? `${c.exec.overall.toFixed(0)}/100 · ${ELEM_ORDER.filter(k => c.exec.parts[k]).map(k => c.exec.parts[k].label.split(' ')[0].toLowerCase() + ' ' + c.exec.parts[k].score.toFixed(0)).join(' · ')}` : '—'}</dd>
             <dt>Timing cons.</dt><dd>${fmt(c.consistency, 0)}/100 · <span class="cls ${c.consClass}">${c.consClass}</span></dd>
             <dt>Pace</dt><dd>${Number.isFinite(c.util) ? (100 * c.util).toFixed(0) + '% grip use' : 'n/a'} · <span class="cls ${c.paceClass === 'n/a' ? 'na' : c.paceClass}">${c.paceClass}</span></dd>
@@ -556,6 +562,105 @@
     el.on('plotly_click', ev => { const p = ev.points[0]; if (p.customdata) selectLap(p.customdata[0]); });
   }
 
+  // ---------------------------------------------------------------- benchmark (reference session = 100)
+  const scoreCol = v => !Number.isFinite(v) ? COL.na : v >= 95 ? COL.good : v >= 80 ? COL.warn : v >= 60 ? COL.serious : COL.critical;
+  const sbar = v => `<span class="sbar" title="reference = 100 (gold mark)"><i style="width:${Math.min(100, Math.max(0, v / 1.5))}%;background:${scoreCol(v)}"></i><b></b></span>`;
+  function renderBenchmark() {
+    const sec = $('benchmark'), nav = $('nav-bench');
+    if (!S.bench || !S.R) { sec.hidden = true; nav.hidden = true; return; }
+    sec.hidden = false; nav.hidden = false;
+    const B = S.bench.cmp, R = S.R;
+    const M = B.meta;
+    $('bench-sub').innerHTML = `Reference: <b>${esc(B.name)}</b>${M && M.driver ? ' · ' + esc(M.driver) : ''}${M && M.car ? ' · ' + esc(M.car) : ''} · ${B.laps.ref} analysable laps · reference = 100`;
+    $('bench-warn').innerHTML = B.warnings.map(w => `<div class="bench-warn">${esc(w)}</div>`).join('');
+    const tile = (k, v, s) => `<div class="btile"><div class="k">${k}</div><div class="v" style="color:${scoreCol(v)}">${Number.isFinite(v) ? v.toFixed(0) : '—'}<small> / 100</small></div>${sbar(v)}<div class="s">${s}</div></div>`;
+    const P = B.pace, C = B.cons;
+    $('bench-tiles').innerHTML =
+      tile('Overall vs benchmark', B.overall, 'mean of pace and consistency') +
+      tile('Pace', P.score, `best lap ${P.best.score.toFixed(0)} · race pace ${P.race.score.toFixed(0)}`) +
+      tile('Consistency', C.score, `lap times ${C.lapTime.score.toFixed(0)} · corners ${C.cornerTime.score.toFixed(0)} · mistakes ${C.mistakes.score.toFixed(0)}`) +
+      tile('Best lap', P.best.score, `${fmtLap(P.best.you)} vs ${fmtLap(P.best.ref)} · <b class="mono">${fmtD(P.best.gap)} s</b> (${fmtD(P.best.gapPct, 2)}%)`) +
+      tile('Race pace', P.race.score, `median clean ${fmtLap(P.race.you)} vs ${fmtLap(P.race.ref)} · <b class="mono">${fmtD(P.race.gap)} s</b>`);
+    const row = (name, you, ref, gap, score, title) => `<tr style="cursor:default" title="${esc(title || '')}"><td class="txt">${name}</td><td>${you}</td><td style="color:var(--bench)">${ref}</td><td>${gap}</td><td><span style="display:inline-flex;align-items:center;gap:6px">${sbar(score)}<span style="min-width:28px;text-align:right">${Number.isFinite(score) ? score.toFixed(0) : '—'}</span></span></td></tr>`;
+    const el = C.elements;
+    $('bench-table').innerHTML = `<div style="overflow-x:auto"><table class="tbl"><thead><tr><th class="l">Measure</th><th>You</th><th>Reference</th><th>Gap</th><th>Score</th></tr></thead><tbody>
+      ${row('Best lap', fmtLap(P.best.you), fmtLap(P.best.ref), fmtD(P.best.gap), P.best.score)}
+      ${row('Race pace (median clean)', fmtLap(P.race.you), fmtLap(P.race.ref), fmtD(P.race.gap), P.race.score)}
+      ${row('Theoretical best', fmtLap(P.theoretical.you), fmtLap(P.theoretical.ref), fmtD(P.theoretical.gap), P.theoretical.score)}
+      ${row('Lap-time spread', fmt(C.lapTime.you) + ' s', fmt(C.lapTime.ref) + ' s', fmtD(C.lapTime.gap), C.lapTime.score, 'half robust σ + half σ of valid lap times')}
+      ${row('Corner-time spread (median σ)', fmt(C.cornerTime.you) + ' s', fmt(C.cornerTime.ref) + ' s', fmtD(C.cornerTime.you - C.cornerTime.ref), C.cornerTime.score)}
+      ${['line', 'entry', 'min', 'exit'].filter(k => el[k]).map(k => row(`${el[k].label} consistency`, '', '', '', el[k].score, 'mean over corners of reference spread ÷ your spread')).join('')}
+      ${row('Time lost to mistakes', fmt(C.mistakes.you, 2) + ' s/lap', fmt(C.mistakes.ref, 2) + ' s/lap', fmtD(C.mistakes.you - C.mistakes.ref, 2), C.mistakes.score)}
+      ${row('Repeatability (median clean − best)', fmt(C.repeat.you) + ' s', fmt(C.repeat.ref) + ' s', fmtD(C.repeat.you - C.repeat.ref), C.repeat.score)}
+      </tbody></table>
+      <table class="tbl" style="margin-top:10px"><thead><tr><th class="l">Sector</th><th>You (median)</th><th>Reference</th><th>Gap</th><th>Score</th></tr></thead><tbody>
+      ${B.sectors.map(x => row(x.id, fmt(x.median.you), fmt(x.median.ref), fmtD(x.median.gap), x.median.score)).join('')}</tbody></table></div>`;
+    // corner chart
+    const CB = B.corners;
+    react('ch-bench-corners', [
+      { type: 'bar', x: CB.map(c => c.id), y: CB.map(c => c.median.gap), name: 'median lap', customdata: CB.map(c => c.index),
+        marker: { color: CB.map(c => c.median.gap > 0 ? hexA(COL.slower, 0.85) : hexA(COL.faster, 0.85)) },
+        text: CB.map(c => Math.abs(c.median.gap) >= 0.05 ? fmtD(c.median.gap, 2) : ''), textposition: 'outside', textfont: { family: MONO, size: 10, color: COL.text },
+        hovertemplate: '<b>%{x}</b> median %{y:+.3f} s vs reference<extra></extra>' },
+      { type: 'scatter', mode: 'markers', x: CB.map(c => c.id), y: CB.map(c => c.best.gap), name: 'best vs best', customdata: CB.map(c => c.index),
+        marker: { symbol: 'diamond', size: 10, color: COL.bench, line: { width: 1, color: '#0a0b0d' } }, hovertemplate: '<b>%{x}</b> best vs best %{y:+.3f} s<extra></extra>' },
+    ], baseLayout({ margin: { l: 48, r: 10, t: 22, b: 30 }, showlegend: true, legend: { orientation: 'h', y: 1.12, x: 0, font: { size: 10 } }, bargap: 0.3,
+      yaxis: { title: { text: 'Δ s (+ slower)' }, zeroline: true, zerolinecolor: COL.bench, zerolinewidth: 1.5 }, xaxis: { tickfont: { family: MONO, size: 10 } },
+      shapes: S.corner !== null ? [{ type: 'rect', xref: 'x', yref: 'paper', x0: S.corner - 0.5, x1: S.corner + 0.5, y0: 0, y1: 1, line: { color: COL.cyan, width: 1.5 } }] : [] }), CFG_STATIC);
+    const ch = $('ch-bench-corners'); ch.removeAllListeners && ch.removeAllListeners('plotly_click');
+    ch.on('plotly_click', ev => { const ci = ev.points[0].customdata; if (Number.isInteger(ci)) selectCorner(ci); });
+    // corner table
+    const dv = (v, d, good) => !Number.isFinite(v) ? '—' : `<span class="${Math.abs(v) < Math.pow(10, -d) ? '' : (good(v) ? 't-good' : 't-bad')}">${fmtD(v, d)}</span>`;
+    const rows = CB.map(c => ({ ...c, _id: c.index }));
+    const cols = [
+      { k: 'index', h: 'Corner', l: true, txt: true, f: r => `<b>${esc(r.id)}</b> <span class="muted">${esc(r.dir)}</span>` },
+      { k: 'pace', h: 'Pace', sv: r => r.median.score, f: r => `<span style="display:inline-flex;align-items:center;gap:6px">${sbar(r.median.score)}${r.median.score.toFixed(0)}</span>` },
+      { k: 'dmed', h: 'Δ median', sv: r => r.median.gap, f: r => dv(r.median.gap, 3, v => v < 0) },
+      { k: 'dbest', h: 'Δ best', sv: r => r.best.gap, f: r => dv(r.best.gap, 3, v => v < 0) },
+      { k: 'dEntry', h: 'Δ turn-in', f: r => dv(r.dEntry, 1, v => v > 0) },
+      { k: 'dMin', h: 'Δ min', f: r => dv(r.dMin, 1, v => v > 0) },
+      { k: 'dExit', h: 'Δ exit', f: r => dv(r.dExit, 1, v => v > 0) },
+      { k: 'dBrake', h: 'Δ brake pt', f: r => dv(r.dBrake, 0, v => v > 0) },
+      { k: 'dPickup', h: 'Δ throttle pt', f: r => dv(r.dPickup, 0, v => v < 0) },
+      { k: 'dLineApex', h: 'Δ apex line', title: 'your median apex placement minus the reference\'s (m, + = closer to the inside)', f: r => Number.isFinite(r.dLineApex) ? fmtD(r.dLineApex, 2) : '—' },
+      { k: 'cons', h: 'Consistency', sv: r => r.consScore, f: r => Number.isFinite(r.consScore) ? `<span style="display:inline-flex;align-items:center;gap:6px">${sbar(r.consScore)}${r.consScore.toFixed(0)}</span>` : '—' },
+      { k: 'cause', h: 'Main difference', l: true, txt: true, sv: r => r.causes.length, f: r => r.causes.length ? esc(r.causes.map(x => x.text).join(', ')) : '<span class="muted">—</span>' },
+    ];
+    sortable('tbl-bench', cols, rows, id => selectCorner(id), r => r.index === S.corner, S.sort['tbl-bench'] || { k: 'index', asc: true });
+    const kcol = { diagnosis: COL.bench, weakness: COL.serious, strength: COL.good };
+    $('bench-insights').innerHTML = B.insights.map(i => `<div class="insight" style="--ik:${kcol[i.kind] || COL.bench}" ${Number.isInteger(i.corner) ? `data-corner="${i.corner}"` : ''}><div class="it">Benchmark</div><h4>${esc(i.title)}</h4><p>${esc(i.text)}</p></div>`).join('');
+    $('bench-insights').querySelectorAll('[data-corner]').forEach(e => e.onclick = () => selectCorner(+e.dataset.corner));
+  }
+  function loadReference(fileList) {
+    if (!S.R) { toast('Load your session first, then the reference.'); return; }
+    const arr = Array.from(fileList); if (!arr.length) return;
+    $('loading').classList.remove('hide'); $('loading-msg').textContent = `Analysing reference ${arr.map(f => f.name).join(', ')}…`;
+    Promise.all(arr.map(f => f.arrayBuffer().then(buffer => ({ name: f.name, buffer }))))
+      .then(files => files.map(f => (E.ibt.isIBT(f.buffer) || /\.ibt$/i.test(f.name)) ? f : { name: f.name, text: new TextDecoder('utf-8').decode(f.buffer) }))
+      .then(files => setTimeout(() => buildBenchmark(files, true), 20))
+      .catch(e => { $('loading').classList.add('hide'); toast('Could not read the reference: ' + e.message); });
+  }
+  function buildBenchmark(files, announce, useAsRef) {
+    try {
+      const model = E.benchmark.analyzeReference(S.R, files);
+      S.bench = { files, model, cmp: E.benchmark.compare(S.R, model) };
+      window.__bench = S.bench;
+      if (announce || useAsRef) S.ref = 'bench-best';
+      renderAll(true);
+      if (announce) { toast(`Benchmark loaded — pace ${S.bench.cmp.pace.score.toFixed(0)}, consistency ${S.bench.cmp.cons.score.toFixed(0)} (reference = 100).`); $('benchmark').scrollIntoView({ behavior: 'smooth' }); }
+    } catch (e) {
+      console.warn(e);
+      const had = !!S.bench; S.bench = null; window.__bench = null;
+      if (had) renderAll(true);
+      $('modal-body').innerHTML = `<div style="display:flex;align-items:center"><h2 style="flex:1">Reference session not used</h2><button class="btn" id="modal-close">Close</button></div><p class="dim" style="font-size:13px;line-height:1.6">${esc(e.message)}</p><p class="dim" style="font-size:12.5px">The reference must be the same track and layout, with at least 3 complete laps.</p>`;
+      $('modal').classList.add('on'); $('modal-close').onclick = () => $('modal').classList.remove('on');
+    } finally { $('loading').classList.add('hide'); }
+  }
+  function refreshBenchmark() { // main session re-analysed (lap exclusion): reference model unchanged, comparison recomputed
+    if (!S.bench) return;
+    try { S.bench.cmp = E.benchmark.compare(S.R, S.bench.model); window.__bench = S.bench; } catch (e) { console.warn(e); S.bench = null; }
+  }
+
   // ---------------------------------------------------------------- corner consistency (line / entry / min / exit)
   const consCol = v => v >= 75 ? COL.good : v >= 50 ? COL.warn : v >= 30 ? COL.serious : COL.critical;
   const ELEM_ORDER = ['line', 'entry', 'min', 'exit'];
@@ -577,11 +682,24 @@
           <div class="bar"><i style="width:${e.score}%;background:${consCol(e.score)}"></i></div>
           <div class="s">${(100 * e.within).toFixed(0)}% of laps in tolerance · worst ${esc(CL[e.worst].id)}</div></div>`;
       }).join('');
-    // heatmap: rows = overall + elements, columns = corners
+    // heatmap: rows = overall + elements, columns = corners; absolute scores or relative to the benchmark
+    const relMode = S.consMode === 'bench' && S.bench;
+    const tog = $('cons-mode');
+    if (tog) tog.innerHTML = S.bench ? `<span class="chips"><button class="chip ${!relMode ? 'on' : ''}" data-cm="abs">Absolute</button><button class="chip ${relMode ? 'on' : ''}" data-cm="bench" style="--cc:var(--bench)">vs benchmark (= 100)</button></span>` : 'score 0–100 · 50 = spread equal to the tolerance';
+    if (tog) tog.querySelectorAll('[data-cm]').forEach(b => b.onclick = () => { S.consMode = b.dataset.cm; renderCons(); });
     const rows = [['overall', 'Overall'], ...ELEM_ORDER.filter(k => X.elements[k]).map(k => [k, elemNames[k]])];
-    const z = rows.map(([k]) => CL.map(c => c.exec ? (k === 'overall' ? c.exec.overall : (c.exec.parts[k] ? c.exec.parts[k].score : null)) : null));
-    const txt = rows.map(([k]) => CL.map(c => { if (!c.exec) return ''; if (k === 'overall') return c.exec.overall.toFixed(0); const p = c.exec.parts[k]; return p ? p.score.toFixed(0) : ''; }));
-    const hov = rows.map(([k, name]) => CL.map(c => { if (!c.exec) return ''; if (k === 'overall') return `${c.id} overall ${c.exec.overall.toFixed(0)}/100 · weakest: ${c.exec.parts[c.exec.weakest].label.toLowerCase()}`; const p = c.exec.parts[k]; return p ? `${c.id} ${name}: ${p.score.toFixed(0)}/100<br>spread ${fmtSpread(p)} · ${(100 * p.within).toFixed(0)}% of laps in tolerance (n=${p.n})` : ''; }));
+    let z, txt, hov;
+    if (relMode) {
+      const BC = S.bench.cmp.corners;
+      const val = (ci, k) => { const b = BC[ci]; if (!b) return null; if (k === 'overall') return Number.isFinite(b.consScore) ? b.consScore : null; return b.cons[k] ? b.cons[k].score : null; };
+      z = rows.map(([k]) => CL.map((c, ci) => val(ci, k)));
+      txt = z.map(r => r.map(v => v === null ? '' : v.toFixed(0)));
+      hov = rows.map(([k, name]) => CL.map((c, ci) => { const b = BC[ci], v = val(ci, k); if (v === null) return ''; if (k === 'overall') return `${c.id}: ${v.toFixed(0)} vs benchmark (= 100)`; const p = b.cons[k]; return `${c.id} ${name}: ${v.toFixed(0)} vs benchmark<br>you ${p.unit === 'm' ? '±' + p.youAbs.toFixed(2) + ' m' : '±' + p.youAbs.toFixed(1) + ' km/h'} · reference ${p.unit === 'm' ? '±' + p.refAbs.toFixed(2) + ' m' : '±' + p.refAbs.toFixed(1) + ' km/h'}`; }));
+    } else {
+      z = rows.map(([k]) => CL.map(c => c.exec ? (k === 'overall' ? c.exec.overall : (c.exec.parts[k] ? c.exec.parts[k].score : null)) : null));
+      txt = rows.map(([k]) => CL.map(c => { if (!c.exec) return ''; if (k === 'overall') return c.exec.overall.toFixed(0); const p = c.exec.parts[k]; return p ? p.score.toFixed(0) : ''; }));
+      hov = rows.map(([k, name]) => CL.map(c => { if (!c.exec) return ''; if (k === 'overall') return `${c.id} overall ${c.exec.overall.toFixed(0)}/100 · weakest: ${c.exec.parts[c.exec.weakest].label.toLowerCase()}`; const p = c.exec.parts[k]; return p ? `${c.id} ${name}: ${p.score.toFixed(0)}/100<br>spread ${fmtSpread(p)} · ${(100 * p.within).toFixed(0)}% of laps in tolerance (n=${p.n})` : ''; }));
+    }
     react('ch-cons-heat', [{
       type: 'heatmap', z, x: CL.map(c => c.id), y: rows.map(r => r[1]), zmin: 0, zmax: 100, text: txt, texttemplate: '%{text}', textfont: { family: MONO, size: 11, color: '#0a0b0d' },
       customdata: hov, hovertemplate: '%{customdata}<extra></extra>', xgap: 3, ygap: 3,
@@ -678,6 +796,9 @@
     const lapTrace = (l, col, w) => ({ type: 'scatter', mode: 'lines', x: ks.map(k => P(l, k)[0]), y: ks.map(k => P(l, k)[1]), line: { color: col, width: w }, name: l.label,
       customdata: ks.map(k => [(k * G.ds).toFixed(0), (l.off[k] * sg).toFixed(2), l.grid.speed ? l.grid.speed[k].toFixed(1) : '—']),
       hovertemplate: `${l.label} · %{customdata[0]} m<br>%{customdata[1]} m toward inside · %{customdata[2]} km/h<extra></extra>` });
+    const bLap = S.bench && S.bench.cmp.sameFrame ? S.bench.model.laps[S.bench.model.cornerStats.list[ci].bestLap] : null;
+    if (bLap && bLap.off) { const chips = document.querySelector('#line-controls .chips'); if (chips) chips.insertAdjacentHTML('beforeend', `<span class="chip on" style="--cc:${COL.bench}"><span class="sw"></span>Benchmark ${esc(bLap.label)} (best at ${esc(c.id)})</span>`); }
+    if (bLap && bLap.off) { const t = lapTrace(bLap, COL.bench, 2.2); t.name = 'Benchmark ' + bLap.label; t.line.dash = 'dash'; t.hovertemplate = t.hovertemplate.replace(bLap.label, 'Benchmark ' + bLap.label); data.push(t); }
     if (best && !shown.some(l => l.index === best.index)) data.push(lapTrace(best, COL.good, 2.6));
     shown.slice().reverse().forEach(l => data.push(lapTrace(l, l.index === best?.index ? COL.good : COL.laps[shown.indexOf(l)], l.index === S.sel ? 2.4 : 1.8)));
     // apex + brake markers for best and shown laps
@@ -708,6 +829,7 @@
       { type: 'scatter', mode: 'lines', x: xd, y: band.map(b => b[1]), line: { color: COL.ref, width: 1, dash: 'dot' }, name: 'median', hovertemplate: 'median %{y:.2f} m<extra></extra>' },
     ];
     const offTrace = (l, col, w) => ({ type: 'scatter', mode: 'lines', x: xd, y: ks.map(k => l.off[k] * sg), line: { color: col, width: w }, name: l.label, hovertemplate: `${l.label} %{y:.2f} m<extra></extra>` });
+    if (bLap && bLap.off) { const t = offTrace(bLap, COL.bench, 2); t.name = 'Benchmark'; t.line.dash = 'dash'; t.hovertemplate = 'Benchmark %{y:.2f} m<extra></extra>'; od.push(t); }
     if (best && !shown.some(l => l.index === best.index)) od.push(offTrace(best, COL.good, 2.2));
     shown.forEach((l, i) => od.push(offTrace(l, l.index === best?.index ? COL.good : COL.laps[i], i === 0 ? 2 : 1.5)));
     const vl = (k, t) => [{ type: 'line', x0: k * G.ds, x1: k * G.ds, yref: 'paper', y0: 0, y1: 1, line: { color: '#3a404a', width: 1 } }, { x: k * G.ds, y: 1, yref: 'paper', yanchor: 'bottom', text: t, showarrow: false, font: { size: 9, color: COL.muted } }];
@@ -725,9 +847,9 @@
     const L = cs.line, sel = R.laps[S.sel], fs = sel && sel.analysable ? R.features.get(sel.index).corners[ci] : null;
     const order = ['lineTurnIn', 'lineApex', 'lineClip', 'lineExit', 'lineWidth', 'pathDelta', 'minRadius'];
     const v = (x, d) => Number.isFinite(x) ? (d === 0 ? x.toFixed(0) : (x > 0 ? '+' : '') + x.toFixed(d)) : '—';
-    $('line-table').innerHTML = `<table class="tbl" style="margin-top:8px"><thead><tr><th class="l">Line measure</th><th>Best ${best ? esc(best.label) : ''}</th><th>${sel ? esc(sel.label) : 'Selected'}</th><th>Median</th><th>Spread σ</th><th title="Spearman correlation with segment time; negative = higher value goes with faster laps">ρ vs time</th></tr></thead><tbody>${order.map(k => {
+    $('line-table').innerHTML = `<table class="tbl" style="margin-top:8px"><thead><tr><th class="l">Line measure</th><th>Best ${best ? esc(best.label) : ''}</th><th>${sel ? esc(sel.label) : 'Selected'}</th><th>Median</th>${bLap ? '<th>Benchmark</th>' : ''}<th>Spread σ</th><th title="Spearman correlation with segment time; negative = higher value goes with faster laps">ρ vs time</th></tr></thead><tbody>${order.map(k => {
       const m = L.metrics[k]; const hl = L.finding.strong && L.finding.metric === k;
-      return `<tr style="cursor:default"><td class="txt l">${esc(m.label)} <span class="muted">(${m.unit})</span></td><td>${v(m.best, m.d)}</td><td>${fs ? v(fs[k], m.d) : '—'}</td><td>${v(m.med, m.d)}</td><td>${Number.isFinite(m.sd) ? m.sd.toFixed(m.d || 1) : '—'}</td><td class="${hl ? 'hl' : ''}">${Number.isFinite(m.rho) ? m.rho.toFixed(2) : '—'}</td></tr>`;
+      return `<tr style="cursor:default"><td class="txt l">${esc(m.label)} <span class="muted">(${m.unit})</span></td><td>${v(m.best, m.d)}</td><td>${fs ? v(fs[k], m.d) : '—'}</td><td>${v(m.med, m.d)}</td>${bLap ? `<td style="color:var(--bench)">${v(S.bench.model.cornerStats.list[ci].line ? S.bench.model.cornerStats.list[ci].line.metrics[k].med : NaN, m.d)}</td>` : ''}<td>${Number.isFinite(m.sd) ? m.sd.toFixed(m.d || 1) : '—'}</td><td class="${hl ? 'hl' : ''}">${Number.isFinite(m.rho) ? m.rho.toFixed(2) : '—'}</td></tr>`;
     }).join('')}</tbody></table>`;
     const fdv = $('line-finding');
     fdv.className = 'line-finding' + (L.finding.strong ? ' strong' : '');
@@ -809,6 +931,7 @@
         <option value="theo" ${S.ref === 'theo' ? 'selected' : ''}>Theoretical best ${fmtLap(R.theo.total)}</option>
         <option value="best" ${S.ref === 'best' ? 'selected' : ''}>Best lap ${esc(R.laps[R.sessionStats.bestLap].label)}</option>
         <option value="median" ${S.ref === 'median' ? 'selected' : ''}>Median trace</option>
+        ${S.bench ? `<option value="bench-best" ${S.ref === 'bench-best' ? 'selected' : ''}>Benchmark best ${fmtLap(S.bench.cmp.traces.bestTime)}</option><option value="bench-theo" ${S.ref === 'bench-theo' ? 'selected' : ''}>Benchmark theoretical ${fmtLap(S.bench.cmp.traces.theoTime)}</option>` : ''}
         ${complete.map(l => `<option value="lap:${l.index}" ${S.ref === 'lap:' + l.index ? 'selected' : ''}>${esc(l.label)} ${fmtLap(l.lapTime)}</option>`).join('')}
       </select><span class="chip on" style="--cc:${COL.ref}"><span class="sw"></span>ref</span></div>
       <div class="ctl"><label>Channels</label><div class="chips" id="tm-ch">${['speed', 'delta', 'throttle', 'brake', 'steering', 'gear', 'rpm', 'latG', 'lonG'].map(c => `<button class="chip ${S.ch.has(c) ? 'on' : 'off'}" data-ch="${c}" ${chs.includes(c) ? '' : 'disabled title="channel not in data"'}>${chanLabel[c]}</button>`).join('')}</div></div>
@@ -928,6 +1051,7 @@
     const add = (g, name, col, w, dash) => { if (g && g.speed) traces.push({ type: GL, mode: 'lines', x, y: Array.from(g.speed), yaxis: 'y', line: { color: col, width: w, dash }, name, hovertemplate: `${name}: %{y:.1f} km/h<extra></extra>` }); };
     add(R.ref, 'Median', '#6b7280', 1.2, 'dot');
     add(R.theo.trace, 'Theoretical', COL.laps[2], 1.4);
+    if (S.bench) add(S.bench.cmp.traces.best, `Benchmark ${fmtLap(S.bench.cmp.traces.bestTime)}`, COL.bench, 1.6);
     if (best.index !== sel.index) add(best.grid, `Best ${best.label}`, COL.good, 1.4);
     add(sel.grid, sel.label, COL.laps[0], 1.8);
     let note = `${sel.label} vs ${ref.label}`;
@@ -1124,12 +1248,19 @@
     const R = S.R;
     const kcol = { diagnosis: COL.cyan, weakness: COL.serious, strength: COL.good, opportunity: COL.laps[2], pace: COL.warn, mistakes: COL.critical, trend: COL.text2, data: COL.muted };
     const kname = { diagnosis: 'Diagnosis', weakness: 'Weakness', strength: 'Strength', opportunity: 'Opportunity', pace: 'Pace', mistakes: 'Mistakes', trend: 'Trend', data: 'Data' };
-    $('insight-list').innerHTML = R.insights.map(i => `<div class="insight" style="--ik:${kcol[i.kind]}" ${Number.isInteger(i.corner) ? `data-corner="${i.corner}"` : ''}><div class="it">${kname[i.kind]}</div><h4>${esc(i.title)}</h4><p>${esc(i.text)}</p></div>`).join('');
+    const all = (S.bench ? S.bench.cmp.insights : []).concat(R.insights);
+    $('insight-list').innerHTML = all.map(i => `<div class="insight" style="--ik:${kcol[i.kind]}" ${Number.isInteger(i.corner) ? `data-corner="${i.corner}"` : ''}><div class="it">${kname[i.kind]}</div><h4>${esc(i.title)}</h4><p>${esc(i.text)}</p></div>`).join('');
     $('insight-list').querySelectorAll('[data-corner]').forEach(el => el.onclick = () => { selectCorner(+el.dataset.corner); document.getElementById('corners').scrollIntoView({ behavior: 'smooth' }); });
   }
-  function renderCoaching() {
+  function coachingList() {
     const R = S.R;
-    $('coach-list').innerHTML = R.coaching.length ? R.coaching.map((c, i) => `<div class="rec ${c.corner === S.corner ? 'sel' : ''}" data-corner="${c.corner}" tabindex="0"><div class="num">${i + 1}</div><div><h4>${esc(c.title)} <span class="prio ${c.priority}" style="margin-left:6px">${c.priority}</span></h4>
+    if (!S.bench) return R.coaching;
+    const b = S.bench.cmp.coaching, seen = new Set(b.map(c => c.corner));
+    return b.concat(R.coaching.filter(c => !seen.has(c.corner))).slice(0, 6);
+  }
+  function renderCoaching() {
+    const list = coachingList();
+    $('coach-list').innerHTML = list.length ? list.map((c, i) => `<div class="rec ${c.corner === S.corner ? 'sel' : ''}" data-corner="${c.corner}" tabindex="0"><div class="num">${i + 1}</div><div><h4>${esc(c.title)} <span class="prio ${c.priority}" style="margin-left:6px">${c.priority}</span>${c.bench ? ' <span class="tag" style="color:var(--bench);border-color:#5a4a14">vs benchmark</span>' : ''}</h4>
       <div class="row"><b>Problem</b>${esc(c.problem)}</div><div class="row"><b>Evidence</b>${esc(c.evidence)}</div><div class="row"><b>Objective</b>${esc(c.objective)}</div></div>
       <div class="imp"><div class="v">≈${fmt(c.impact, 2)} s</div><div class="k">est. per lap</div></div></div>`).join('') : '<div class="empty">No recommendation exceeds the 0.015 s/lap threshold.</div>';
     $('coach-list').querySelectorAll('[data-corner]').forEach(el => el.onclick = () => { selectCorner(+el.dataset.corner); document.getElementById('corners').scrollIntoView({ behavior: 'smooth' }); });
@@ -1192,6 +1323,18 @@ L3 Major mistake         — loss ≥ max(0.30 s, 5σ_seg), ≥3 channel groups,
 L4 Compromised           — off-track with ≥0.5 s loss, track-limit violation, or spin signature
 Confidence: High = ≥2 independent channel groups agree and loss z ≥ 2 (or explicit channel);
             Medium = one strong channel (|z| ≥ 4) with loss, or ≥ 2 groups; Low = otherwise ("possible").</div>`),
+      sec('Benchmark (reference session)', `A reference session is analysed with the same engine, but on <b>this session's</b> distance grid, corners, segments, sectors and racing-line frame (GPS is projected with the same origin), so corner times, speeds and positions are compared like-for-like. The reference must be the same track: its lap length must be within ±4%.
+        <div class="formula">Pace score         = 100 − 1000 × (you − reference) / reference      → 1 point per 0.1% of time; 1% slower = 90; faster than the reference > 100
+Consistency score  = 100 × reference spread / your spread           → twice the reference's spread = 50
+(all scores clamped to 0–150; the reference scores exactly 100 on every measure)
+
+Pace          = mean(best-lap score, race-pace score)                race pace = median clean lap
+Consistency   = 0.35 lap-time spread + 0.15 corner-time spread + 0.15 line & speed spread + 0.25 mistake cost + 0.10 repeatability
+                lap-time spread = ½ robust σ + ½ σ of valid laps; corner-time = median per-corner robust σ;
+                line & speed = per corner, reference ÷ your spread for line (m), entry/min/exit speed (relative);
+                mistake cost = (ref + 0.05)/(you + 0.05) of s/lap lost; repeatability = same on (median clean − best)
+Overall       = mean(pace, consistency)</div>
+        Per corner: Δ median / Δ best segment time, and the differences in turn-in, minimum and exit speed, brake and throttle points and apex placement between your typical lap and the reference's typical lap. "Main difference" ranks the deficits after dividing by measurement floors (1 km/h minimum, 1.5 km/h turn-in/exit, 3 m brake, 4 m throttle). Using your own session as the reference returns 100 everywhere.`),
       sec('Corner consistency (line & speed)', `For every corner, four elements are scored from the analysable laps (laps with an off-track at that corner are excluded):<br>
         <b>Entry speed</b> (at turn-in), <b>minimum speed</b> and <b>exit speed</b> (at the corner's exit point): spread = robust σ (1.4826 × MAD) divided by the median, so the same km/h variation weighs more in a slow corner. Tolerance 1.5%.<br>
         <b>Driving line</b> (needs GPS or X/Y): at every point through the corner window, the robust σ of the laps' lateral offsets is taken; the spread is the median of those values. Tolerance 0.6 m. The per-lap value plotted is the lap's RMS distance from the median line through the corner.
@@ -1247,6 +1390,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
         const R = E.analyze(S.files, { base: S.R._base, exclude: keys });
         R.synthetic = S.R.synthetic; R.syntheticNote = S.R.syntheticNote;
         S.R = R; window.__analysis = R;
+        refreshBenchmark();
         saveExcluded(keys);
         renderAll(true);
         const n = keys.length;
@@ -1292,11 +1436,11 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
     sel: ['strip', 'lapTable', 'lapDetail', 'progress', 'trends', 'consCorner', 'cornerDetail', 'cornerLaps', 'cornerDiff', 'line', 'heat', 'tmControls', 'telemetry', 'speedCmp', 'delta', 'mapControls', 'map'],
     cmp: ['strip', 'tmControls', 'telemetry', 'line'],
     ref: ['tmControls', 'telemetry', 'speedCmp', 'delta', 'mapControls', 'map'],
-    corner: ['cons', 'consCorner', 'cornerTable', 'cornerDetail', 'matrix', 'cornerLaps', 'cornerDiff', 'line', 'heat', 'tmControls', 'telemetry', 'speedCmp', 'map', 'mapMistakes', 'coaching'],
+    corner: ['benchmark', 'cons', 'consCorner', 'cornerTable', 'cornerDetail', 'matrix', 'cornerLaps', 'cornerDiff', 'line', 'heat', 'tmControls', 'telemetry', 'speedCmp', 'map', 'mapMistakes', 'coaching'],
     ch: ['tmControls', 'telemetry'], ov: ['tmControls', 'telemetry'],
   };
   const renderers = {
-    cons: renderCons, consCorner: renderConsCorner, strip: renderStrip, lapTable: renderLapTable, lapDetail: renderLapDetail, progress: renderProgress, trends: renderTrends,
+    benchmark: renderBenchmark, cons: renderCons, consCorner: renderConsCorner, strip: renderStrip, lapTable: renderLapTable, lapDetail: renderLapDetail, progress: renderProgress, trends: renderTrends,
     cornerTable: renderCornerTable, cornerDetail: renderCornerDetail, matrix: renderMatrix, cornerLaps: renderCornerLaps, cornerDiff: renderCornerDiff, line: renderLine, heat: renderHeat,
     tmControls: renderTmControls, telemetry: renderTelemetry, speedCmp: renderSpeedCmp, delta: renderDeltaTable, mapControls: renderMapControls, map: renderMap, mapMistakes: renderMapMistakes, coaching: renderCoaching,
   };
@@ -1304,7 +1448,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
     const todo = new Set(); keys.forEach(k => (deps[k] || []).forEach(r => todo.add(r)));
     for (const r of Object.keys(renderers)) if (todo.has(r)) safe(r, renderers[r]);
   }
-  const CHART_OF = { cons: 'ch-cons-heat', progress: 'ch-progress', budget: 'ch-budget', dist: 'ch-dist', trends: 'ch-mtrend', lapDetail: 'ch-lapseg', cornerDetail: 'ch-corner-speed', matrix: 'ch-matrix', cornerLaps: 'ch-corner-laps', cornerDiff: 'ch-corner-diff', line: 'ch-line-map', heat: 'ch-heat', theo: 'ch-theo', telemetry: 'ch-telemetry', speedCmp: 'ch-speedcmp', map: 'ch-map' };
+  const CHART_OF = { benchmark: 'ch-bench-corners', cons: 'ch-cons-heat', progress: 'ch-progress', budget: 'ch-budget', dist: 'ch-dist', trends: 'ch-mtrend', lapDetail: 'ch-lapseg', cornerDetail: 'ch-corner-speed', matrix: 'ch-matrix', cornerLaps: 'ch-corner-laps', cornerDiff: 'ch-corner-diff', line: 'ch-line-map', heat: 'ch-heat', theo: 'ch-theo', telemetry: 'ch-telemetry', speedCmp: 'ch-speedcmp', map: 'ch-map' };
   function safe(name, fn) {
     try { fn(); }
     catch (e) {
@@ -1874,7 +2018,7 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
       S.sel = R.sessionStats.bestLap; S.cmp = []; S.ref = 'theo'; S.ch = null; S.xr = null;
       S.corner = R.coaching.length ? R.coaching[0].corner : (R.corners.length ? 0 : null);
     }
-    [['header', renderHeader], ['verdict', renderVerdict], ['kpis', renderKPIs], ['progress', renderProgress], ['budget', renderBudget], ['dist', renderDist], ['trends', renderTrends],
+    [['header', renderHeader], ['verdict', renderVerdict], ['kpis', renderKPIs], ['benchmark', renderBenchmark], ['progress', renderProgress], ['budget', renderBudget], ['dist', renderDist], ['trends', renderTrends],
       ['consBreak', renderConsBreak], ['paceBreak', renderPaceBreak], ['cons', renderCons], ['consCorner', renderConsCorner], ['strip', renderStrip], ['lapTable', renderLapTable], ['lapDetail', renderLapDetail],
       ['cornerTable', renderCornerTable], ['cornerDetail', renderCornerDetail], ['matrix', renderMatrix], ['cornerLaps', renderCornerLaps], ['cornerDiff', renderCornerDiff], ['line', renderLine], ['heat', renderHeat],
       ['theo', renderTheo], ['tmControls', renderTmControls], ['telemetry', renderTelemetry], ['speedCmp', renderSpeedCmp], ['delta', renderDeltaTable],
@@ -1909,6 +2053,8 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
         }
         S.R = R; S.sort = {};
         renderAll();
+        if (S.bench) buildBenchmark(S.bench.files, false);
+        else if (S.embeddedRef) { const f = S.embeddedRef; S.embeddedRef = null; buildBenchmark(f, false, true); }
         if (R.excluded.length) toast(`Restored your earlier choice: ${R.excluded.length} lap(s) excluded.`);
         // a new data set resets the replay; offer a replay video for iRacing telemetry
         if (RP.open) closeReplay();
@@ -1939,6 +2085,8 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
 
   function boot() {
     $('file-input').onchange = e => readFiles(e.target.files);
+    $('ref-input').onchange = e => { const f = e.target.files; loadReference(f); e.target.value = ''; };
+    $('bench-clear').onclick = () => { S.bench = null; window.__bench = null; if (String(S.ref).startsWith('bench')) S.ref = 'theo'; S.consMode = 'abs'; renderAll(true); toast('Reference removed.'); };
     wireReplay();
     $('btn-dq').onclick = () => { if (S.R) openDQ(); };
     $('modal').onclick = e => { if (e.target === $('modal')) $('modal').classList.remove('on'); };
@@ -1962,7 +2110,10 @@ Repeatability = 100·(½·mean_c e^(−(median_c − best_c)/max(0.08 s, 0.6%)) 
       document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('active', cur && a.getAttribute('href') === '#' + cur.id));
     }, { passive: true });
     if (typeof Plotly === 'undefined') { showError('The charting library (Plotly) could not be loaded, so no charts can be drawn. Use the offline build (dist/sample_dashboard_offline.html), which has the library built in.'); return; }
-    const embedded = Array.from(document.querySelectorAll('script[type="text/tab-separated-values"]')).map(s => ({ name: s.dataset.name || 'embedded.tsv', text: s.textContent.replace(/<\\\//g, '</').replace(/^\n/, '') }))
+    const tsvOf = s => ({ name: s.dataset.name || 'embedded.tsv', text: s.textContent.replace(/<\\\//g, '</').replace(/^\n/, '') });
+    const embRef = Array.from(document.querySelectorAll('script[type="text/tab-separated-values"][data-role="reference"]')).map(tsvOf);
+    if (embRef.length) S.embeddedRef = embRef; // demo build: a reference session ships with the page
+    const embedded = Array.from(document.querySelectorAll('script[type="text/tab-separated-values"]:not([data-role="reference"])')).map(tsvOf)
       .concat(Array.from(document.querySelectorAll('script[type="application/x-ibt-base64"]')).map(s => ({ name: s.dataset.name || 'embedded.ibt', buffer: E.ibt.fromBase64(s.textContent) })));
     if (embedded.length) run(embedded);
     else { $('loading').classList.add('hide'); $('welcome').hidden = false; window.__dashboardReady = true; }

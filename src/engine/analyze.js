@@ -16,12 +16,17 @@
   function analyze(files, opts = {}) {
     const t0 = Date.now();
     let I, lapInfo, G;
+    const prep = opts.prepare || {};
     if (opts.base) ({ I, lapInfo, G } = opts.base);
     else {
-      I = NS.ingest.buildSamples(files);
+      I = NS.ingest.buildSamples(files, { gpsOrigin: prep.gpsOrigin });
       lapInfo = NS.laps.detectLaps(I);
-      G = NS.laps.resampleLaps(I, lapInfo);
-      G.L = lapInfo.L;
+      if (prep.grid) {
+        const d = (lapInfo.L - prep.grid.L) / prep.grid.L;
+        if (!(Math.abs(d) < 0.04)) throw new Error(`Lap length ${lapInfo.L.toFixed(0)} m differs by ${(100 * d).toFixed(1)}% from the main session (${prep.grid.L.toFixed(0)} m) — this looks like a different track or layout.`);
+      }
+      G = NS.laps.resampleLaps(I, lapInfo, prep.grid);
+      G.L = prep.grid ? prep.grid.L : lapInfo.L;
     }
     const laps = lapInfo.laps;
     const unavailable = [];
@@ -38,15 +43,19 @@
     // IDs stay stable when the user excludes laps; medians keep single bad laps from dominating.
     const trackLaps = laps.filter(l => l.complete && !l.dqSevere);
     const ref = NS.track.buildReference(trackLaps.length ? trackLaps : laps.filter(l => l.complete), G, I.avail);
-    const explicit = NS.track.explicitCornerRanges(trackLaps, G, I);
-    const trackModel = trackLaps.length >= 2 ? NS.track.detectCorners(ref, G, I.avail, explicit) : { corners: [], notes: ['Fewer than two complete laps — corner model unavailable.'], inferred: true };
+    // opts.trackModel: analyse on another session's corners/segments/sectors (benchmark comparison)
+    const ext = opts.trackModel;
+    const explicit = ext ? null : NS.track.explicitCornerRanges(trackLaps, G, I);
+    const trackModel = ext ? { corners: ext.corners, notes: ['Corner model taken from the main session.'], inferred: true, curv: null }
+      : trackLaps.length >= 2 ? NS.track.detectCorners(ref, G, I.avail, explicit) : { corners: [], notes: ['Fewer than two complete laps — corner model unavailable.'], inferred: true };
     const corners = trackModel.corners;
-    const segs = NS.track.buildSegments(corners, ref, G);
-    const sectors = NS.track.buildSectors(trackLaps, segs, G, I);
-    // lateral deviation (needs reference line)
-    if (I.avail.position && !opts.base) for (const l of laps) if (l.complete) { const r = NS.features.lateralDeviation(l, ref, G); l.dev = r.dev; l.off = r.off; }
+    const segs = ext ? ext.segs : NS.track.buildSegments(corners, ref, G);
+    const sectors = ext ? ext.sectors : NS.track.buildSectors(trackLaps, segs, G, I);
+    // lateral deviation from a line (own median line, or the main session's for a benchmark)
+    const lineRef = opts.lineRef && opts.lineRef.x ? opts.lineRef : ref;
+    if (I.avail.position && !opts.base) for (const l of laps) if (l.complete) { const r = NS.features.lateralDeviation(l, lineRef, G); l.dev = r.dev; l.off = r.off; }
     const brakeThr = I.avail.brake ? Math.max(0.06 * St.quantile(St.finite(Array.from(ref.brake || [])), 0.99), 1) : NaN;
-    const model = { I, laps, G, ref, corners, segs, sectors, avail: I.avail, brakeThr, refXY: ref.x && ref.y ? { x: ref.x, y: ref.y } : null };
+    const model = { I, laps, G, ref, corners, segs, sectors, avail: I.avail, brakeThr, refXY: lineRef.x && lineRef.y ? { x: lineRef.x, y: lineRef.y } : null };
     model.features = NS.features.extract(model);
     const det = ana.length >= 3 ? NS.mistakes.detect(model) : { incidents: [], base: corners.map(() => ({})), devThr: NaN };
     model.incidents = det.incidents; model.base = det.base; model.devThr = det.devThr;

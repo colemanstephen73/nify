@@ -1,0 +1,156 @@
+{
+  "synthetic": true,
+  "track_length_m": 4280.5,
+  "laps": {
+    "1": {
+      "simulated_lap_time_s": 104.71391725818525,
+      "partial": true
+    },
+    "2": {
+      "simulated_lap_time_s": 96.14195280299836,
+      "partial": false
+    },
+    "3": {
+      "simulated_lap_time_s": 95.92068701795019,
+      "partial": false
+    },
+    "4": {
+      "simulated_lap_time_s": 95.95382727163187,
+      "partial": false
+    },
+    "5": {
+      "simulated_lap_time_s": 96.03256720096284,
+      "partial": false
+    },
+    "6": {
+      "simulated_lap_time_s": 95.90391406823937,
+      "partial": false
+    },
+    "7": {
+      "simulated_lap_time_s": 95.99077650384974,
+      "partial": false
+    },
+    "8": {
+      "simulated_lap_time_s": 96.14501647967866,
+      "partial": false
+    },
+    "9": {
+      "simulated_lap_time_s": 96.10162170386383,
+      "partial": false
+    },
+    "10": {
+      "simulated_lap_time_s": 95.97823188642454,
+      "partial": false
+    },
+    "11": {
+      "simulated_lap_time_s": 96.31959828571522,
+      "partial": false
+    },
+    "12": {
+      "simulated_lap_time_s": 102.31714628758633,
+      "partial": true
+    },
+    "13": {
+      "simulated_lap_time_s": 104.59055021727832,
+      "partial": true
+    },
+    "14": {
+      "simulated_lap_time_s": 96.06254286577322,
+      "partial": false
+    },
+    "15": {
+      "simulated_lap_time_s": 96.06797871647518,
+      "partial": false
+    },
+    "16": {
+      "simulated_lap_time_s": 96.10981510546307,
+      "partial": false
+    },
+    "17": {
+      "simulated_lap_time_s": 96.11973426948343,
+      "partial": false
+    },
+    "18": {
+      "simulated_lap_time_s": 95.9551167286777,
+      "partial": false
+    },
+    "19": {
+      "simulated_lap_time_s": 96.17538902375807,
+      "partial": false
+    },
+    "20": {
+      "simulated_lap_time_s": 95.98492104398079,
+      "partial": false
+    },
+    "21": {
+      "simulated_lap_time_s": 95.98414971486392,
+      "partial": false
+    },
+    "22": {
+      "simulated_lap_time_s": 95.90709215864129,
+      "partial": false
+    },
+    "23": {
+      "simulated_lap_time_s": 96.08433417268725,
+      "partial": false
+    },
+    "24": {
+      "simulated_lap_time_s": 102.20914112951239,
+      "partial": true
+    }
+  },
+  "events": [],
+  "corners": {
+    "T1": {
+      "start_m": 620.0,
+      "end_m": 689.0
+    },
+    "T2": {
+      "start_m": 859.5,
+      "end_m": 951.0
+    },
+    "T3": {
+      "start_m": 1211.5,
+      "end_m": 1387.0
+    },
+    "T4": {
+      "start_m": 1717.5,
+      "end_m": 1751.5
+    },
+    "T5": {
+      "start_m": 1780.0,
+      "end_m": 1812.0
+    },
+    "T6": {
+      "start_m": 2192.5,
+      "end_m": 2291.5
+    },
+    "T7": {
+      "start_m": 2432.0,
+      "end_m": 2498.5
+    },
+    "T8": {
+      "start_m": 3019.0,
+      "end_m": 3081.5
+    },
+    "T9": {
+      "start_m": 3292.0,
+      "end_m": 3377.0
+    },
+    "T10": {
+      "start_m": 3527.5,
+      "end_m": 3684.0
+    },
+    "T11": {
+      "start_m": 3984.5,
+      "end_m": 4100.0
+    }
+  },
+  "notes": "Lap 1, 12, 13, 24 are partial out/in laps. 0.6 s dropout in lap 10.",
+  "defects": {
+    "dropout_lap": 10,
+    "duplicate_rows": 15,
+    "malformed_rows": 5,
+    "missing_cells": 44
+  }
+}

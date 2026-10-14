@@ -17,7 +17,7 @@ import os
 import re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ENGINE_ORDER = ["stats", "ibt", "ingest", "laps", "track", "features", "mistakes", "scoring", "insights", "analyze"]
+ENGINE_ORDER = ["stats", "ibt", "ingest", "laps", "track", "features", "mistakes", "scoring", "insights", "analyze", "benchmark"]
 PLOTLY_CDN = "https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.35.2/plotly.min.js"
 
 
@@ -30,6 +30,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--tsv", action="append", default=[], help="TSV file to embed (repeatable)")
     ap.add_argument("--ibt", action="append", default=[], help="iRacing .ibt file to embed (repeatable, base64)")
+    ap.add_argument("--ref-tsv", action="append", default=[], help="TSV file to embed as the benchmark reference session (repeatable)")
     ap.add_argument("--out", required=True)
     ap.add_argument("--inline-plotly", nargs="?", const=os.path.join(ROOT, "vendor", "plotly-strict-2.35.2.min.js"),
                     help="inline Plotly (default: the bundled CSP-safe vendor/plotly-strict build) instead of loading it from the CDN")
@@ -57,6 +58,9 @@ def main():
     for p in args.tsv:
         txt = read(p).replace("</", "<\\/")
         data.append(f'<script type="text/tab-separated-values" data-name="{html.escape(os.path.basename(p))}">\n{txt}</script>')
+    for p in args.ref_tsv:
+        txt = read(p).replace("</", "<\\/")
+        data.append(f'<script type="text/tab-separated-values" data-role="reference" data-name="{html.escape(os.path.basename(p))}">\n{txt}</script>')
     import base64
     for p in args.ibt:
         with open(p, "rb") as fh:

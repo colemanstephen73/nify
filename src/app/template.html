@@ -16,6 +16,7 @@
 <header class="topbar">
   <div class="brand"><span class="mark"></span><span>Telemetry<span class="full"> · Race Engineering</span></span></div>
   <nav class="nav" id="nav">
+    <a href="#benchmark" id="nav-bench" hidden>Benchmark</a>
     <a href="#overview">Overview</a>
     <a href="#consistency">Consistency</a>
     <a href="#laps">Laps</a>
@@ -29,6 +30,8 @@
   <div class="top-actions">
     <button class="btn" id="btn-replay" title="Open the replay panel: sync a replay video with the telemetry, or play the telemetry on its own">▶ Replay</button>
     <button class="btn" id="btn-dq" title="Data-quality report">Data quality</button>
+    <label class="btn" for="ref-input" id="btn-ref" title="Load a reference session (the target benchmark: .ibt or TSV)">Reference…</label>
+    <input type="file" id="ref-input" accept=".ibt,.tsv,.txt,.csv,.log,text/tab-separated-values,text/plain" multiple hidden>
     <label class="btn primary" for="file-input" title="Load iRacing .ibt or TSV telemetry files">Load .ibt / TSV…</label>
     <input type="file" id="file-input" accept=".ibt,.tsv,.txt,.csv,.log,text/tab-separated-values,text/plain" multiple hidden>
   </div>
@@ -113,7 +116,7 @@
 <main id="app">
   <div class="welcome" id="welcome" hidden>
     <h1>Race telemetry analysis</h1>
-    <p class="dim">Load one or more iRacing <b>.ibt</b> telemetry files or raw TSV exports. Everything runs locally in your browser — nothing is uploaded.</p>
+    <p class="dim">Load one or more iRacing <b>.ibt</b> telemetry files or raw TSV exports. Optionally add a <b>reference session</b> as the benchmark to measure against. Everything runs locally in your browser — nothing is uploaded.</p>
     <div class="dz">Drag &amp; drop .ibt or TSV files here, or use <b>Load .ibt / TSV…</b> above.<br><span class="muted">Columns are detected automatically (lap, time, distance, speed, throttle, brake, steering, gear, RPM, accelerations, GPS/XY, sectors, track limits…).</span></div>
     <div id="welcome-err"></div>
   </div>
@@ -125,6 +128,19 @@
     </div>
 
     <div class="verdict" id="verdict"></div>
+
+    <section id="benchmark" hidden>
+      <div class="sec-title"><h2>Benchmark</h2><span class="sub" id="bench-sub"></span><span class="spacer"></span><label class="btn" for="ref-input">Change reference…</label><button class="btn" id="bench-clear">Remove reference</button></div>
+      <div id="bench-warn"></div>
+      <div class="bench-tiles" id="bench-tiles"></div>
+      <div class="grid g-2" style="margin-top:12px">
+        <div class="panel"><h3>Time vs benchmark by corner <span class="r">segment time, + = slower than the reference · click a corner</span></h3><div class="chart" id="ch-bench-corners" style="height:320px"></div></div>
+        <div class="panel"><h3>Score breakdown <span class="r">reference = 100</span></h3><div id="bench-table"></div></div>
+      </div>
+      <div class="panel" style="margin-top:12px"><h3>Corner by corner vs benchmark <span class="r">your typical (median) lap vs the reference's typical lap · click a row</span></h3><div class="tbl-wrap" style="max-height:none"><table class="tbl" id="tbl-bench"></table></div>
+        <div class="note">Δ = you − reference. Speeds km/h (− = slower than the reference), brake/throttle points in metres (− brake = earlier, + throttle = later), line in metres toward the inside of the corner. Consistency = reference spread ÷ your spread × 100.</div></div>
+      <div class="insights" id="bench-insights" style="margin-top:12px"></div>
+    </section>
 
     <section id="overview">
       <div class="sec-title"><h2>Performance overview</h2><span class="sub">Pace, execution quality and validity are scored separately</span></div>
@@ -147,7 +163,7 @@
     <section id="consistency">
       <div class="sec-title"><h2>Corner consistency</h2><span class="sub">How repeatably the driver hits the same line, entry, minimum and exit speed at every corner · click a corner</span></div>
       <div class="cons-head" id="cons-head"></div>
-      <div class="panel" style="margin-top:12px"><h3>Consistency by corner <span class="r">score 0–100 · 50 = spread equal to the tolerance</span></h3><div class="chart" id="ch-cons-heat" style="height:250px"></div></div>
+      <div class="panel" style="margin-top:12px"><h3>Consistency by corner <span class="r" id="cons-mode">score 0–100 · 50 = spread equal to the tolerance</span></h3><div class="chart" id="ch-cons-heat" style="height:250px"></div></div>
       <div class="panel" style="margin-top:12px">
         <h3 id="cons-corner-title">Corner detail</h3>
         <div class="cons-elems" id="cons-elems"></div>
