@@ -1,0 +1,91 @@
+# DRAFT from research track B (search summaries only; see research/engine-comer-c52.md)
+schema_version: 1
+updated: 2026-10-18
+model: Comer C52
+
+specs:
+  displacement: {value: 50.27, units: cc, sources: [dealer_90racing, dealer_topkartusa, wka_tm_2022_002], confidence: expert_consensus, notes: "WKA rounds to 50 cc"}
+  bore: {value: 40, units: mm, sources: [dealer_90racing, dealer_topkartusa], confidence: expert_consensus}
+  stroke: {value: 40, units: mm, sources: [wka_tm_2022_002, dealer_90racing], confidence: sanctioning_body, notes: "1.575 in; identifies C52 vs C51 (38 mm)"}
+  cycle: {value: two-stroke, units: null, sources: [dealer_90racing, dealer_topkartusa], confidence: expert_consensus}
+  cooling: {value: forced air, units: null, sources: [dealer_90racing, dealer_topkartusa], confidence: expert_consensus}
+  cylinder: {value: "aluminium, Nikasil plated", units: null, sources: [dealer_90racing], confidence: anecdote}
+  intake: {value: piston port, units: null, sources: [dealer_90racing], confidence: anecdote}
+  ignition: {value: electronic, units: null, sources: [dealer_90racing, comer_c50_sheet_2015], confidence: expert_consensus}
+  ignition_timing: {value: {min: 0.055, max: 0.067}, units: in_btdc, sources: [wka_tm_2022_002], confidence: track_official, notes: "≈19–21° BTDC; capped, single WKA doc via summary"}
+  carburetor: {value: "Dell'Orto SHA 14-12L", units: null, sources: [wka_tm_2022_002_pdf, dealer_90racing, dealer_topkartusa], confidence: sanctioning_body}
+  power: {value: 2, units: hp, at_rpm: 6500, sources: [dealer_topkartusa, dealer_racingkart_it], confidence: expert_consensus, notes: "dealer-relayed; 6500 rpm conflicts with anecdotal 9600–11000 rpm tach peaks"}
+  min_combustion_chamber: {value: 7.7, units: cc, sources: [wka_tm_2022_002_pdf], confidence: track_official}
+  exhaust_port_height_min: {value: 1.206, units: in, sources: [wka_tm_2022_002_pdf], confidence: track_official, notes: "114° ATDC with 3 mm rod"}
+  intake_port_height_max: {value: 0.435, units: in, sources: [wka_tm_2022_002_pdf], confidence: track_official}
+
+clutch:
+  type: {value: "centrifugal, 3-shoe", units: null, sources: [comer_c50_sheet_2015, dealer_90racing], confidence: expert_consensus}
+  drum_teeth: {value: 10, units: teeth, sources: [wka_tm_2022_002_pdf, dealer_90racing, dealer_pkt_drum], confidence: sanctioning_body, notes: "WKA 621.17.1"}
+  engagement_rpm: {value: null, units: rpm, sources: [], confidence: unknown}
+  shoe_limits: {value: null, units: in, sources: [wka_tm_2022_002], confidence: unknown, notes: "WKA specifies min shoe width, min assembly width, max diameter; numbers not visible"}
+  spring_limits: {value: null, units: null, sources: [wka_tm_2022_002], confidence: unknown, notes: "coil count and wire diameter specified; numbers not visible"}
+
+chain:
+  pitch: {value: "#219", units: null, sources: [wka_tm_2022_002_pdf, dealer_90racing], confidence: sanctioning_body}
+
+gearing:
+  driver_sprocket: {value: 10, units: teeth, sources: [wka_tm_2022_002_pdf], confidence: sanctioning_body}
+  suggested: {value: "10/89", units: driver/axle, sources: [wka_tm_2022_002, rakc_2024_book, eldora_2020], confidence: sanctioning_body}
+  axle_sprocket_options: {value: null, units: teeth, sources: [], confidence: unknown, notes: "WKA axle is non-tech; user to list sprockets owned. Forum typical 79–88 (kartpulse_gearing, anecdote)"}
+  typical_axle_range: {value: {min: 79, max: 88}, units: teeth, sources: [kartpulse_gearing], confidence: anecdote}
+
+fuel_mix:
+  fuel: {value: "87 octane gasoline", units: null, sources: [wka_mfg_cup, wka_tm_2019_001], confidence: sanctioning_body}
+  ratio_options:
+    - {value: 16, units: "fuel:oil (8 oz/US gal)", sources: [dealer_90racing, flowracers_ratio, fourcycle_mix], confidence: expert_consensus, notes: "US kid kart practice"}
+    - {value: 25, units: "fuel:oil (4%)", sources: [comer_c50_sheet_2015, dealer_topkartusa], confidence: expert_consensus, notes: "manufacturer-origin figure (C50 sheet); CONFLICT with 16:1, not averaged"}
+  oil: {value: null, units: null, sources: [dealer_topkartusa], confidence: unknown, notes: "no approved-oil list found; dealer says synthetic 2-stroke, not castor"}
+
+spark_plug:
+  model: {value: null, units: null, sources: [], confidence: unknown}
+  candidates:
+    value: ["Champion RCJ7Y", "NGK BPMR7A", "Bosch WS5F"]
+    units: null
+    confidence: inferred
+    sources: [comer_c50_uk_regs_2022, comer_c50_sheet_2015]
+    derivation: "Permitted plugs for the Comer C50 in UK Bambino 2022 regs; C50 sheet says short-thread plug; assumed same head family for C52. Unverified."
+  gap: {value: null, units: mm, sources: [], confidence: unknown}
+
+break_in: {value: null, units: null, sources: [], confidence: unknown}
+
+maintenance:
+  top_end_interval: {value: null, units: hours, sources: [], confidence: unknown}
+  clutch_interval: {value: null, units: hours, sources: [], confidence: unknown}
+  plug_interval: {value: null, units: hours, sources: [], confidence: unknown}
+
+rpm_band:
+  peak_power_rpm: {value: 6500, units: rpm, sources: [dealer_topkartusa, dealer_racingkart_it], confidence: anecdote, notes: "downgraded: conflicts with tach anecdotes; do not use as gearing target until confirmed"}
+  observed_peak_rpm: {value: {min: 9600, max: 11000}, units: rpm, sources: [fourcycle_c51_slow], confidence: anecdote, notes: "C51 owner tach 9600; rival est. ~11000"}
+  idle_rpm: {value: 2400, units: rpm, sources: [fourcycle_c51_slow], confidence: anecdote, notes: "high idle (~4000) can engage clutch"}
+  max_rpm: {value: null, units: rpm, sources: [], confidence: unknown}
+
+variants:
+  C50: {stroke_mm: 38, displacement_cc: 48, wka_legal: false, sources: [comer_c50_sheet_2015, wka_2023_changes], confidence: sanctioning_body}
+  C51: {stroke_mm: 38, displacement_cc: 48, wka_legal: true, exhaust_port_min_in: 1.204, intake_port_max_in: 0.417, min_chamber_cc: 7.4, sources: [wka_tm_2022_002], confidence: sanctioning_body, notes: "C51 may grind exhaust port top to reach minimum"}
+  C52: {stroke_mm: 40, displacement_cc: 50, wka_legal: true, sources: [wka_tm_2022_002], confidence: sanctioning_body}
+  mixing: {value: "No C50 parts in C51/C52; C52 crank only with C52 cylinder+piston; C51 crank only with C51 case/cyl/piston", sources: [wka_tm_2022_002, wka_2023_changes], confidence: sanctioning_body}
+
+sources:
+  wka_tm_2022_002: {url: "https://www.worldkarting.com/tm-update-2022-002/", title: "WKA TM Update 2022-002", confidence: sanctioning_body, accessed: 2026-10-18, notes: "search summaries only; single-doc details capped to track_official"}
+  wka_tm_2022_002_pdf: {url: "https://www.worldkarting.com/wp-content/uploads/2022/04/Tech-Update-2022-002-COMER-C52.pdf", title: "Tech Update 2022-002 COMER C52 (PDF)", confidence: sanctioning_body, accessed: 2026-10-18, notes: "WebFetch failed (DNS); summaries only"}
+  wka_2023_changes: {url: "https://www.worldkarting.com/documents/2022/10/2023-wka-tech-manual-approved-changes.pdf/", title: "2023 WKA Tech Manual Approved Changes (2022-10-01)", confidence: sanctioning_body, accessed: 2026-10-18, notes: "C-50 removed"}
+  wka_mfg_cup: {url: "https://www.worldkarting.com/series/manufacturers-cup/", title: "WKA Manufacturers Cup Series", confidence: sanctioning_body, accessed: 2026-10-18, notes: "Kid Kart 5-7, 150 lb, Comer C51 only, spec 87; page may be outdated"}
+  wka_tm_2019_001: {url: "https://nicole-gaines-8xm9.squarespace.com/tech-updates/tm-update-2019-001", title: "WKA TM Update 2019-001 (old site)", confidence: track_official, accessed: 2026-10-18, notes: "capped; spec 87 fuel purchased from WKA"}
+  comer_c50_sheet_2015: {url: "http://eolstoragewe.blob.core.windows.net/wm-553616-cmsimages/50cccomerspecsheet.pdf", title: "Comer C50 Specification Sheet 2015 158677/B", confidence: sanctioning_body, accessed: 2026-10-18, notes: "UK homologation/manufacturer sheet; capped one level (summary-only); C50 not C52"}
+  comer_c50_uk_regs_2022: {url: "https://eolstoragewe.blob.core.windows.net/wm-553616-cmsimages/ComerC50EMRMSASpecSheet2022-21012022.pdf", title: "Comer C50 Bambino technical regulations 2022", confidence: track_official, accessed: 2026-10-18, notes: "capped; plug list"}
+  dealer_90racing: {url: "https://90racing.com/products/comer-c52-kart-engine-90-comer-c52", title: "90 Racing Comer C52 listing", confidence: anecdote, accessed: 2026-10-18, notes: "dealer; 16:1 premix"}
+  dealer_topkartusa: {url: "https://shop.topkartusa.net/products/comer-c52-engine", title: "TopKart USA Comer C52 Engine", confidence: anecdote, accessed: 2026-10-18, notes: "dealer; 2 hp @ 6500; 4% (25:1) not castor (summary merged with racingkart.it)"}
+  dealer_racingkart_it: {url: "https://www.racingkart.it/en/motori-kart/comer/motore-comer-c52", title: "Racing Kart Engine Comer C52", confidence: anecdote, accessed: 2026-10-18, notes: "dealer; 2 CV"}
+  dealer_pkt_drum: {url: "https://pktaxles.com/products/comer-c50-219-clutch-drum-go-kart", title: "PKT Comer 219 Clutch Drum", confidence: anecdote, accessed: 2026-10-18, notes: "fits C50/C51/C52"}
+  rakc_2024_book: {url: "https://www.roadamerica.com/sites/main/files/file-attachments/rakc_-_2023_official_rule_book_-_revised_5-6-23.pdf", title: "Road America Karting Club rule book", confidence: track_official, accessed: 2026-10-18, notes: "Comer gear 10/89"}
+  eldora_2020: {url: "https://www.eldoraspeedway.com/wp-content/uploads/2020/03/2020-class-specifications.pdf", title: "Little Eldora 2020 class specifications", confidence: track_official, accessed: 2026-10-18, notes: "WKA gear 10/89, 'WKA restrictor'"}
+  kartpulse_gearing: {url: "https://forums.kartpulse.com/t/vintage-100cc-build-in-us/10210?page=5", title: "KartPulse forum: kid kart gearing", confidence: anecdote, accessed: 2026-10-18, notes: ""}
+  flowracers_ratio: {url: "https://flowracers.com/blog/2-stroke-fuel-ratios/", title: "Flow Racers: 2-stroke fuel ratios", confidence: anecdote, accessed: 2026-10-18, notes: "C51 16:1"}
+  fourcycle_mix: {url: "https://4cycle.com/karting/threads/comer-kid-kart-oil-gas-mix-ratio.64197/", title: "4cycle: Comer kid kart oil/gas mix ratio", confidence: anecdote, accessed: 2026-10-18, notes: "8 oz/gal; 6 cold, 9-10 hot"}
+  fourcycle_c51_slow: {url: "https://4cycle.com/karting/threads/c51-kid-kart-racing-why-is-my-kids-engine-so-much-slower.107502/post-766589", title: "4cycle: C51 kid kart slower", confidence: anecdote, accessed: 2026-10-18, notes: "tach 9600 peak, idle 2400"}
