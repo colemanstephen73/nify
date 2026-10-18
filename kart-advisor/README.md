@@ -18,6 +18,8 @@ npm start          # builds data/ → app/data.json, serves http://localhost:808
 - **Same Wi-Fi:** open `http://<computer-ip>:8080/app/`. Offline mode needs `localhost` or `https`, so for trackside use, host the `kart-advisor/` folder on any static HTTPS host (e.g. GitHub Pages).
 - **Install it:** open it once, then "Add to Home Screen". After the first load it works with no signal; only weather auto-fill needs internet.
 
+**Hosted single-file version:** `npm run bundle` writes `dist/kart-advisor-standalone.html`, one self-contained file you can open in any browser (and `dist/kart-advisor.html` for hosts that add their own page wrapper). It works the same way, except weather is typed in by hand, the backup is copy/paste, and there is no offline service worker.
+
 ## Using it at the track
 1. **Kart tab:** enter what you normally run (pressures, widths, gear, jet, kart weight). Recommendations are changes from these numbers, and blanks are never guessed.
 2. **Setup tab:** track, rules, weather (**Fill from weather forecast** uses Open-Meteo at the track's coordinates), track temperature (IR gun), surface, rubber, tires, driver, and how the kart felt. Then press **Get setup**.

@@ -8,6 +8,7 @@ The approved plan is in `PLAN.md`. This repo also contains an unrelated telemetr
 - `npm start`: validates and builds `data/` into `app/data.json`, then serves at http://localhost:8080/app/
 - `npm test`: data build + validation, then every `tests/**/*.test.js` (Node's built-in `node:test`). Run after every engine change.
 - `npm run test:ui`: Playwright smoke test (phone viewport, sheet, log, offline, dark mode). Set `SHOTS=<dir>` for screenshots.
+- `npm run bundle`: single-file builds in `dist/` (knowledge base + modules inlined). `dist/kart-advisor.html` is published as a private claude.ai artifact: https://claude.ai/artifact/XPXU2pLzf8aB3WmHG3Xzd2 (republish after changes).
 - `node tools/build-data.js --check`: validate the knowledge base without writing.
 - `node tools/track-geometry.js <track> overpass|pixels <file>`: centreline → `data/geometry/<track>.yaml` (see README).
 

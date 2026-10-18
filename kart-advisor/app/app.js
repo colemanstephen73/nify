@@ -11,6 +11,7 @@ const DEFAULT_INPUTS = {
   driver: { weightLb: null, experience: 'novice' }, feel: { text: '', chips: [] },
 };
 let kb, lastResult = null, lastInputs = null;
+const HOSTED = () => !!document.getElementById('kb-data');
 let inputs = { ...DEFAULT_INPUTS, ...store.get('ka.inputs', {}) };
 let profile = store.get('ka.profile', { engine: 'Comer C52', driverSprocket: 10 });
 const saveInputs = () => store.set('ka.inputs', inputs);
@@ -21,13 +22,14 @@ const conf = c => String(c || 'unknown').replace(/_/g, ' ');
 const nowLocal = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 16); };
 
 // ---------------- boot ----------------
-init();
 async function init() {
   applyTheme(store.get('ka.theme', null));
   $('#theme').addEventListener('click', () => { const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; store.set('ka.theme', t); applyTheme(t); });
   document.querySelectorAll('nav.bottom button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-  try { kb = await (await fetch('data.json')).json(); }
+  // Single-file build (tools/bundle.js) embeds the knowledge base and runs where service workers aren't allowed.
+  const embedded = document.getElementById('kb-data');
+  if (!embedded && 'serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  try { kb = embedded ? JSON.parse(embedded.textContent) : await (await fetch('data.json')).json(); }
   catch { $('#tab-setup').append(h('p', { class: 'banner bad' }, 'Could not load the knowledge base (data.json). Run "npm start" from kart-advisor/.')); return; }
   if (!kb.tracks[inputs.track]) inputs.track = Object.keys(kb.tracks)[0];
   renderSetup(); renderKart(); renderLog(); renderInfo();
@@ -73,7 +75,9 @@ function renderSetup() {
     } catch (err) { da.textContent = err.message; }
   };
   [air, trackT, rh, pr].forEach(el => el.addEventListener('input', changed));
-  const fill = h('button', { class: 'btn secondary', type: 'button', onclick: async () => {
+  const fill = HOSTED()
+    ? h('p', { class: 'hint' }, 'Enter the numbers from your weather app. Automatic weather works in the version you run from a computer (npm start).')
+    : h('button', { class: 'btn secondary', type: 'button', onclick: async () => {
     status.textContent = 'Getting weather…';
     try {
       const r = await fetchWeather(track(), when.value || nowLocal());
@@ -289,17 +293,30 @@ async function renderLog() {
   if (learned.jetReference) root.append(h('p', { class: 'hint' }, `Jetting reference: #${learned.jetReference.jet} at ${learned.jetReference.densityAltitudeFt} ft DA (${learned.jetReference.date}).`));
   if (!sessions.length) root.append(h('p', {}, 'No sessions yet. Get a setup, then "Save to session log".'));
   for (const s of sessions) root.append(sessionCard(s));
-  const file = h('input', { type: 'file', accept: 'application/json', class: 'sr-only', id: 'imp', onchange: async e => {
-    try { const text = await e.target.files[0].text(); const n = await db.importJson(text); const p = JSON.parse(text).profile; if (p) { profile = p; store.set('ka.profile', p); renderKart(); } toast(`Imported ${n} sessions`); renderLog(); }
+  const importText = async text => {
+    try { const n = await db.importJson(text); const p = JSON.parse(text).profile; if (p) { profile = p; store.set('ka.profile', p); renderKart(); } toast(`Imported ${n} sessions`); renderLog(); }
     catch (err) { toast(`Import failed: ${err.message}`); }
-  } });
+  };
+  const file = h('input', { type: 'file', accept: 'application/json', class: 'sr-only', id: 'imp', onchange: async e => importText(await e.target.files[0].text()) });
+  const backup = h('textarea', { id: 'backup', readonly: true, hidden: true, 'aria-label': 'Backup text' });
+  const paste = h('textarea', { id: 'paste', placeholder: 'Paste backup text here' });
   root.append(h('div', { class: 'card' }, h('h3', {}, 'Backup'),
+    h('p', { class: 'hint' }, 'Copy the backup text and keep it somewhere safe (notes app, email to yourself). Paste it back below to restore.'),
     h('button', { class: 'btn small', type: 'button', onclick: async () => {
       const data = JSON.parse(await db.exportJson()); data.profile = profile;
-      const a = h('a', { href: URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })), download: `kart-log-${new Date().toISOString().slice(0, 10)}.json` });
-      document.body.append(a); a.click(); a.remove();
-    } }, 'Export log + profile'),
-    h('label', { for: 'imp', class: 'btn small secondary', style: 'display:inline-flex;align-items:center' }, 'Import'), file));
+      const text = JSON.stringify(data, null, 2);
+      backup.value = text; backup.hidden = false;
+      try { await navigator.clipboard.writeText(text); toast('Backup copied'); }
+      catch { backup.focus(); backup.select(); toast('Select all and copy the text below'); }
+      if (!HOSTED()) {
+        const a = h('a', { href: URL.createObjectURL(new Blob([text], { type: 'application/json' })), download: `kart-log-${new Date().toISOString().slice(0, 10)}.json` });
+        document.body.append(a); a.click(); a.remove();
+      }
+    } }, 'Copy backup'),
+    h('label', { for: 'imp', class: 'btn small secondary', style: 'display:inline-flex;align-items:center' }, 'Import file'), file,
+    backup,
+    h('label', { for: 'paste' }, 'Restore from pasted backup'), paste,
+    h('button', { class: 'btn small secondary', type: 'button', onclick: () => importText(paste.value) }, 'Restore')));
 }
 
 function sessionCard(s) {
@@ -323,7 +340,11 @@ function sessionCard(s) {
       await db.saveSession({ ...s, ran, laps: lapList, bestLap: lapList.length ? Math.min(...lapList) : null, engineGood: good.checked, notes: notes.value });
       toast('Session updated'); renderLog();
     } }, 'Save'),
-    h('button', { class: 'btn small secondary', type: 'button', onclick: async () => { if (confirm('Delete this session?')) { await db.deleteSession(s.id); renderLog(); } } }, 'Delete'));
+    // Two taps instead of confirm(), which embedded viewers suppress.
+    h('button', { class: 'btn small secondary', type: 'button', onclick: async e => {
+      if (e.currentTarget.dataset.armed) { await db.deleteSession(s.id); renderLog(); return; }
+      e.currentTarget.dataset.armed = '1'; e.currentTarget.textContent = 'Tap again to delete';
+    } }, 'Delete'));
 }
 
 // ---------------- info tab ----------------
@@ -344,3 +365,6 @@ function renderInfo() {
     ...Object.values(kb.tracks).map(t => h('details', { class: 'card' }, h('summary', {}, t.name), h('p', {}, t.geometry_status), h('ul', { class: 'list' }, (t.inferred_items || []).map(i => h('li', {}, i))))),
     h('h2', {}, 'Sources'), q, ul);
 }
+
+// Start last, so every module-level constant above is initialised first.
+init();
