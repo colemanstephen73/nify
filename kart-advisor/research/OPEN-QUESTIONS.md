@@ -27,7 +27,7 @@ These are things the research could not settle. The answers change recommendatio
 16. Engine hours and last service; tach readings if you have them (the published 6,500 rpm peak doesn't match owners' 9,600–11,000 rpm tach readings).
 
 ## Tracks (geometry and trackside checks)
-17. **Overhead screenshots** of both tracks with a scale bar, in `tracks/<track>/images/`. The alternative is allowing `overpass-api.de` in the cloud environment's network settings. Then run `node tools/track-geometry.js` to get per-corner data. **Neither track has corner data yet.**
+17. **Overhead screenshots** of both tracks with a scale bar, in `tracks/<track>/images/`. The alternative is allowing `overpass-api.de` in the cloud environment's network settings. Then run `node tools/track-geometry.js` to get per-corner data. **Rocky Ridge now has traced corner data (inferred, from your screenshot); OVRP still has none.**
 18. **Lap direction** at each track, and whether **kid karts run the full course** or a short layout.
 19. **Rocky Ridge length:** 910 ft (2026 press), ~1,056 ft (club page) or 880 ft (directory)?
 20. **Elevations** are estimates (Rocky Ridge ~1,450 ft, OVRP ~520 ft, possibly higher). They only matter if you enter sea-level pressure instead of station pressure.

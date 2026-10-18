@@ -73,7 +73,7 @@ sources:
 id: rocky-ridge
 name: Rocky Ridge Raceway
 short_name: Rocky Ridge
-geometry_status: "No centreline yet: Overpass blocked from the build session. Add screenshots to tracks/rocky-ridge/images/ or a centreline here."
+geometry_status: "Corners traced by hand from the crew chief's Google satellite screenshot (tracks/rocky-ridge/images/overhead-google.webp), scaled to 910 ft. INFERRED: confirm direction of travel and the kid kart layout trackside."
 
 # Club rule layer enforced by the engine (VT Shifter Karts 'Class Structure 2024'; no 2025/2026 sheet found).
 rules_name: "VT Shifter Karts Kid Kart (2024 class structure)"
@@ -204,6 +204,9 @@ local_rules:
       confidence: expert_consensus
 
 inferred_items:
+  - "Corner data (data/geometry/rocky-ridge.yaml) is traced from a satellite screenshot and scaled to the 910 ft press figure; radii are approximate (about ±30%)."
+  - "Direction of travel unknown: corners are listed counter-clockwise from the start/finish line. If the track runs clockwise, every left/right flips (the gearing advice does not change)."
+  - "Layout read from the photo: start/finish on the diagonal leg, a tight left at the pit-lane end, top and bottom hairpins, and a kink/pinch on the long left leg."
   - "lat/lon = village centre, not track (needs map/GPS)."
   - "elevation_ft ~1,450 from place/ZIP data."
   - "Comer C52 eligible under '50c Comer'."

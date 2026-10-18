@@ -66,7 +66,9 @@ test('gearing: open gear at Rocky Ridge, revving out drops 2 teeth, snapped to o
   assert.equal(run({ feel: { text: 'tops out' }, kart: { sprocketsOwned: [84, 86, 89] } }).fields.axle_sprocket.value, 86);
   const none = run({ kart: { axleSprocket: null } });
   assert.equal(none.fields.axle_sprocket.value, 89, 'starts at the WKA-suggested 10/89');
-  assert.match(none.fields.axle_sprocket.steps[1].text, /No corner geometry/);
+  assert.match(none.fields.axle_sprocket.reason, /Layout is balanced/, 'traced Rocky Ridge layout is balanced');
+  const k = structuredClone(kb); k.tracks['rocky-ridge'].configurations[0].corners = [];
+  assert.match(recommend(k, base({ kart: { axleSprocket: null } })).fields.axle_sprocket.steps[1].text, /No corner geometry/);
 });
 
 test('jetting: denser air than the reference session → bigger jet; thinner → smaller', () => {

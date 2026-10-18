@@ -38,8 +38,9 @@ test('Rocky Ridge, cool damp green track', () => {
   assert.equal(r.fields.front_tire_pressure.value, 15);
   assert.ok(r.derived.air.densityAltitudeFt < 1500, 'cool air is denser than the reference');
   assert.ok(r.fields.main_jet.value >= 58, 'denser air: never leaner than the reference');
-  assert.equal(r.fields.axle_sprocket.value, 89, 'no gear rule, no geometry: baseline kept');
-  assert.equal(r.track.geometry, 'missing');
+  assert.equal(r.fields.axle_sprocket.value, 89, 'no gear rule, balanced layout: baseline kept');
+  assert.equal(r.track.geometry, 'available', 'traced from the crew chief\'s screenshot');
+  assert.equal(r.derived.demands.cornerCount, 7);
   assert.equal(r.legality.currentIssues.length, 0);
 });
 

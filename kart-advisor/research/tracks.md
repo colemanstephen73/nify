@@ -186,3 +186,22 @@ Sources: https://ovrp.net/wp-content/uploads/2024/03/Kart-Racing-Class-Structure
 - wu_pws_cudd: https://wu-next-prod.wunderground.com/weather/us/ny/westbrookville/KNYCUDDE18
 - yt_ovrp_new: https://www.youtube.com/watch?v=B3mDj7A9I38
 - yt_ovrp_s3: https://www.youtube.com/watch?v=PE51gN1Clc8
+
+
+## 11. Rocky Ridge geometry from the crew chief's screenshot (added 2026-10-18)
+
+Source: Google satellite screenshot supplied by the user, saved as `tracks/rocky-ridge/images/overhead-google.webp`. The centreline was traced by hand on a 50 px grid (`tracks/rocky-ridge/centreline-trace.json`) and scaled to the 910 ft press length. At that scale the asphalt comes out about 26 ft wide, which is plausible for a kart track (OVRP publishes 26 ft). That supports the 910 ft figure over 880 ft or 1,056 ft, but doesn't prove it. **Everything here is `inferred`.**
+
+| # | Corner (counter-clockwise from start/finish) | Type | Turn | Min radius |
+|---|---|---|---|---|
+| 1 | Bottom-hairpin exit onto the start/finish diagonal | kink (right) | ~30° | ~20 m |
+| 2 | Pit-lane corner, right end | tight (left) | ~90° | ~6 m |
+| 3 | Bend on the right leg | medium (right) | ~47° | ~14 m |
+| 4 | Top hairpin | hairpin (left) | ~173° | ~9 m |
+| 5 | Upper bend, left leg | kink (left) | ~31° | ~22 m |
+| 6 | "Pinch" on the left leg | medium (right) | ~52° | ~14 m |
+| 7 | Bottom hairpin | hairpin (left) | ~208° | ~10 m |
+
+**What the layout demands:** 7 corners, and about 58% of the lap is spent turning. Three corners are tight (both hairpins and the pit-lane corner) and two are fast kinks. The longest uninterrupted straight is only ~28 m (~90 ft), on the start/finish diagonal, which kink 1 splits. The engine scores this as **balanced** (accel-vs-rolling +0.14): there is no strong case for moving off the baseline gear for the layout alone. The two hairpins reward drive off slow corners, and the short straights mean the kart rarely reaches top speed.
+
+**Confirm trackside:** direction of travel, whether kid karts run this full layout, and the lap length.

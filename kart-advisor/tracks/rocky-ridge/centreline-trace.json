@@ -1,0 +1,14 @@
+{
+  "image": "tracks/rocky-ridge/images/overhead-google.webp",
+  "traced": "2026-10-18, by hand from a 50 px grid over the user's Google satellite screenshot (756x1082 px)",
+  "direction_note": "Direction of travel unknown: points run counter-clockwise as seen from above (start/finish diagonal toward the pit-lane corner, up the right side, over the top hairpin, down the left side, round the bottom hairpin). If the track runs clockwise, every corner's left/right flips.",
+  "targetLengthFt": 910,
+  "points": [
+    [330, 920], [345, 860], [365, 805], [390, 752], [440, 702], [500, 652], [570, 604], [612, 578],
+    [636, 560], [642, 535], [630, 500], [608, 455], [572, 405], [538, 355], [526, 305], [538, 252],
+    [552, 200], [550, 155], [528, 120], [495, 103], [460, 102], [425, 112], [400, 135], [385, 175],
+    [368, 228], [348, 290], [336, 350], [338, 400], [354, 450], [367, 500], [364, 550], [336, 600],
+    [292, 650], [254, 700], [208, 750], [160, 800], [128, 850], [121, 900], [134, 950], [168, 995],
+    [228, 1016], [288, 1002], [322, 965]
+  ]
+}

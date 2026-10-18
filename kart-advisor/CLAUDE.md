@@ -45,6 +45,7 @@ The approved plan is in `PLAN.md`. This repo also contains an unrelated telemetr
 - [x] Knowledge base in `data/`, validated
 - [x] Engine + learning module + tests (66 unit/scenario/property tests, UI smoke test)
 - [x] App (Setup / Kart / Log / Info), offline service worker, IndexedDB log, export/import
-- [ ] **Track geometry for both tracks**: blocked on screenshots or Overpass access. Run `tools/track-geometry.js` when available.
+- [x] Rocky Ridge geometry: hand-traced from the user's screenshot (`tracks/rocky-ridge/centreline-trace.json` → `data/geometry/rocky-ridge.yaml`), inferred; direction unknown
+- [ ] OVRP geometry: needs a screenshot (or Overpass)
 - [ ] Confirm the user's open questions (C52 legality at OVRP, 2026 rule sheets, kart baseline), then update `data/`
 - Search budget ran out during research. Follow-ups worth searching: wet-weather kid kart setup, the OVRP 2026 sheet, VT Shifter Karts 2026 rules.
