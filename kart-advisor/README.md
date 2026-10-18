@@ -21,11 +21,11 @@ npm start          # builds data/ → app/data.json, serves http://localhost:808
 **Hosted single-file version:** `npm run bundle` writes `dist/kart-advisor-standalone.html`, one self-contained file you can open in any browser (and `dist/kart-advisor.html` for hosts that add their own page wrapper). It works the same way, except weather is typed in by hand, the backup is copy/paste, and there is no offline service worker.
 
 ## Using it at the track
-1. **Kart tab:** enter what you normally run (pressures, widths, gear, jet, kart weight). Recommendations are changes from these numbers, and blanks are never guessed.
-2. **Setup tab:** track, rules, weather (**Fill from weather forecast** uses Open-Meteo at the track's coordinates), track temperature (IR gun), surface, rubber, tires, driver, and how the kart felt. Then press **Get setup**.
+1. **My kart page:** enter what you normally run (pressures, widths, gear, jet, kart weight). Recommendations are changes from these numbers, and blanks are never guessed.
+2. **Setup page:** track, rules, weather (**Fill from weather forecast** uses Open-Meteo at the track's coordinates), track temperature (IR gun), surface, rubber, tires, driver, and how the kart felt. Then press **Get setup**.
 3. Read the sheet. **Steps and sources** under each line shows every rule that touched it, with links.
-4. **Save to session log.** Afterwards, add what you actually ran and the lap times in the **Log** tab. Tick **Engine ran clean** on a session with a tan plug: that becomes the jetting reference, and jet changes for later weather are calculated from it.
-5. The **What helped here** list in the Log tab compares sessions in similar conditions. It is evidence only and never changes recommendations.
+4. **Save to session log.** Afterwards, add what you actually ran and the lap times on the **Session log** page. Tick **Engine ran clean** on a session with a tan plug: that becomes the jetting reference, and jet changes for later weather are calculated from it.
+5. The **What helped** list on the Session log page compares sessions in similar conditions. It is evidence only and never changes recommendations.
 
 Back up with **Export log + profile** (JSON). Import it on another phone.
 

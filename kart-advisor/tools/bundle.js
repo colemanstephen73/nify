@@ -43,6 +43,8 @@ const css = read('app/styles.css');
 const head = `<title>Kid Kart Setup</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="description" content="Setup advisor for a TopKart kid kart with a Comer C52.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Condensed:wght@600;700&display=swap">
 <style>\n${css}\n</style>`;
 const kbJson = JSON.stringify(kb).replace(/</g, '\\u003c');
 const content = `${head}\n${body}\n<script type="application/json" id="kb-data">${kbJson}</script>\n<script type="module">\n${js.replace(/<\/script/gi, '<\\/script')}\n</script>\n`;

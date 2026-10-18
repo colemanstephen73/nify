@@ -5,32 +5,40 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Kid Kart Setup</title>
   <meta name="description" content="Setup advisor for a TopKart kid kart with a Comer C52: tire pressures, widths, gearing and jetting for the day's conditions, with a reason and source for every change.">
-  <meta name="theme-color" content="#0b3d91">
+  <meta name="theme-color" content="#1f4fd1">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Condensed:wght@600;700&display=swap">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header class="top">
-    <h1>Kid Kart Setup</h1>
-    <button id="theme" class="icon-btn" type="button" aria-label="Switch light/dark theme">◐</button>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="site">
+    <div class="site-inner">
+      <a class="brand" href="#setup"><span class="brand-mark" aria-hidden="true"></span><span><b>Kid Kart Setup</b><small>TopKart · Comer C52</small></span></a>
+      <nav class="site-nav" aria-label="Main">
+        <a href="#setup" data-route="setup">Setup</a>
+        <a href="#kart" data-route="kart">My kart</a>
+        <a href="#log" data-route="log">Session log</a>
+        <a href="#tracks" data-route="tracks">Tracks</a>
+        <a href="#about" data-route="about">About</a>
+      </nav>
+      <button id="theme" class="theme-btn" type="button" aria-label="Switch light/dark theme"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg></button>
+    </div>
   </header>
 
-  <main>
-    <section id="tab-setup" class="tab" aria-labelledby="nav-setup"></section>
-    <section id="tab-kart" class="tab" hidden aria-labelledby="nav-kart"></section>
-    <section id="tab-log" class="tab" hidden aria-labelledby="nav-log"></section>
-    <section id="tab-info" class="tab" hidden aria-labelledby="nav-info"></section>
+  <main id="main">
+    <section id="page-setup" class="page" aria-label="Setup"></section>
+    <section id="page-kart" class="page" hidden aria-label="My kart"></section>
+    <section id="page-log" class="page" hidden aria-label="Session log"></section>
+    <section id="page-tracks" class="page" hidden aria-label="Tracks"></section>
+    <section id="page-about" class="page" hidden aria-label="About"></section>
   </main>
 
-  <nav class="bottom" aria-label="Sections">
-    <button id="nav-setup" data-tab="setup" aria-current="page">Setup</button>
-    <button id="nav-kart" data-tab="kart">Kart</button>
-    <button id="nav-log" data-tab="log">Log</button>
-    <button id="nav-info" data-tab="info">Info</button>
-  </nav>
+  <footer class="site-foot"><div class="site-inner">Recommendations are a starting point for an adult crew chief. Check every change against your club's current rules and your own judgement.</div></footer>
 
-  <noscript><p class="card">This app needs JavaScript.</p></noscript>
+  <noscript><p>This site needs JavaScript.</p></noscript>
   <script type="module" src="app.js"></script>
 </body>
 </html>

@@ -52,6 +52,7 @@ const doc = {
   corners: r.corners.map(c => ({ ...c, sources: ['centreline'], confidence: confidence === 'inferred' ? 'inferred' : confidence, ...(confidence === 'inferred' ? { derivation: 'curvature of the traced centreline' } : {}) })),
   demands: { ...r.demands, sources: ['centreline'], confidence: 'inferred', derivation: 'engine/geometry.js summarizeDemands' },
   warnings: r.warnings,
+  outline_m: { value: r.outline, sources: ['centreline'], confidence, ...(confidence === 'inferred' ? { derivation: 'smoothed traced centreline, metres, x east / y north of the trace start' } : {}) },
 };
 fs.mkdirSync(path.join(root, 'data/geometry'), { recursive: true });
 const out = path.join(root, 'data/geometry', `${track}.yaml`);

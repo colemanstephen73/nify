@@ -165,6 +165,7 @@ export function analyzeCentreline(ptsM, opts = {}) {
       minRadiusM: +c.minRadius.toFixed(1),
       entryM: +sOf(c.r.startJ).toFixed(1),
       apexM: +sOf(c.apexJ).toFixed(1),
+      apexXY: pts[idx(c.apexJ)].map(v => +v.toFixed(1)),
       exitM: +sOf(c.r.endJ).toFixed(1),
       lengthM: +((c.r.endJ - c.r.startJ + 1) * ds).toFixed(1),
       precedingStraightM: +straight.toFixed(1),
@@ -187,7 +188,9 @@ export function analyzeCentreline(ptsM, opts = {}) {
   const warnings = [];
   // A trace that doesn't come back to its start gets an artificial corner where it is closed.
   if (closureGapM > Math.max(5 * o.step, 0.02 * length)) warnings.push(`centreline is not closed (gap ${closureGapM.toFixed(1)} m): the corner at the join is not real`);
-  return { lengthM: +length.toFixed(1), corners, demands: summarizeDemands(corners, length, o), warnings };
+  // Smoothed centreline (every ~2 m) so a map can be drawn; index 0 is the start of the trace.
+  const outline = pts.filter((_, i) => i % Math.max(1, Math.round(2 / ds)) === 0).map(p => p.map(v => +v.toFixed(1)));
+  return { lengthM: +length.toFixed(1), corners, demands: summarizeDemands(corners, length, o), warnings, outline };
 }
 
 export function summarizeDemands(corners, lengthM, o = DEFAULTS) {

@@ -41,7 +41,7 @@ export function toKnowledgeBase(files) {
     const t = kb.tracks[doc.track];
     if (!t) throw new Error(`${name}: unknown track ${doc.track}`);
     const cfg = (t.configurations ||= []).find(c => c.id === doc.configuration) || t.configurations[0];
-    Object.assign(cfg, { corners: doc.corners, length_m: doc.length_m.value, geometry_method: doc.method.value, sources: [...(cfg.sources || []), 'geometry'] });
+    Object.assign(cfg, { corners: doc.corners, outline_m: doc.outline_m?.value ?? null, length_m: doc.length_m.value, geometry_method: doc.method.value, sources: [...(cfg.sources || []), 'geometry'] });
     kb.sourceIndex[`tracks/${doc.track}:geometry`] = { id: `tracks/${doc.track}:geometry`, ...doc.sources.centreline };
   }
   return kb;

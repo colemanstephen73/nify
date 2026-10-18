@@ -44,7 +44,7 @@ The approved plan is in `PLAN.md`. This repo also contains an unrelated telemetr
 - [x] Plan approved; research tracks A–D in `research/` with sources, confidence and open questions (`research/OPEN-QUESTIONS.md`)
 - [x] Knowledge base in `data/`, validated
 - [x] Engine + learning module + tests (66 unit/scenario/property tests, UI smoke test)
-- [x] App (Setup / Kart / Log / Info), offline service worker, IndexedDB log, export/import
+- [x] Website-style app: hash-routed pages (#setup, #kart, #log, #tracks, #about) with a top nav; setup page = inputs + live setup-sheet table (grouped rows, tap for steps and sources); Tracks page draws the corner map from `outline_m`. Offline service worker, IndexedDB log, copy/paste backup
 - [x] Rocky Ridge geometry: hand-traced from the user's screenshot (`tracks/rocky-ridge/centreline-trace.json` → `data/geometry/rocky-ridge.yaml`), inferred; direction unknown
 - [ ] OVRP geometry: needs a screenshot (or Overpass)
 - [ ] Confirm the user's open questions (C52 legality at OVRP, 2026 rule sheets, kart baseline), then update `data/`
