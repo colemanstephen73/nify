@@ -30,9 +30,19 @@ export function toKnowledgeBase(files) {
   for (const [name, doc] of Object.entries(files)) {
     const fileKey = name.replace(/\.ya?ml$/, '');
     for (const [id, s] of Object.entries(doc.sources || {})) kb.sourceIndex[`${fileKey}:${id}`] = { id: `${fileKey}:${id}`, ...s };
+    if (fileKey.startsWith('geometry/')) continue;
     const m = fileKey.match(/^(tracks|rules)\/(.+)$/);
     if (m) kb[m[1]][doc.id || m[2]] = { ...doc, fileKey };
     else kb[fileKey.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = { ...doc, fileKey };
+  }
+  // Geometry files (tools/track-geometry.js output) attach corners to a track configuration.
+  for (const [name, doc] of Object.entries(files)) {
+    if (!name.startsWith('geometry/')) continue;
+    const t = kb.tracks[doc.track];
+    if (!t) throw new Error(`${name}: unknown track ${doc.track}`);
+    const cfg = (t.configurations ||= []).find(c => c.id === doc.configuration) || t.configurations[0];
+    Object.assign(cfg, { corners: doc.corners, length_m: doc.length_m.value, geometry_method: doc.method.value, sources: [...(cfg.sources || []), 'geometry'] });
+    kb.sourceIndex[`tracks/${doc.track}:geometry`] = { id: `tracks/${doc.track}:geometry`, ...doc.sources.centreline };
   }
   return kb;
 }

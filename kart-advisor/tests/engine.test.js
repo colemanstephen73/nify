@@ -185,3 +185,21 @@ test('same input → same output', () => {
   const a = run({ feel: { text: 'pushes on entry' } }), b = run({ feel: { text: 'pushes on entry' } });
   assert.deepEqual(a, b);
 });
+
+test('track demands: geometry with tight corners shortens the gearing (+2 teeth) when the gear is open', async () => {
+  const { analyzeCentreline } = await import('../engine/geometry.js');
+  const k = structuredClone(kb);
+  // Small kart track: four tight hairpin-ish corners joined by short straights.
+  const pts = [];
+  const seg = (x0, y0, x1, y1) => { for (let t = 0; t < 1; t += 0.02) pts.push([x0 + (x1 - x0) * t, y0 + (y1 - y0) * t]); };
+  const arc = (cx, cy, r, a0, a1) => { for (let a = a0; a < a1; a += 0.05) pts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]); };
+  seg(0, 0, 40, 0); arc(40, 7, 7, -Math.PI / 2, Math.PI / 2); seg(40, 14, 0, 14); arc(0, 7, 7, Math.PI / 2, 1.5 * Math.PI);
+  const g = analyzeCentreline(pts);
+  Object.assign(k.tracks['rocky-ridge'].configurations[0], { corners: g.corners, length_m: g.lengthM });
+  const r = recommend(k, base());
+  assert.equal(r.track.geometry, 'available');
+  assert.equal(r.derived.demands.character, 'acceleration');
+  assert.equal(r.fields.axle_sprocket.value, 91);
+  const ovrp = structuredClone(k); ovrp.tracks.ovrp.configurations[0].corners = g.corners;
+  assert.equal(recommend(ovrp, base({ track: 'ovrp' })).fields.axle_sprocket.value, 89, 'spec gear wins over layout');
+});

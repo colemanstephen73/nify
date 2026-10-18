@@ -7,7 +7,8 @@
   "scripts": {
     "build": "node tools/build-data.js",
     "start": "node tools/build-data.js && node tools/serve.js",
-    "test": "node tools/build-data.js && node --test \"tests/**/*.test.js\""
+    "test": "node tools/build-data.js && node --test \"tests/**/*.test.js\"",
+    "test:ui": "node tools/build-data.js && node tests/ui/smoke.mjs"
   },
   "devDependencies": {
     "js-yaml": "4.1.0"

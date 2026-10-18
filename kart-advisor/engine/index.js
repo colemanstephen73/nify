@@ -120,7 +120,9 @@ export function recommend(kb, inputs) {
     step('axle_sprocket', 'track', `Spec gear at this track: ${gearRule.eq.value} teeth (${gearRule.eq.layer}). Track layout doesn't change it.`, gearRule.eq.sources, 'track_official');
   } else if (!demands) {
     step('axle_sprocket', 'track', `No corner geometry for ${track.short_name || track.name} yet, so the gear isn't adjusted for the layout`, ref(track.fileKey, config?.sources || []), 'unknown');
-  } else if (demands.character !== 'balanced') {
+  } else if (demands.character === 'balanced') {
+    step('axle_sprocket', 'track', `Layout is balanced (${demands.tightCount} tight, ${demands.fastCount} fast of ${demands.cornerCount} corners; longest straight ${Math.round(mToFt(demands.longestStraightM))} ft): no gear change for the track`, ref(track.fileKey, config.sources || []), 'inferred');
+  } else {
     gearShift = demands.character === 'acceleration' ? gearKb.demand_shift_teeth.value : -gearKb.demand_shift_teeth.value;
     step('axle_sprocket', 'track', demands.character === 'acceleration'
       ? `Mostly tight corners (${demands.tightCount} of ${demands.cornerCount}): ${gearShift} teeth for acceleration off the corners`
@@ -267,7 +269,7 @@ export function recommend(kb, inputs) {
   for (const id of HANDLING_LEVERS) {
     const f = fields[id];
     if (!f.steps.length) step(id, 'baseline', leverExists(id) ? (f.baseline == null ? 'No change recommended today (add it to your kart profile to track it)' : 'No rule changed this today: keep your baseline') : notAvailableText(id), leverExists(id) ? [USER] : ref('chassis', C.adjustments?.[lever(id).chassis_ref]?.sources || []), leverExists(id) ? 'user' : (C.adjustments?.[lever(id).chassis_ref]?.confidence || 'unknown'));
-    if (!leverExists(id) && !f.steps.some(s => s.stage !== 'baseline')) f.status = f.baseline == null ? 'not_adjustable' : f.status;
+    if (!leverExists(id) && !f.steps.some(s => s.stage !== 'baseline')) f.status = id === 'rear_hub_length' ? 'withheld' : f.baseline == null ? 'not_adjustable' : f.status;
     if (f.status === 'relative' && f.delta === 0) f.status = 'withheld';
   }
   function notAvailableText(id) {

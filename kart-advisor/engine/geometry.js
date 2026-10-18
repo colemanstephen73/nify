@@ -191,7 +191,7 @@ export function analyzeCentreline(ptsM, opts = {}) {
 }
 
 export function summarizeDemands(corners, lengthM, o = DEFAULTS) {
-  const tight = corners.filter(c => c.minRadiusM < o.tightRadius);
+  const tight = corners.filter(c => c.minRadiusM < o.tightRadius || c.type === 'hairpin');
   const fast = corners.filter(c => c.minRadiusM >= o.fastRadius || c.type === 'kink');
   const cornerDist = corners.reduce((s, c) => s + c.lengthM, 0);
   const longest = corners.reduce((b, c) => (c.precedingStraightM > (b?.precedingStraightM ?? -1) ? c : b), null);

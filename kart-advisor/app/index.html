@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Kid Kart Setup</title>
+  <meta name="description" content="Setup advisor for a TopKart kid kart with a Comer C52: tire pressures, widths, gearing and jetting for the day's conditions, with a reason and source for every change.">
+  <meta name="theme-color" content="#0b3d91">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="top">
+    <h1>Kid Kart Setup</h1>
+    <button id="theme" class="icon-btn" type="button" aria-label="Switch light/dark theme">◐</button>
+  </header>
+
+  <main>
+    <section id="tab-setup" class="tab" aria-labelledby="nav-setup"></section>
+    <section id="tab-kart" class="tab" hidden aria-labelledby="nav-kart"></section>
+    <section id="tab-log" class="tab" hidden aria-labelledby="nav-log"></section>
+    <section id="tab-info" class="tab" hidden aria-labelledby="nav-info"></section>
+  </main>
+
+  <nav class="bottom" aria-label="Sections">
+    <button id="nav-setup" data-tab="setup" aria-current="page">Setup</button>
+    <button id="nav-kart" data-tab="kart">Kart</button>
+    <button id="nav-log" data-tab="log">Log</button>
+    <button id="nav-info" data-tab="info">Info</button>
+  </nav>
+
+  <noscript><p class="card">This app needs JavaScript.</p></noscript>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
