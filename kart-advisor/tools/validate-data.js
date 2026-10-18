@@ -14,7 +14,14 @@ export const RULE_FIELDS = [
 ];
 export const RULE_OPS = ['eq', 'min', 'max', 'one_of', 'sealed', 'required', 'note'];
 
-export function validateFile(name, doc) {
+// A source id is local ("x") or points at another file's sources ("chassis:x" → chassis.yaml).
+const resolves = (id, sources, all) => {
+  if (id in sources) return true;
+  const m = /^([\w/-]+):(.+)$/.exec(id);
+  return !!(m && all && all[`${m[1]}.yaml`]?.sources?.[m[2]]);
+};
+
+export function validateFile(name, doc, all) {
   const errs = [];
   const err = (path, msg) => errs.push(`${name}:${path}: ${msg}`);
   if (!doc || typeof doc !== 'object') return [`${name}: not an object`];
@@ -22,7 +29,7 @@ export function validateFile(name, doc) {
   const sources = doc.sources || {};
   if (!doc.sources) err('', 'missing sources map');
   for (const [id, s] of Object.entries(sources)) {
-    if (!s || (!s.url && s.kind !== 'observation' && s.kind !== 'standard')) err(`sources.${id}`, 'source needs a url (or kind: observation | standard)');
+    if (!s || (!s.url && s.kind !== 'observation' && s.kind !== 'policy')) err(`sources.${id}`, 'source needs a url (or kind: observation | policy)');
     if (s && !CONFIDENCE.includes(s.confidence)) err(`sources.${id}`, `bad confidence "${s?.confidence}"`);
   }
   const walk = (node, path) => {
@@ -31,7 +38,7 @@ export function validateFile(name, doc) {
     if (path === 'sources') return;
     if ('confidence' in node && !CONFIDENCE.includes(node.confidence)) err(path, `bad confidence "${node.confidence}"`);
     if (Array.isArray(node.sources)) {
-      for (const id of node.sources) if (!(id in sources)) err(path, `unknown source id "${id}"`);
+      for (const id of node.sources) if (!resolves(id, sources, all)) err(path, `unknown source id "${id}"`);
     }
     const hasFact = 'value' in node && node.value !== null && node.value !== undefined;
     if (hasFact) {
@@ -53,5 +60,5 @@ export function validateFile(name, doc) {
 }
 
 export function validateAll(files) {
-  return Object.entries(files).flatMap(([name, doc]) => validateFile(name, doc));
+  return Object.entries(files).flatMap(([name, doc]) => validateFile(name, doc, files));
 }

@@ -1,0 +1,174 @@
+# Recommendation engine tunables. Hand-editable: change a step size or threshold here, not in code.
+# Sources may point at other files as "<file>:<id>" (chassis:..., engine:..., carb:...).
+# Entries marked `policy` are design decisions of this app (how cautious to be), not facts about the kart.
+schema_version: 1
+updated: 2026-10-18
+sources:
+  policy:
+    kind: policy
+    url: PLAN.md
+    title: "Advisor policy (PLAN.md §3): stability first for young drivers, one or two changes at a time, err rich"
+    confidence: inferred
+    notes: "Engine design choices, not kart specs. Edit to taste."
+  user_brief:
+    kind: observation
+    title: "Crew chief's brief: a slightly too hooked-up kart beats a loose one for a young driver"
+    confidence: inferred
+    notes: "Requirement from the project brief."
+
+# Adjustable levers. Effects and directions come from the chassis research.
+# grip_effect: what +1 step does to grip at each end (+ = more grip, - = less).
+levers:
+  rear_track_width:
+    label: Rear track width
+    units: in
+    step: 0.5
+    step_text: "1/4 in per side (1/2 in overall)"
+    plus_effect: "less rear grip, freer; helps push and hop"
+    minus_effect: "more rear grip; helps a loose rear"
+    grip_effect: {front: 0, rear: -1}
+    chassis_ref: rear_track_width
+    sources: [chassis:generic_setup_guides, chassis:ssc_2005]
+    confidence: expert_consensus
+  front_track_width:
+    label: Front track width
+    units: in
+    step: 0.4
+    step_text: "one spindle spacer (about 5 mm) per side"
+    plus_effect: "more front grip and quicker turn-in; helps push (too wide gets twitchy)"
+    minus_effect: "less front grip, slower turn-in"
+    grip_effect: {front: 1, rear: 0}
+    chassis_ref: front_track_width
+    sources: [chassis:generic_setup_guides, chassis:pk_spindle_spacers]
+    confidence: expert_consensus
+  rear_tire_pressure:
+    label: Rear tire pressure (cold)
+    units: psi
+    step: 0.5
+    step_text: "0.5 psi"
+    plus_effect: "less rear grip once hot; part of a hop cure"
+    minus_effect: "more rear grip; helps the rear sliding on entry"
+    grip_effect: {front: 0, rear: -1}
+    sources: [chassis:generic_setup_guides, chassis:ssc_2005]
+    confidence: expert_consensus
+  front_tire_pressure:
+    label: Front tire pressure (cold)
+    units: psi
+    step: 0.5
+    step_text: "0.5 psi"
+    plus_effect: "less front bite"
+    minus_effect: "front less 'skatey', more bite"
+    grip_effect: {front: -1, rear: 0}
+    sources: [chassis:kp_kid_tires, chassis:generic_setup_guides]
+    confidence: anecdote
+  rear_hub_length:
+    label: Rear hub length
+    units: mm
+    options: [40, 62, 95, 115]
+    step_text: "next hub length"
+    plus_effect: "longer hub: more rear grip"
+    minus_effect: "shorter hub: less rear grip, frees the kart; hop cure"
+    grip_effect: {front: 0, rear: 1}
+    chassis_ref: rear_hub_length
+    sources: [chassis:pk_righetti_25hubs, chassis:ssc_2005]
+    confidence: expert_consensus
+  ballast_height:
+    label: Ballast height
+    units: position
+    options: [low, mid, high]
+    step_text: "one mounting position"
+    plus_effect: "higher: more weight transfer, nervous on brakes and curbs"
+    minus_effect: "lower: more stable, less weight transfer; hop cure"
+    grip_effect: {front: 0, rear: 0}
+    chassis_ref: ballast
+    sources: [chassis:ballast_guides, chassis:ssc_2005]
+    confidence: expert_consensus
+  seat_fore_aft:
+    label: Seat position (fore/aft)
+    units: in
+    step: 0.5
+    step_text: "1/2 in"
+    plus_effect: "forward: more front weight, more front grip"
+    minus_effect: "back: more rear weight"
+    grip_effect: {front: 1, rear: -1}
+    chassis_ref: seat_fore_aft
+    novice_allowed: false
+    sources: [chassis:weight_dist_guides]
+    confidence: expert_consensus
+    notes: "Lowest priority. Moving the seat changes how the driver reaches the wheel and pedals, so only experienced crews use it as a balance lever."
+
+# Adjustments the research could not confirm exist on this chassis. Never output.
+not_recommended: [caster, camber, toe, ride_height, torsion_bar, axle, seat_height, steering_ratio]
+
+# One combined grip estimate so cold + green + old tires don't stack three separate changes.
+grip_model:
+  base: 0.85
+  surface: {dry: 0, damp: -0.4, wet: -0.7}
+  rubber: {green: -0.15, medium: 0, rubbered: 0.1}
+  tire_age: {new: 0.05, scuffed: 0, old: -0.1}
+  track_temp_f: [{below: 50, add: -0.15}, {below: 65, add: -0.08}, {below: 120, add: 0}, {below: 999, add: -0.05}]
+  low_below: 0.7
+  high_at_or_above: 0.95
+  sources: [policy]
+  confidence: inferred
+  derivation: "Ordering from the chassis research (cold/green/old tires = less grip; very hot = greasy). Magnitudes are policy."
+
+conditions:
+  low_grip:
+    changes: [{lever: rear_track_width, steps: -1}]
+    reason: "Low grip expected: add rear grip so the kart stays planted and predictable for a young driver"
+    sources: [chassis:generic_setup_guides, user_brief]
+    confidence: inferred
+  high_grip:
+    changes: [{lever: rear_track_width, steps: 1}]
+    experienced_only: true
+    reason: "High grip: free the rear a little so the kart doesn't bind or hop"
+    sources: [chassis:generic_setup_guides, chassis:ssc_2005]
+    confidence: inferred
+  pressure_by_track_temp_f:
+    bands: [{below: 60, steps: 2}, {below: 75, steps: 1}, {below: 110, steps: 0}, {below: 999, steps: -1}]
+    reason_cold: "Cold track: start higher so the hard kid kart tires build heat"
+    reason_hot: "Hot track: start a little lower; the tires come in on their own"
+    sources: [chassis:mg_red_pressure_guides, chassis:kp_kid_pressure]
+    confidence: expert_consensus
+  wet:
+    note: "No sourced wet-weather chassis guidance for this kart was found. Only the tire rule and the low-grip change are applied. Ask an experienced local crew."
+    sources: [policy]
+    confidence: unknown
+
+driver:
+  # Rear-grip floor: no change may reduce rear grip below baseline (hop is the exception, it's a control problem).
+  rear_grip_floor: {novice: all, intermediate: conditions, experienced: none}
+  ballast_margin_lb: {value: 2, sources: [policy], confidence: inferred, derivation: "Covers fuel burn and scale differences so the kart never weighs light"}
+  sources: [user_brief, chassis:kid_stability_forum]
+  confidence: inferred
+
+feel:
+  max_handling_changes: 2
+  max_carb_changes: 1
+  priority: [lean, hop, oversteer_entry, oversteer_mid, oversteer_exit, understeer_entry, understeer_mid, understeer_exit, slow_warmup, rich, tops_out, bog]
+  fixes:
+    understeer_entry: [{lever: front_track_width, steps: 1}, {lever: front_tire_pressure, steps: -1}]
+    understeer_mid: [{lever: front_track_width, steps: 1}, {lever: rear_track_width, steps: 1}, {lever: front_tire_pressure, steps: -1}]
+    understeer_exit: [{lever: rear_track_width, steps: 1}, {lever: front_track_width, steps: 1}, {lever: seat_fore_aft, steps: 1}]
+    oversteer_entry: [{lever: rear_tire_pressure, steps: -1}, {lever: rear_track_width, steps: -1}]
+    oversteer_mid: [{lever: rear_track_width, steps: -1}, {lever: rear_tire_pressure, steps: -1}]
+    oversteer_exit: [{lever: rear_track_width, steps: -1}, {lever: rear_hub_length, steps: 1}]
+    hop: [{lever: ballast_height, steps: -1}, {lever: rear_track_width, steps: 1}, {lever: rear_tire_pressure, steps: 1}, {lever: rear_hub_length, steps: -1}]
+    slow_warmup: [{lever: rear_tire_pressure, steps: 1}, {lever: front_tire_pressure, steps: 1}]
+  sources: [chassis:generic_setup_guides, chassis:ssc_2005, policy]
+  confidence: expert_consensus
+
+jetting:
+  # Physics rule from research C: flow area ∝ sqrt(air density) → jet number ∝ density^0.25.
+  number_exponent: {value: 0.25, sources: [carb:engtips], confidence: inferred, derivation: "carb.yaml jetting.derivation (constant AFR)"}
+  round_up_from: {value: 0.3, sources: [policy, carb:motocrosshideout], confidence: inferred, derivation: "Round to the richer jet unless within 0.3 of the leaner one: lean risks seizure"}
+  fallback_jet: {value: 58, sources: [carb:ntk_7786, carb:ntk_forum_8846], confidence: anecdote, notes: "Only used when no current jet is known. A bare retail SHA 14/12L ships with #57; #58 is the richer common choice."}
+  available: {value: [54, 55, 56, 57, 58, 59, 60, 61, 62], sources: [carb:pkt_jet_holder, carb:kartpulse_comer_jetting], confidence: expert_consensus}
+
+gearing:
+  baseline: {value: 89, sources: [engine:wka_tm_2022_002, engine:rakc_2024_book, engine:eldora_2020], confidence: sanctioning_body, notes: "10/89 is WKA's suggested Comer kid kart gear"}
+  driver: {value: 10, sources: [engine:wka_tm_2022_002_pdf], confidence: sanctioning_body}
+  demand_shift_teeth: {value: 2, sources: [policy], confidence: inferred, derivation: "Tight, acceleration-heavy layout: +2 teeth; fast flowing layout: -2"}
+  max_shift_teeth: {value: 4, sources: [engine:kartpulse_gearing, policy], confidence: inferred, derivation: "Keeps inside the 79-88 forum range around the 89 suggestion"}
+  tops_out_teeth: {value: -2, sources: [policy], confidence: inferred}

@@ -1,0 +1,211 @@
+# TopKart kid kart chassis knowledge base. Merged from research/drafts/chassis.yaml (see research/chassis-topkart.md).
+# Confidence is capped one level lower unless >=2 independent results agree.
+schema_version: 1
+updated: 2026-10-18
+model: "TopKart Kid Kart (TopKart USA '2026 Kid Kart Chassis'; EU name 'KID KART 50cc RT20'). Owner's model year TBD."
+
+sources:
+  topkart_usa_2026_page: {url: "https://shop.topkartusa.net/products/kid-kart-chassis", title: "Top Kart USA – 2026 Kid Kart Chassis", confidence: manufacturer, accessed: 2026-10-18, notes: "Seen via search summary only. Lists 25mm tube, 770mm WB, 30mm axle, IMAF Puffo seat, mechanical brake, 112DSM/140 wheels, C52 standard, no tires."}
+  topkart_usa_kidkart_old: {url: "https://topkartusa.net/chassis/kid-kart/", title: "Top Kart USA – Kid Kart Chassis (older page, ~2015-16)", confidence: manufacturer, accessed: 2026-10-18, notes: "Summary only. 25mm axle and bearings, D.17 spindle 10.5 deg, D.25 aluminium rear hubs, Puffo seat, mechanical brake."}
+  topkart_usa_axle25: {url: "https://shop.topkartusa.net/products/25mm-kid-kart-axle", title: "Top Kart USA – 25mm Kid Kart Axle", confidence: manufacturer, accessed: 2026-10-18, notes: "SKU 1000-138-04, 25x950x3, 'Top Kart original Kid Kart'. Sold out."}
+  topkart_usa_axles: {url: "https://shop.topkartusa.net/collections/axles-hubs", title: "Top Kart USA – Axles & Components", confidence: manufacturer, accessed: 2026-10-18, notes: "6x5x60 Mini/Kid Kart axle key fits hubs and sprocket hub; 30mm Top Kart axles listed."}
+  topkart_usa_bearings: {url: "https://shop.topkartusa.net/collections/bearings", title: "Top Kart USA – Bearings", confidence: manufacturer, accessed: 2026-10-18, notes: "25x62 Kid Kart axle bearing; 30x62 mini/kid kart bearing; 17x35x10 front hub bearing."}
+  topkart_usa_spindles: {url: "https://shop.topkartusa.net/collections/spindle-components", title: "Top Kart USA – Spindle Components", confidence: manufacturer, accessed: 2026-10-18, notes: "D.17 spindle fits Mini and Kid Kart; that spindle type noted discontinued."}
+  topkart_usa_chassisparts: {url: "https://shop.topkartusa.net/collections/chassis-parts", title: "Top Kart USA – Chassis Parts", confidence: manufacturer, accessed: 2026-10-18, notes: "Tie rods per chassis; rear bumper bolt kit '25mm – Kid Kart'."}
+  mondokart_rt20: {url: "https://www.mondokart.com/en/new-chassis-mondokart/chassis-top-kart-kart-tonykart/chassis-new-top-kart-kid-kart-50cc-rt20-without-engine-without-tyres.html", title: "MondoKart – Top-Kart KID KART 50cc RT20", confidence: expert_consensus, accessed: 2026-10-18, notes: "Retailer. 25mm tube, 770mm WB, 25mm axle."}
+  gokartsusa_c50: {url: "https://gokartsusa.com/TopKart-Kid-Kart-Chassis-Complete-With-C50-2-2.aspx", title: "GoKartsUSA – TopKart Kid Kart complete with C50 (archived)", confidence: expert_consensus, accessed: 2026-10-18, notes: "Dealer. 25mm axle, 770mm WB, 42in overall width, mechanical rear brake, Bridgestone YLC '4.50x10', ages 5-8."}
+  pk_righetti_25hubs: {url: "https://pointkarting.com/products/righetti-25mm-rear-hubs", title: "Point Karting – Righetti 25mm rear hubs", confidence: expert_consensus, accessed: 2026-10-18, notes: "Aftermarket. 40/62/95/115mm lengths; 62mm 'most common factory option on Kid Karts'; 115mm for extra rear grip."}
+  pk_spindle_spacers: {url: "https://pointkarting.com/products/17mm-spindle-spacers-go-kart", title: "PKT 17mm spindle spacers", confidence: expert_consensus, accessed: 2026-10-18, notes: "Fit most kid karts with 17mm spindles."}
+  pk_sniper_sa1: {url: "https://pointkarting.com/products/sniper-sa1-caster-camber-adjusters", title: "Sniper SA1 caster/camber adjusters", confidence: expert_consensus, accessed: 2026-10-18, notes: "Aftermarket 8mm kingpin option for 'most Kid Kart or Cadet chassis'. Not evidence that TopKart ships with adjusters."}
+  tss_2025: {url: "https://texassprintseries.com/wp-content/uploads/2025/01/206-Kid-Kart-Supplemental.pdf", title: "Texas Sprint Series 206 Kid Kart Supplemental (2025)", confidence: track_official, accessed: 2026-10-18, notes: "Front max 40in; rear 39-42in outside rim/tire; WB 29-31.5in; 20in max height."}
+  amr_2018: {url: "http://amrmotorplex.com/files/1415/4042/7888/AMR_Kid_Kart_Package_v3.pdf", title: "AMR Motorplex Kid Kart Class Rules v3 (2018)", confidence: track_official, accessed: 2026-10-18, notes: "Front max 40in; rear 39-42in; WB 29-35.5in."}
+  ovka_2025: {url: "https://ovka.com/wp-content/uploads/OVKA-Intro-to-Karting-Manual-2025-Final-v1.0.pdf", title: "OVKA Intro to Karting Manual 2025", confidence: track_official, accessed: 2026-10-18, notes: "Comer C51/C52 kid kart 150 lb min with 0.310in restrictor."}
+  ovka_2022: {url: "https://ovka.com/files/2022/2022_OVKA_Rulebook.pdf", title: "OVKA 2022 Rulebook", confidence: track_official, accessed: 2026-10-18, notes: "10x4.50-5 F/R, max circumference 33.25in."}
+  badger: {url: "https://badgerkartclub.com/rulebook/", title: "Badger Kart Club Rulebook", confidence: track_official, accessed: 2026-10-18, notes: "150 lb; MG SH or SH2 (Red), max circumference 33-3/8in."}
+  amp_2018: {url: "https://www.atlantamotorsportspark.com/wp-content/uploads/2018/01/AMP-Class-Structure.pdf", title: "AMP Class Structure (2018)", confidence: track_official, accessed: 2026-10-18, notes: "150 lb; MG 'HZ' Red 4.5 F/R."}
+  kart61: {url: "https://www.61kartway.com/classes/", title: "61 Kartway – Classes", confidence: track_official, accessed: 2026-10-18, notes: "Cites 2026 WKA Tech Manual; Comer kid kart 150 lb; Hoosier R60B."}
+  newcastle: {url: "https://newcastlemotorsportspark.com/rules", title: "Kart Racers of America supplemental rules", confidence: track_official, accessed: 2026-10-18, notes: "No min weight for Comer class; MG Red 450x5; rear circumference max 33in."}
+  ckc_2026: {url: "https://irp.cdn-website.com/7ce125dc/files/uploaded/CKC+2026.6+Supplemental+Ruleset.pdf", title: "CKC 2026.6 Supplemental Ruleset", confidence: track_official, accessed: 2026-10-18, notes: "Kid kart max 20 psi hot or cold."}
+  road_america_2025: {url: "https://roadamerica.com/sites/main/files/file-attachments/2025_rakc_class_structure.pdf", title: "Road America Karting Club class structure 2025", confidence: track_official, accessed: 2026-10-18, notes: "Kid kart max 30 psi after race (conflicts with 20 psi elsewhere)."}
+  kp_kid_pressure: {url: "https://forums.kartpulse.com/t/tire-pressure-cold-day-kid-kart/13973", title: "KartPulse – Tire pressure cold day – kid kart", confidence: anecdote, accessed: 2026-10-18, notes: "Quotes 20.00 psi max rule; DQ at 20.5; run ~20 then bleed to 19-19.5; hard compound, light kart builds little heat."}
+  kp_kid_tires: {url: "https://forums.kartpulse.com/t/do-i-need-new-tires-for-kid-kart/13707", title: "KartPulse – Do I need new tires for kid kart?", confidence: anecdote, accessed: 2026-10-18, notes: "Wear dots misleading; lower front pressure less skatey for one driver."}
+  kp_topkart_opinions: {url: "https://forums.kartpulse.com/t/top-kart-opinions/10227", title: "KartPulse – Top Kart opinions", confidence: anecdote, accessed: 2026-10-18, notes: "Parts ~3 days out in USA per TK USA owner; brand matters less than local support."}
+  generic_setup_guides: {url: "https://nhka.net/wp-content/uploads/2018/02/crg-setup-guide.pdf", title: "CRG setup manual (plus agreeing guides: kartinghub.co.uk, angriracing.com, linsellspeedshop.com, kartpulse rear-width thread)", confidence: expert_consensus, accessed: 2026-10-18, notes: "Generic adult-kart handling effects; several guides agree on direction. Not kid-kart-specific."}
+  ssc_2005: {url: "https://forums.kartpulse.com/uploads/default/original/1X/9b7c2e0ca91fc49233ae65ac3a9b4c9472d3bea1.pdf", title: "SSC Racing setup manual (2005)", confidence: expert_consensus, accessed: 2026-10-18, notes: "Hop cure: rear near legal max, shorter hubs, +0.5-1 psi rear, lower ballast. 43/57, 50/50."}
+  weight_dist_guides: {url: "https://kartbalance.com/", title: "KartBalance (agrees with Woodbridge Kart Club, Angri Racing, SSC 2005)", confidence: expert_consensus, accessed: 2026-10-18, notes: "Adult kart baseline 43F/57R, 50/50 L/R, ~50% cross. Not kid-kart-specific."}
+  ballast_guides: {url: "https://kartbalance.com/blog/2026/03/lo206-briggs-206-weight-distribution-deep-dive/", title: "KartBalance LO206 ballast guide (agrees with kartpulse mounting-lead thread)", confidence: expert_consensus, accessed: 2026-10-18, notes: "Low ballast = stable; high = more transfer, nervous on brakes/curbs."}
+  kid_stability_forum: {url: "https://4cycle.com/karting/threads/kid-kart-setup.31126/", title: "4cycle – Kid kart setup", confidence: anecdote, accessed: 2026-10-18, notes: "Kid kart should be easy to drive; not loose or pushing; ~10-12 years old."}
+  hoosier_r60b: {url: "https://www.hoosiertire.com/news/article/64406/?tab=news", title: "Hoosier R60B release", confidence: manufacturer, accessed: 2026-10-18, notes: "4.5/10.0-5 medium-hard sprint slick."}
+  mg_red_pressure_guides: {url: "https://www.decuzzitires.com/post/finding-the-right-tire-pressure-for-your-go-kart", title: "Decuzzi (agrees with riiroo.com, amvkartcomponents.com, mgtiresusa.com/tips, nashvillekartinggroup.com)", confidence: expert_consensus, accessed: 2026-10-18, notes: "MG Red adult-kart: ~12-15 psi cold, ~14-18 hot; colder day = higher start. Not kid-kart-specific."}
+
+adjustments:
+  rear_track_width:
+    exists: true
+    units: in
+    range: {min: null, max: null}   # chassis hub-travel limits unknown; club rule limits below are not chassis range
+    rule_limits_reference: {min: 39, max: 42, measured: "outside rim/tire", sources: [tss_2025, amr_2018], confidence: track_official}
+    step: null
+    baseline: null
+    effect: "narrower = more rear grip, less stable (cures loose/oversteer); wider = freer/more stable, less rear grip (cures push, hop)"
+    sources: [topkart_usa_axles, topkart_usa_kidkart_old, generic_setup_guides]
+    confidence: inferred
+    notes: "Exists inferred from keyed axle + sliding rear hubs; effect is generic adult-kart consensus."
+  rear_hub_length:
+    exists: true
+    units: mm
+    range: {min: null, max: null}
+    options_aftermarket_25mm: {values: [40, 62, 95, 115], sources: [pk_righetti_25hubs], confidence: expert_consensus}
+    step: null
+    baseline: null
+    effect: "shorter = less rear grip / frees kart (hop cure); longer = more rear grip"
+    sources: [pk_righetti_25hubs, ssc_2005]
+    confidence: expert_consensus
+    notes: "TopKart stock hub length unknown; option list is aftermarket for 25mm axles only."
+  front_track_width:
+    exists: true
+    units: mm
+    range: {min: null, max: null}
+    rule_limits_reference: {max_in: 40, measured: "outside rim/tire", sources: [tss_2025, amr_2018], confidence: track_official}
+    step: null
+    baseline: null
+    effect: "wider = more front grip, quicker turn-in (cures push), too wide = twitchy; narrower = slower turn-in"
+    sources: [topkart_usa_spindles, pk_spindle_spacers, generic_setup_guides]
+    confidence: inferred
+    notes: "D.17 spindle confirmed; spacer count/widths on TopKart unknown."
+  seat_fore_aft:
+    exists: true
+    units: mm
+    range: {min: null, max: null}
+    step: null
+    baseline: null
+    effect: "forward = more front weight %; back = more rear weight %. Main lever for F/R and L/R %."
+    sources: [topkart_usa_2026_page, weight_dist_guides]
+    confidence: inferred
+  seat_height:
+    exists: unknown
+    units: mm
+    range: {min: null, max: null}
+    step: null
+    baseline: null
+    effect: "higher = higher CG, more weight transfer; lower = more stable"
+    sources: [ballast_guides]
+    confidence: unknown
+    notes: "Mounting adjustability on this chassis not documented."
+  caster:
+    exists: unknown
+    units: deg
+    range: {min: null, max: null}
+    step: null
+    baseline: 10.5
+    effect: "not recommendable until confirmed adjustable"
+    sources: [topkart_usa_kidkart_old]
+    confidence: expert_consensus
+    notes: "Older page lists spindle 'D.17 / 10.5 deg', probably built-in angle (unconfirmed what it measures). No factory eccentrics found; aftermarket Sniper SA1 exists (pk_sniper_sa1)."
+  camber:
+    exists: unknown
+    units: deg
+    range: {min: null, max: null}
+    step: null
+    baseline: null
+    effect: "not recommendable until confirmed adjustable"
+    sources: []
+    confidence: unknown
+  toe:
+    exists: true
+    units: mm
+    range: {min: null, max: null}
+    step: null
+    baseline: null
+    effect: "unknown baseline; do not recommend changes until baseline measured"
+    sources: [topkart_usa_chassisparts]
+    confidence: inferred
+    notes: "Tie rods confirmed as parts; adjustable rod ends assumed (universal on karts), not confirmed."
+  ride_height:
+    exists: unknown
+    units: mm
+    range: {min: null, max: null}
+    step: null
+    baseline: null
+    effect: "not recommendable until confirmed"
+    sources: []
+    confidence: unknown
+  axle:
+    exists: true
+    adjustable_stiffness: unknown
+    diameter_mm_conflict:
+      - {value: 25, length_mm: 950, wall_mm: 3, sources: [topkart_usa_kidkart_old, topkart_usa_axle25, mondokart_rt20, gokartsusa_c50], confidence: manufacturer}
+      - {value: 30, sources: [topkart_usa_2026_page], confidence: expert_consensus}
+    effect: "softer = suits high grip; stiffer = suits low grip (generic; only if alternative axles exist)"
+    sources: [topkart_usa_axle25, topkart_usa_2026_page, generic_setup_guides]
+    confidence: unknown
+    notes: "Owner must measure. No alternative hardness TopKart kid axles found."
+  torsion_bar:
+    exists: unknown
+    effect: "no evidence this chassis has bars; never recommend"
+    sources: []
+    confidence: unknown
+  ballast:
+    exists: true
+    units: lb
+    mounting_points: null
+    effect: "low/central = stable baseline; higher = more weight transfer, nervous on brakes/curbs; lowering ballast is part of a hop cure"
+    sources: [ballast_guides, ssc_2005, ovka_2025, badger]
+    confidence: expert_consensus
+    notes: "Needed to reach club minimum (commonly 150 lb kart+driver)."
+  steering_ratio:
+    exists: unknown
+    effect: "slower ratio easier for young drivers (generic, single source)"
+    sources: []
+    confidence: unknown
+  brakes:
+    exists: true
+    type: "mechanical, rear only"
+    adjustable_bias: false
+    sources: [topkart_usa_2026_page, topkart_usa_kidkart_old, gokartsusa_c50]
+    confidence: manufacturer
+    notes: "'Mechanical' agreed by 2 TopKart pages; 'rear' from GoKartsUSA only."
+
+chassis_specs:
+  tubing_mm: {value: 25, sources: [topkart_usa_2026_page, topkart_usa_kidkart_old, mondokart_rt20], confidence: manufacturer}
+  wheelbase_mm: {value: 770, sources: [topkart_usa_2026_page, mondokart_rt20, gokartsusa_c50], confidence: manufacturer}
+  overall_width_in: {value: 42, sources: [gokartsusa_c50], confidence: expert_consensus}
+  spindle_mm: {value: 17, sources: [topkart_usa_kidkart_old, topkart_usa_spindles], confidence: manufacturer}
+  seat: {value: "IMAF Puffo (Silver)", sources: [topkart_usa_2026_page, topkart_usa_kidkart_old], confidence: manufacturer}
+  wheels: {value: "aluminium 112DSM/140", sources: [topkart_usa_2026_page, topkart_usa_kidkart_old], confidence: manufacturer}
+
+weight_distribution:
+  rear_pct_target: {value: null, sources: [], confidence: unknown, adult_kart_reference: {value: 57, sources: [weight_dist_guides, ssc_2005], confidence: expert_consensus}}
+  left_pct_target: {value: null, sources: [], confidence: unknown, adult_kart_reference: {value: 50, sources: [weight_dist_guides, ssc_2005], confidence: expert_consensus}}
+  cross_weight_pct_target: {value: null, sources: [], confidence: unknown, adult_kart_reference: {value: 50, sources: [weight_dist_guides], confidence: expert_consensus}}
+  notes: "No kid-kart-specific targets found. Adult references are not to be used as kid baselines without user confirmation."
+
+tires:
+  - {brand: "MG", model: "SH / SH2 (Red)", size_front: "10x4.50-5", size_rear: "10x4.50-5", max_circumference_in: 33.375, pressure_psi: {min: null, max: null, baseline_front: null, baseline_rear: null}, sources: [badger], confidence: track_official, notes: "Badger Kart Club spec; size per OVKA/AMP 4.5 F/R. Adult-kart MG Red ranges (~12-15 cold) in mg_red_pressure_guides are not kid-specific."}
+  - {brand: "MG", model: "HZ Red", size_front: "4.5 (5in rim)", size_rear: "4.5 (5in rim)", pressure_psi: {min: null, max: null, baseline_front: null, baseline_rear: null}, sources: [amp_2018], confidence: track_official, notes: "2018 doc."}
+  - {brand: "MG", model: "Red", size_front: "450x5", size_rear: "450x5", max_circumference_in_rear: 33, pressure_psi: {min: null, max: null, baseline_front: null, baseline_rear: null}, sources: [newcastle], confidence: track_official}
+  - {brand: "Hoosier", model: "R60B", size_front: "10.0x4.5-5", size_rear: "10.0x4.5-5", pressure_psi: {min: null, max: null, baseline_front: null, baseline_rear: null}, sources: [kart61, hoosier_r60b], confidence: track_official, notes: "61 Kartway citing 2026 WKA Tech Manual (not verified against WKA)."}
+  - {brand: "Bridgestone", model: "YLC", size_front: "4.50 (likely 10x4.50-5)", size_rear: "4.50 (likely 10x4.50-5)", pressure_psi: {min: null, max: null, baseline_front: null, baseline_rear: null}, sources: [gokartsusa_c50], confidence: inferred, notes: "As delivered on an older complete TopKart; listing says '4.50x10'."}
+
+pressure_rules:
+  - {max_psi: 20, when: "hot or cold / any point pre or post event", sources: [ckc_2026, kp_kid_pressure], confidence: track_official}
+  - {max_psi: 30, when: "after race", sources: [road_america_2025], confidence: track_official}
+
+balance_levers:   # generic kart guidance; sign = effect of the stated direction
+  - {lever: rear_track_width, direction: "-1/4 in per side (3-5 mm)", effect: "more rear grip, less stable; cures loose/oversteer on exit", sources: [generic_setup_guides], confidence: expert_consensus}
+  - {lever: rear_track_width, direction: "+1/4 in per side", effect: "less rear grip, freer/more stable; cures push and hop", sources: [generic_setup_guides, ssc_2005], confidence: expert_consensus}
+  - {lever: front_track_width, direction: "+5 mm per side (one spacer)", effect: "more front grip/turn-in; cures push; too wide = twitchy", sources: [generic_setup_guides], confidence: expert_consensus}
+  - {lever: rear_tire_pressure, direction: "-0.5 to -1 psi", effect: "more rear grip; cures rear sliding on entry", sources: [generic_setup_guides], confidence: expert_consensus}
+  - {lever: rear_tire_pressure, direction: "+0.5 to +1 psi", effect: "less rear grip; part of hop cure", sources: [ssc_2005], confidence: expert_consensus}
+  - {lever: tire_pressure_cold_day, direction: "higher start pressure in cold", effect: "faster heat build-up", sources: [mg_red_pressure_guides, kp_kid_pressure], confidence: expert_consensus}
+  - {lever: rear_hub_length, direction: "shorter", effect: "less rear grip, frees kart; hop cure", sources: [ssc_2005, pk_righetti_25hubs], confidence: expert_consensus}
+  - {lever: ballast_height, direction: "lower", effect: "more stable, less weight transfer; hop cure", sources: [ballast_guides, ssc_2005], confidence: expert_consensus}
+  - {lever: seat_fore_aft, direction: "forward", effect: "more front weight %", sources: [weight_dist_guides], confidence: expert_consensus}
+
+quirks:
+  - {text: "Axle diameter differs between sources: 25 mm (older spec, 25x950x3 part) vs 30 mm (2026 product page). Bearings, hubs and cassettes are not interchangeable between them; measure before ordering or recommending hub changes.", sources: [topkart_usa_2026_page, topkart_usa_axle25, topkart_usa_bearings], confidence: expert_consensus}
+  - {text: "The D.17 spindle type used on Mini and Kid Kart is listed as discontinued.", sources: [topkart_usa_spindles], confidence: expert_consensus}
+  - {text: "2026 Kid Kart ships without tires.", sources: [topkart_usa_2026_page], confidence: expert_consensus}
+  - {text: "Kid kart tire wear dots often do not touch the ground; do not use them to judge pressure.", sources: [kp_kid_tires], confidence: inferred}
+  - {text: "Kid kart tires are hard and the kart is light, so they build little heat; forum practice is to run near the 20 psi cap and bleed to ~19-19.5 after warm-up.", sources: [kp_kid_pressure], confidence: inferred}
+  - {text: "For 5-8 year-olds, a predictable, easy-to-drive kart (neither loose nor pushing) and a correct seat position matter more than fine tuning.", sources: [kid_stability_forum], confidence: inferred}
+  - {text: "TopKart USA parts were reported ~3 days out in the USA.", sources: [kp_topkart_opinions], confidence: inferred}

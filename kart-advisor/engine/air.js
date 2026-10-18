@@ -44,6 +44,11 @@ export function densityAltitudeFromDensity(rho) {
   return (ISA.T0 / ISA.L) * (1 - Math.pow(rho / ISA.rho0, 1 / (EXP - 1)));
 }
 
+// ISA density at a given density altitude (m). Inverse of densityAltitudeFromDensity.
+export function densityFromDensityAltitude(hM) {
+  return ISA.rho0 * Math.pow(1 - (ISA.L * hM) / ISA.T0, EXP - 1);
+}
+
 // Convenience: everything the engine needs from the weather inputs.
 // pressure: { kind: 'station' | 'sea_level', hpa }; elevation is required for 'sea_level',
 // and is used to estimate station pressure when pressure is missing entirely.

@@ -1,0 +1,34 @@
+# WKA Kid Kart (Comer) limits the engine enforces. From research/engine-comer-c52.md and
+# research/carb-comer-14mm.md. Search summaries only: confirm against the current WKA Tech Manual.
+schema_version: 1
+updated: 2026-10-18
+id: wka
+name: "WKA Kid Kart (Comer), Tech Manual §621 + TM Update 2022-002"
+body: WKA
+layer: sanctioning_body
+sources:
+  wka_tm_2022_002: {url: "https://www.worldkarting.com/tm-update-2022-002/", title: "WKA TM Update 2022-002", confidence: sanctioning_body, accessed: 2026-10-18, notes: "search summaries only"}
+  wka_tm_2022_002_pdf: {url: "https://www.worldkarting.com/wp-content/uploads/2022/04/Tech-Update-2022-002-COMER-C52.pdf", title: "Tech Update 2022-002 COMER C52 (PDF)", confidence: sanctioning_body, accessed: 2026-10-18, notes: "fetch failed; summaries only"}
+  wka_2023_changes: {url: "https://www.worldkarting.com/documents/2022/10/2023-wka-tech-manual-approved-changes.pdf/", title: "2023 WKA Tech Manual Approved Changes", confidence: sanctioning_body, accessed: 2026-10-18}
+  wka_mfg_cup: {url: "https://www.worldkarting.com/series/manufacturers-cup/", title: "WKA Manufacturers Cup Series", confidence: sanctioning_body, accessed: 2026-10-18, notes: "possibly outdated; says Comer C51 only"}
+  wka_fl_winter: {url: "https://www.worldkarting.com/series/florida-winter-cup/", title: "WKA Florida Winter Cup Series", confidence: sanctioning_body, accessed: 2026-10-18}
+  wka_tm_2019_001: {url: "https://nicole-gaines-8xm9.squarespace.com/tech-updates/tm-update-2019-001", title: "WKA TM Update 2019-001", confidence: track_official, accessed: 2026-10-18}
+limits:
+  - {field: engine_model, op: one_of, value: ["Comer C51", "Comer C52"], section: "621 (TM 2022-002)", sources: [wka_tm_2022_002, wka_2023_changes], confidence: sanctioning_body, text: "C51 or C52; C50 and C50 parts banned from 2023"}
+  - {field: carb_model, op: eq, value: "Dell'Orto SHA 14-12L", section: "621.1", sources: [wka_tm_2022_002_pdf], confidence: sanctioning_body, text: "Only the SHA 14-12L, all parts as cast"}
+  - {field: driver_sprocket, op: eq, value: 10, section: "621.17.1", sources: [wka_tm_2022_002_pdf], confidence: sanctioning_body, text: "Comer 10-tooth clutch drum"}
+  - {field: chain, op: eq, value: "#219", section: "621.17.1", sources: [wka_tm_2022_002_pdf], confidence: sanctioning_body}
+  - {field: min_weight_lb, op: min, value: 150, section: "series class table", sources: [wka_mfg_cup, wka_fl_winter], confidence: sanctioning_body, text: "kart + driver, ready to race"}
+  - {field: fuel, op: eq, value: "87 octane gasoline", section: "series rules", sources: [wka_mfg_cup, wka_tm_2019_001], confidence: sanctioning_body, text: "spec 87 octane pump gas plus oil"}
+  - {field: main_jet, op: note, value: "Jet size is non-tech (no WKA maximum)", section: "621.1.2", sources: [wka_tm_2022_002], confidence: track_official}
+  - {field: axle_sprocket, op: note, value: "No national gear rule; 10/89 suggested. Local clubs may mandate a gear.", section: "621", sources: [wka_tm_2022_002_pdf], confidence: track_official}
+  - {field: driver_age, op: note, value: "5–7 (series tables; clubs often 5–8)", sources: [wka_mfg_cup, wka_fl_winter], confidence: sanctioning_body}
+# Engine tech items the app does not set, shown for reference only.
+tech:
+  - {item: "Ignition timing 0.055–0.067 in BTDC (≈19–21°)", sources: [wka_tm_2022_002], confidence: track_official}
+  - {item: "C52 combustion chamber ≥ 7.7 cc", sources: [wka_tm_2022_002_pdf], confidence: track_official}
+  - {item: "C52 exhaust port height ≥ 1.206 in; intake port height ≤ 0.435 in", sources: [wka_tm_2022_002_pdf], confidence: track_official}
+  - {item: "Original muffler; exit-hole limits (values unknown)", sources: [wka_tm_2022_002], confidence: track_official}
+  - {item: "Carb venturi 0.475 in no-go; atomizer holes 0.035 / 0.049 in no-go", sources: [wka_tm_2022_002], confidence: sanctioning_body}
+  - {item: "Clutch shoe and spring dimensions are specified (values not visible in summaries)", sources: [wka_tm_2022_002], confidence: unknown}
+  - {item: "No restrictor found in §621 summaries (one Little Eldora sheet mentions a 'WKA restrictor')", sources: [wka_tm_2022_002], confidence: unknown}

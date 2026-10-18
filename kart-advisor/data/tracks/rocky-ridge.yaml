@@ -1,0 +1,211 @@
+# Rocky Ridge Raceway. From research/tracks.md; built from web-search summaries only (fetch blocked).
+# "expert_consensus" with a "capped" note = a track_official page seen only via search summary.
+schema_version: 1
+updated: 2026-10-18
+sources:
+  sevendays_2026:
+    url: https://www.sevendaysvt.com/arts-culture/sports/drivers-at-rocky-ridge-raceway-battle-for-the-checkered-flag/
+    title: "Drivers at Rocky Ridge Raceway Battle for the Checkered Flag (Seven Days)"
+    confidence: expert_consensus
+    accessed: 2026-10-18
+    notes: "Press quoting the track. 910 ft paved, 6 classes, drivers from age 4, kids run single-gear karts. Seen only via search summary."
+  timesargus_2026:
+    url: https://www.timesargus.com/eedition/page-a5/page_d17c0e20-afdb-583d-bfe9-ed2120bda3f3.html
+    title: "Business Briefs, Aug. 22, 2026 (Times Argus)"
+    confidence: expert_consensus
+    accessed: 2026-10-18
+    notes: "905 Pirie Rd, 910 ft paved, 20th anniversary. May share press material with Seven Days."
+  vtsk_rules:
+    url: https://vtshifterkarts.com/2021-rules-regulations/
+    title: "VT Shifter Karts Rules & Regulations (heading: Class Structure 2024)"
+    confidence: expert_consensus
+    accessed: 2026-10-18
+    notes: "track_official, capped (summary only). Kid Kart: 50c Comer, weight/details/tires/fuel open, ages 4-7. No 2025/2026 sheet found."
+  vtsk_sponsor:
+    url: https://vtshifterkarts.com/sponsorship-opportunities-become-part-of-the-team/
+    title: "VT Shifter Karts sponsorship page"
+    confidence: expert_consensus
+    accessed: 2026-10-18
+    notes: "track_official, capped. Built 2006, paved road course about 1/5 mile, 16 ft elevation change."
+  vtsk_blog:
+    url: https://vtshifterkarts.com/home/blog/
+    title: "VT Shifter Karts blog / race results"
+    confidence: expert_consensus
+    accessed: 2026-10-18
+    notes: "track_official, capped. Describes Kid Kart as Comer 50cc, 4-6 year olds."
+  kartdirectory_rr:
+    url: https://kartdirectory.racing/us/circuit/rocky-ridge-raceway/
+    title: "Kart Directory: Rocky Ridge Raceway"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "1/5 mile road course, Kid Kart ages 4-6. May copy the club site."
+  getinthestands_rr:
+    url: https://www.getinthestands.com/vermont/williamstown/motorsports/rocky-ridge-raceway
+    title: "GetInTheStands: Rocky Ridge Raceway"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "1/6 mile asphalt; listed under Williamstown."
+  racingnear_rr:
+    url: https://racingnear.me/venues/rocky-ridge-raceway/
+    title: "racingnear.me: Rocky Ridge Raceway"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "905 Pirie Rd, Graniteville 05654; phone (802) 839-0486."
+  wiki_graniteville:
+    url: https://en.wikipedia.org/wiki/Graniteville,_Vermont
+    title: "Graniteville, Vermont (Wikipedia)"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Village centre 44.14917, -72.49222; elevation 1,378 ft (420 m). Not the track itself."
+  zip_05654:
+    url: https://us-databases.com/zip-code/05654/
+    title: "ZIP 05654"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "1,452 ft at about 44.138, -72.487."
+  yt_rr_lap:
+    url: https://www.youtube.com/watch?v=6AXpWMTNLCk
+    title: "Rocky Ridge Raceway (Jr Shifter lap), about 20 years old"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Location not confirmed. Candidate for layout or direction check."
+
+id: rocky-ridge
+name: Rocky Ridge Raceway
+short_name: Rocky Ridge
+geometry_status: "No centreline yet: Overpass blocked from the build session. Add screenshots to tracks/rocky-ridge/images/ or a centreline here."
+
+# Club rule layer enforced by the engine (VT Shifter Karts 'Class Structure 2024'; no 2025/2026 sheet found).
+rules_name: "VT Shifter Karts Kid Kart (2024 class structure)"
+limits:
+  - {field: engine_model, op: one_of, value: ["Comer C50", "Comer C51", "Comer C52"], sources: [vtsk_rules, vtsk_blog], confidence: expert_consensus, text: "'50c Comer'. C52 assumed eligible: confirm."}
+  - {field: min_weight_lb, op: note, value: "open (no minimum listed)", sources: [vtsk_rules], confidence: expert_consensus}
+  - {field: tire_spec, op: note, value: "open", sources: [vtsk_rules], confidence: expert_consensus}
+  - {field: fuel, op: note, value: "open", sources: [vtsk_rules], confidence: expert_consensus}
+  - {field: axle_sprocket, op: note, value: "No gear rule found ('single-gear' = no gearbox)", sources: [sevendays_2026], confidence: unknown}
+  - {field: driver_age, op: note, value: "4-7 (rules table) or 4-6 (club blog)", sources: [vtsk_rules, vtsk_blog], confidence: expert_consensus}
+club_name: VT Shifter Karts
+
+location:
+  address:
+    value: "905 Pirie Rd, Graniteville (Barre), VT 05654"
+    sources: [sevendays_2026, timesargus_2026, racingnear_rr]
+    confidence: expert_consensus
+    notes: "One listing gives 400 Baptist St (conflict)."
+  lat:
+    value: 44.1492
+    sources: [wiki_graniteville]
+    confidence: inferred
+    derivation: "Graniteville village centre; 905 Pirie Rd not geocoded. Replace with the track centroid."
+  lon:
+    value: -72.4922
+    sources: [wiki_graniteville]
+    confidence: inferred
+    derivation: "Graniteville village centre; see lat."
+  elevation_ft:
+    value: 1450
+    sources: [wiki_graniteville, zip_05654]
+    confidence: inferred
+    derivation: "Nearby place and ZIP elevations range 1,378-1,466 ft; ~1,450 chosen as ZIP-centroid value. Confirm with GPS or USGS."
+  elevation_change_ft:
+    value: 16
+    sources: [vtsk_sponsor]
+    confidence: expert_consensus
+    notes: "track_official, capped (single club page via summary)."
+
+surface:
+  value: asphalt (paved)
+  sources: [sevendays_2026, getinthestands_rr, vtsk_sponsor]
+  confidence: expert_consensus
+  notes: "Built 2006; repave history unknown."
+
+configurations:
+  - id: main
+    name: "Rocky Ridge road course"
+    length_ft:
+      value: null
+      confidence: unknown
+      conflict:
+        - {value: 910, sources: [sevendays_2026, timesargus_2026], confidence: expert_consensus}
+        - {value: 1056, sources: [vtsk_sponsor, kartdirectory_rr], confidence: expert_consensus, notes: "'about a fifth of a mile', converted"}
+        - {value: 880, sources: [getinthestands_rr], confidence: anecdote, notes: "1/6 mile, converted"}
+      notes: "Not averaged. 910 ft is the newest figure; confirm with the user."
+    direction: null
+    turns: null
+    kid_kart: unknown
+    centerline: null
+    corners: []
+    sources: [vtsk_sponsor, sevendays_2026]
+    confidence: expert_consensus
+
+qualitative_corners:
+  - "No corner-by-corner description found."
+  - "Road course 'designed to mimic professional circuits' (kartdirectory_rr, anecdote)."
+  - "16 ft elevation change on the lap (vtsk_sponsor)."
+  - "Short lap (~880-1,056 ft), so corners come in quick succession (inferred)."
+
+local_rules:
+  club:
+    value: VT Shifter Karts
+    sources: [vtsk_rules, timesargus_2026]
+    confidence: expert_consensus
+  sanctioning_body:
+    value: null
+    sources: []
+    confidence: unknown
+    notes: "Club page calls it 'Vermont's only sanctioned go kart racing facility' without naming the body."
+  rules_year:
+    value: 2024
+    sources: [vtsk_rules]
+    confidence: expert_consensus
+    notes: "No 2025/2026 class sheet found."
+  kid_kart_class:
+    name: {value: Kid Kart, sources: [vtsk_rules], confidence: expert_consensus}
+    engine:
+      value: "50cc Comer ('50c Comer')"
+      sources: [vtsk_rules, vtsk_blog]
+      confidence: expert_consensus
+      notes: "C52 assumed eligible as a 50cc Comer (inferred). Confirm."
+    min_weight_lb:
+      value: open
+      sources: [vtsk_rules]
+      confidence: expert_consensus
+      notes: "Rules table says 'open', meaning no minimum."
+    tires:
+      value: open
+      sources: [vtsk_rules]
+      confidence: expert_consensus
+    gearing:
+      value: null
+      sources: [sevendays_2026]
+      confidence: unknown
+      notes: "Seven Days: kids run 'single-gear' karts (no gearbox). No sprocket spec found."
+    restrictor:
+      value: null
+      sources: []
+      confidence: unknown
+    fuel:
+      value: open
+      sources: [vtsk_rules]
+      confidence: expert_consensus
+    age:
+      value: null
+      confidence: unknown
+      conflict:
+        - {value: "4-7", sources: [vtsk_rules], confidence: expert_consensus}
+        - {value: "4-6", sources: [vtsk_blog, kartdirectory_rr], confidence: expert_consensus}
+    safety:
+      value: "Rib protector required; helmet Snell M2015/SA2015 or SFI 31.2/41.2 or newer; transponder needed to be scored"
+      sources: [vtsk_rules]
+      confidence: expert_consensus
+    racing:
+      value: "Kid Karts race (results posted) on Wednesday nights"
+      sources: [vtsk_blog, timesargus_2026]
+      confidence: expert_consensus
+
+inferred_items:
+  - "lat/lon = village centre, not track (needs map/GPS)."
+  - "elevation_ft ~1,450 from place/ZIP data."
+  - "Comer C52 eligible under '50c Comer'."
+  - "Kid karts run the full course (no source either way): kid_kart left as unknown."
+  - "Short lap means rapid corner sequence."

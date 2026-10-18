@@ -1,0 +1,270 @@
+# OVRP (Oakland Valley Race Park). From research/tracks.md; built from web-search summaries only (fetch blocked).
+# "expert_consensus" with a "capped" note = a track_official page seen only via search summary.
+schema_version: 1
+updated: 2026-10-18
+sources:
+  ovrp_track:
+    url: https://ovrp.net/track/
+    title: "OVRP: Track"
+    confidence: expert_consensus
+    accessed: 2026-10-18
+    notes: "track_official, capped. 0.75 mi, 26 ft wide, 30 ft start/finish straight, 135-degree left after S/F, box turn, uphill chicane, 180-degree hairpin (redesign), new curbing, run-off, TecPro. Page is about 5.5 years old."
+  ovrp_about:
+    url: https://ovrp.net/about/
+    title: "OVRP: About"
+    confidence: track_official
+    accessed: 2026-10-18
+    notes: "3/4 mile asphalt sprint road course. Agrees with other sources."
+  ovrp_rentals:
+    url: https://ovrp.net/performance-kart-rentals/
+    title: "OVRP: LO206 Race Rental Karts"
+    confidence: expert_consensus
+    accessed: 2026-10-18
+    notes: "track_official, capped. '3/4 mile, 11 turn, technical' track; Kid Kart rentals exist."
+  ovrp_kart_racing:
+    url: https://ovrp.net/kart-racing/
+    title: "OVRP: Kart Racing"
+    confidence: track_official
+    accessed: 2026-10-18
+    notes: "Links the 2026 OVRP Kart Club New Class Structure and 2026 Complete Rules (contents not seen). 15 club races in 2026."
+  ovrp_forms:
+    url: https://ovrp.net/forms-docs/
+    title: "OVRP: Forms & Docs"
+    confidence: track_official
+    accessed: 2026-10-18
+    notes: "Lists '2026 OVRP Club Karting: Class / Specs' and 'Rules'. Contents not retrieved."
+  ovrp_class_2024:
+    url: https://ovrp.net/wp-content/uploads/2024/03/Kart-Racing-Class-Structure-Description-and-Specs.pdf
+    title: "OVRP Kart Racing Class Structure, Description, and Specs (2024)"
+    confidence: track_official
+    accessed: 2026-10-18
+    notes: "Kid Kart | C51* | 150 | *89 Rear Gear | MG Red/MG Rain | MS98L/MS93 | 5-8. Agrees with the 2019 and 2022 versions. Snippet text garbled."
+  ovrp_class_2022:
+    url: https://ovrp.net/wp-content/uploads/2022/03/2021-Kart-Class-Desc-Spec-1-3-3.pdf
+    title: "OVRP 2022 Karting Class Structure"
+    confidence: track_official
+    accessed: 2026-10-18
+    notes: "Kid Kart 150, *89 rear gear, MG Red / MG (Premium?), ages 5-8."
+  ovrp_class_2019:
+    url: https://www.ovrp.net/wp-content/uploads/2019/04/2019-Kart-Class-Desc-Spec-1.pdf
+    title: "OVRP 2019 Karting Class Structure"
+    confidence: track_official
+    accessed: 2026-10-18
+    notes: "Kid Kart C51*, 150, *89 rear gear, MG Red/MG, MS98L, 5-8."
+  ovrp_class_2025:
+    url: https://ovrp.net/wp-content/uploads/2025/01/Kart-Racing-Class-Structure-Description-and-Specs.-2.pdf
+    title: "OVRP Class Structure (Jan 2025 upload)"
+    confidence: expert_consensus
+    accessed: 2026-10-18
+    notes: "Search summaries disagreed on whether it shows a Kid Kart row (one said 150 lb, 5-8; another did not see the row)."
+  ness_2017:
+    url: https://ovrp.net/wp-content/uploads/2017/04/NESS-STURCTURE_NEW.pdf
+    title: "North East Super Series class structure (2017)"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Kid Kart M1-IAME, 150, spec gear 89, MG Red/MG Rain, 5-8. Series sheet, old."
+  ovrp_lessons:
+    url: https://ovrp.net/karting-lessons/
+    title: "OVRP: Karting Lessons"
+    confidence: track_official
+    accessed: 2026-10-18
+    notes: "Getting Started 5+; Kid Kart program teaches flags and controls."
+  ekn_2020:
+    url: https://www.ekartingnews.com/?p=106910
+    title: "Oakland Valley Race Park Adds Ignite Senior in 2020 (eKartingNews)"
+    confidence: expert_consensus
+    accessed: 2026-10-18
+    notes: "Newly paved 0.75 mile kart circuit."
+  pickocny:
+    url: https://www.pickocny.com/explore-orange-county-ny/p/ovrp---oakland-valley-race-park-644932a818b8847a9ae0135c/
+    title: "Pick Orange County NY: OVRP listing"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Embedded geocode 41.4742348, -74.6142592."
+  mapquest_ovrp:
+    url: https://www.mapquest.com/us/new-york/oakland-valley-race-park-367209776
+    title: "MapQuest: Oakland Valley Race Park"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "41.474357, -74.614153; 305 Oakland Valley Rd."
+  rrw_2011:
+    url: https://www.roadracingworld.com/?p=31379
+    title: "Roadracing World (2011)"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "305 Oakland Valley Road, Cuddebackville NY 12729; 845-754-8500."
+  bmwcca:
+    url: https://www.bmwcca.org/event/ny-chapter-spring-kart-race
+    title: "BMW CCA NY Chapter Spring Kart Race"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "'real go-kart track with elevation, increasing and decreasing radius turns'."
+  viperclub:
+    url: https://www.viperclub.org/vca/threads/ny-ct-vs-ne-karting-event-at-oakland-valley-sunday-sept-3rd.593419
+    title: "Viper Club forum: karting event at Oakland Valley"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Older: 1/2 mile asphalt sprint road course; 1/5 mile dirt oval."
+  indexmundi_cudd:
+    url: https://www.indexmundi.com/zp/us/37300.htm
+    title: "IndexMundi gazetteer: Cuddebackville"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Hamlet 158 m (520 ft), 41.46722, -74.59417."
+  wu_pws_cudd:
+    url: https://wu-next-prod.wunderground.com/weather/us/ny/westbrookville/KNYCUDDE18
+    title: "Weather Underground PWS KNYCUDDE18"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Elev 965 ft at 41.49, -74.62."
+  yt_ovrp_new:
+    url: https://www.youtube.com/watch?v=B3mDj7A9I38
+    title: "Onboard Lap of the New & Improved OVRP"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Reconfigured layout onboard. Use it to confirm direction and corner order."
+  yt_ovrp_s3:
+    url: https://www.youtube.com/watch?v=PE51gN1Clc8
+    title: "OVRP (7/24/20) Session 3"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Best lap 53.420 s (kart class unknown)."
+
+id: ovrp
+name: OVRP (Oakland Valley Race Park)
+short_name: OVRP
+geometry_status: "No centreline yet: Overpass blocked from the build session. Add screenshots to tracks/ovrp/images/ or a centreline here."
+
+# Club rule layer enforced by the engine (2019-2024 class sheets agree; 2026 sheet unread).
+rules_name: "OVRP Kart Club Kid Kart (2024 class sheet)"
+limits:
+  - {field: engine_model, op: one_of, value: ["Comer C51"], sources: [ovrp_class_2024, ovrp_class_2019], confidence: track_official, text: "Sheet lists 'C51*'. The C52 is not mentioned: confirm with OVRP tech before racing a C52."}
+  - {field: axle_sprocket, op: eq, value: 89, sources: [ovrp_class_2024, ovrp_class_2022, ovrp_class_2019], confidence: track_official, text: "Spec 89-tooth rear gear"}
+  - {field: min_weight_lb, op: min, value: 150, sources: [ovrp_class_2024, ovrp_class_2022, ovrp_class_2019], confidence: track_official, text: "Units assumed lb, kart + driver"}
+  - {field: tire_spec, op: one_of, value: ["MG Red", "MG Rain"], sources: [ovrp_class_2024, ovrp_class_2019, ness_2017], confidence: track_official, text: "MG Red dry, MG Rain wet"}
+  - {field: fuel, op: one_of, value: ["MS98L", "MS93"], sources: [ovrp_class_2024, ovrp_class_2019], confidence: expert_consensus}
+  - {field: driver_age, op: note, value: "5-8", sources: [ovrp_class_2024, ovrp_class_2022, ovrp_class_2019], confidence: track_official}
+
+location:
+  address:
+    value: "305 Oakland Valley Rd, Cuddebackville, NY 12729"
+    sources: [rrw_2011, mapquest_ovrp, pickocny]
+    confidence: expert_consensus
+  lat:
+    value: 41.4743
+    sources: [pickocny, mapquest_ovrp]
+    confidence: expert_consensus
+    notes: "Two independent address geocodes agree to about 20 m. This is the address point, not necessarily the track centroid."
+  lon:
+    value: -74.6142
+    sources: [pickocny, mapquest_ovrp]
+    confidence: expert_consensus
+  elevation_ft:
+    value: 520
+    sources: [indexmundi_cudd, wu_pws_cudd]
+    confidence: inferred
+    derivation: "Hamlet gazetteer elevation (520 ft); the track is about 2 km NW of the hamlet centre. A nearby PWS reads 965 ft, so the true value may be higher. Confirm with GPS or USGS."
+  elevation_change_ft:
+    value: null
+    sources: [bmwcca, ovrp_track]
+    confidence: unknown
+    notes: "Qualitative only: 'elevation', 'uphill chicane'."
+
+surface:
+  value: "asphalt, newly paved around 2020"
+  sources: [ekn_2020, ovrp_about]
+  confidence: track_official
+
+configurations:
+  - id: main
+    name: "OVRP 3/4-mile sprint road course (redesigned layout)"
+    length_ft:
+      value: 3960
+      sources: [ovrp_track, ovrp_about, ovrp_rentals, ekn_2020]
+      confidence: track_official
+      notes: "Published as 0.75 mi; feet are a unit conversion (inferred). Older posts cite 1/2 mi (viperclub, skipbarber 2006), probably the pre-redesign layout."
+    width_ft:
+      value: 26
+      sources: [ovrp_track]
+      confidence: expert_consensus
+      notes: "track_official capped. Start/finish straight is 30 ft wide."
+    turns:
+      value: 11
+      sources: [ovrp_rentals]
+      confidence: expert_consensus
+      notes: "track_official capped; undated page."
+    direction: null
+    kid_kart: unknown
+    centerline: null
+    corners: []
+    sources: [ovrp_track, ovrp_rentals]
+    confidence: track_official
+
+qualitative_corners:
+  - "End of 30 ft-wide start/finish straight: 135-degree left-hander, with enlarged paved run-off (ovrp_track)."
+  - "'Box turn': signature feature, shape not described (ovrp_track)."
+  - "Uphill chicane (ovrp_track)."
+  - "180-degree hairpin now connects the box turn and the uphill chicane (redesign; ovrp_track)."
+  - "'Increasing and decreasing radius turns', elevation (bmwcca, anecdote)."
+  - "Corner order beyond the above, longest straight, and radii are unknown. Use the onboard yt_ovrp_new plus screenshots."
+
+local_rules:
+  club:
+    value: OVRP Kart Club
+    sources: [ovrp_kart_racing, ovrp_forms]
+    confidence: track_official
+  sanctioning_body:
+    value: null
+    sources: []
+    confidence: unknown
+    notes: "Track-run club. 2006 material mentions the WKA Northeast Sprint Series; no current sanctioning found."
+  rules_year:
+    value: "2019-2024 sheets (2026 sheet exists, contents unseen)"
+    sources: [ovrp_class_2024, ovrp_forms]
+    confidence: track_official
+  kid_kart_class:
+    name: {value: Kid Kart, sources: [ovrp_class_2024, ovrp_class_2022, ovrp_class_2019], confidence: track_official}
+    engine:
+      value: "Comer C51 ('C51*')"
+      sources: [ovrp_class_2024, ovrp_class_2019]
+      confidence: track_official
+      notes: "Asterisk meaning unclear. NESS 2017 sheet lists M1-IAME (conflict). C52 legality UNKNOWN; check the 2026 sheet."
+    min_weight_lb:
+      value: 150
+      sources: [ovrp_class_2024, ovrp_class_2022, ovrp_class_2019]
+      confidence: track_official
+      notes: "Units not printed in snippets (lb assumed); kart plus driver assumed. 2026 may differ."
+    tires:
+      value: "MG Red (dry) / MG Rain (wet)"
+      sources: [ovrp_class_2024, ovrp_class_2019, ness_2017]
+      confidence: track_official
+    gearing:
+      value: "89T rear sprocket (spec)"
+      sources: [ovrp_class_2024, ovrp_class_2022, ovrp_class_2019, ness_2017]
+      confidence: track_official
+      notes: "Driver/clutch tooth count not stated."
+    restrictor:
+      value: null
+      sources: []
+      confidence: unknown
+    fuel:
+      value: "MS98L or MS93"
+      sources: [ovrp_class_2024, ovrp_class_2019]
+      confidence: expert_consensus
+      notes: "One summary also listed premium pump or C12 (may be sheet-wide)."
+    age:
+      value: "5-8"
+      sources: [ovrp_class_2024, ovrp_class_2022, ovrp_class_2019]
+      confidence: track_official
+    racing:
+      value: "Kid Kart is a club class (racing); lessons and rentals also offered for 5+"
+      sources: [ovrp_class_2024, ovrp_lessons, ovrp_rentals]
+      confidence: track_official
+
+inferred_items:
+  - "length_ft 3960 = 0.75 mi conversion."
+  - "elevation_ft ~520 from hamlet; may be up to ~965."
+  - "lat/lon are address geocodes, not track centroid."
+  - "min weight 150 is lb, kart plus driver."
+  - "2019-2024 Kid Kart specs still apply in 2026 (2026 sheet unread)."
+  - "Kid karts run the full course: kid_kart left as unknown."

@@ -14,6 +14,7 @@ export const TAGS = {
   rich: 'Runs rich (blubbers, smoky, four-strokes)',
   lean: 'Runs lean (pings, screams, tightens up)',
   slow_warmup: 'Takes laps to get grip',
+  tops_out: 'Revs out before the end of the straight',
   good: 'Kart felt good',
 };
 
@@ -30,6 +31,7 @@ const PHRASES = [
   ['bog', /\b(bog\w*|stumbl\w*|hesitat\w*|flat spot|sluggish|no power off)\b/],
   ['rich', /\b(rich|blubber\w*|four[- ]?strok\w*|4[- ]?strok\w*|smok\w*|wet plug|black plug|loads? up)\b/],
   ['lean', /\b(lean|ping\w*|detonat\w*|screams?|screaming|tightens? up|seiz\w*|sticks?|white plug|overheat\w*)\b/],
+  ['tops_out', /\b(tops? out|topp(ed|ing) out|runs? out of (revs|rpm)|revs? out|signs? off|hits? the limiter|flat at the end)\b/],
   ['slow_warmup', /\b(no grip (at|for) (the )?(start|first)|cold tires?|takes? (a few )?laps|slow to (come in|warm))\b/],
   ['good', /\b(felt good|great|perfect|no (problems|issues)|happy with)\b/],
 ];

@@ -1,0 +1,352 @@
+# Comer C52 carburetor knowledge base. Merged from research/drafts/carb.yaml (see research/carb-comer-14mm.md).
+# Search summaries only. Confidence capped one level below the source type unless independent results agree.
+schema_version: 1
+updated: 2026-10-18
+
+sources:
+  wka_tm_2022_002:
+    url: https://www.worldkarting.com/tm-update-2022-002/
+    title: "WKA TM Update 2022-002 (Comer C52 added to C51 rules; PDF: /wp-content/uploads/2022/04/Tech-Update-2022-002-COMER-C52.pdf)"
+    confidence: track_official
+    accessed: 2026-10-18
+    notes: "WKA sanctioning-body text seen only in search summaries. Capped to the next step down (track_official is the ladder step, not the source type). Raised to sanctioning_body where other sources agree."
+  kra_newcastle_rules:
+    url: https://newcastlemotorsportspark.com/rules
+    title: "Kart Racers of America Supplemental Rules (Newcastle Motorsports Park)"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Track rules seen in a summary, so capped from track_official."
+  amr_kidkart_2018:
+    url: http://amrmotorplex.com/files/1415/4042/7888/AMR_Kid_Kart_Package_v3.pdf
+    title: "AMR Motorplex Kid Kart Class Rules v3 (2018-10-24)"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Track rules seen in a summary; 2018."
+  ovka_wka_2010:
+    url: https://www.ovka.com/files/Tech-Corner/2010_06_June_Tech-Corner3-KidKart.pdf
+    title: "WKA 2010 Kid Kart Series Regulations (OVKA Tech Corner)"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Superseded; marked 'guidelines only'."
+  uas_kidkart:
+    url: http://bergfeltracing.com/stockappearingkidkartrules.html
+    title: "Kid Kart UAS Rules"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Air filter non-tech, no scoop or ram effect."
+  racing90_c52:
+    url: https://90racing.com/products/comer-c52-kart-engine-90-comer-c52
+    title: "90 Racing: Comer C52 kart engine"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Retailer; lists SHA 14-12L."
+  racing90_rc1250:
+    url: https://90racing.com/products/k-n-air-filter-element-rc-1250
+    title: "90 Racing: K&N RC-1250"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "2.25 in flange, conical."
+  zipnorth_c50_carb:
+    url: https://zipnorth.com/collections/comer-c50-carb-fuel-parts
+    title: "Zip North: Comer C50 carb & fuel parts"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Lists SHA 14.12L carb, 1486 main jets (M5x0.75), 6108 slide, needle valve, rebuild kit."
+  pkt_jet_holder:
+    url: https://pointkarting.com/products/pkt-carburetor-jet-kits-holders
+    title: "PKT jet holders and kits (Comer C50/51 #54-#58)"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Mini ROK jets have the same size and thread as Comer jets."
+  pkt_changing_jets:
+    url: https://pktaxles.com/kidkarters-changing-jets.html
+    title: "PKT: Changing Jets (kid karters)"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Claims WKA #58 max / .026 in; probably out of date."
+  skyey_blog:
+    url: https://skyeyunderground.weebly.com/blog/comer-c50-tuning-manually
+    title: "Comer C50 tuning (blog)"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: ".0260 in no-go attributed to WKA / Kid Kart Nationals."
+  kartpulse_comer_jetting:
+    url: https://forums.kartpulse.com/t/questions-about-jetting-changes-on-a-comer-c50-c51/6902
+    title: "KartPulse: Questions about jetting changes on a Comer C50/C51"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Pin-gauged jets 57=.0240, 59=.0245, 61=.0250, 62=.0255 in; .026 no-go."
+  kartpulse_density:
+    url: https://forums.kartpulse.com/t/adjusting-jet-sizes-according-to-changes-in-air-density/4415
+    title: "KartPulse: Adjusting jet sizes according to changes in air density"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Repeats the Longacre rule: 1% density change = 1% jet area change."
+  kartpulse_plug:
+    url: https://forums.kartpulse.com/t/reading-spark-plug-color/6072
+    title: "KartPulse: Reading spark plug color"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: ""
+  kartpulse_leanrich:
+    url: https://forums.kartpulse.com/t/lean-vs-rich-i-try-to-achieve-basic-understanding/9968
+    title: "KartPulse: Lean vs rich"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Lean plug white and chalky; rich plug oily, plus oil from the muffler; EGT preferred."
+  ntk_7786:
+    url: https://www.ntkarters.com/forum325/viewtopic.php?p=7786
+    title: "NTKarters forum: Comer 50 idle/choke problem; #58 ideal with K&N"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "About 2011, Texas. Says #58 was max legal for that class."
+  ntk_forum_8846:
+    url: https://ntkarters.com/forum325/viewtopic.php?p=8846
+    title: "NTKarters forum: 58 jet works 99% with K&N 1250"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Not certain which of posts 8846/8847 holds which quote."
+  myrons_sha:
+    url: https://www.myronsmopeds.com/category/carburetor/dellorto/
+    title: "Myron's Mopeds: Dellorto SHA 14/xx, 15/xx"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "14/12L replaces the 14/12, jet 57; venturi naming; M5x0.75 Dellorto thread."
+  myrons_jets:
+    url: https://www.myronsmopeds.com/?p=65038
+    title: "Myron's Mopeds: Dellorto jets (measured)"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Genuine 54=0.580, 56=0.600, 58=0.615, 60=0.627 mm (6 mm jets)."
+  myrons_service:
+    url: https://myronsmopeds.com/2021/03/dellorto-service
+    title: "Myron's Mopeds: Dellorto service"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "SHA float stamped 3.5 g (measured 3.30-3.65 g); idle hole at the spray tube base."
+  mopedarmy_sha:
+    url: https://www.mopedarmy.com/wiki/Dellorto_SHA
+    title: "Moped Army wiki: Dellorto SHA"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Main jet is the only top-end tuning; slide cutaway controls off-idle; 5 mm round jets."
+  puchshop_sha:
+    url: https://www.puchshop.de/en-gb/info-center/dellorto-sha-explained
+    title: "Puchshop: Dellorto SHA explained"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "No separate idle jet, air screw or adjustable needle."
+  mofakult_1412l:
+    url: https://www.mofakult.de/en/dell-orto-14-12-l-sha-carburetor-hand-choke-29727
+    title: "Mofakult: Dell'Orto SHA 14/12 L"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Main jet 57, M5 thread."
+  mofakult_slide:
+    url: https://www.mofakult.lu/en/dell-orto-gas-slide-6-sha-14-16-mm-22340
+    title: "Mofakult: Dell'Orto flat slide 6108 06 64, SHA 14-16"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Labelled both 'no. 2' and 'type 6'."
+  mieloch_1412n:
+    url: https://mieloch.pl/en/gaznik-dellorto-sha-14-12n-10
+    title: "Mieloch: Dellorto SHA 14.12N"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Main jet (M5) 058."
+  mieloch_jets:
+    url: https://mieloch.pl/en/main-jets-dellorto-5mm-set-10-pcs-50-72
+    title: "Mieloch: Dellorto 5 mm main jet set 50-72"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: ""
+  chebco_jets:
+    url: https://www.chebco.com/en/carburetors/1871-copy-of-set-of-10-nozzles-o5-phbg-sha-75-to-98.html
+    title: "Chebco: 5 mm PHBG/SHA jet set"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "States M5x0.80, which conflicts with M5x0.75."
+  chebco_needle:
+    url: https://www.chebco.com/en/carburetors/1866-pointeau-carburateur-dellorto-phbg-sha.html
+    title: "Chebco: Dellorto PHBG/SHA needle valve"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: ""
+  zweirad_jets:
+    url: https://www.zweiradteile.net/en/parts/engine-parts-cables-wires/engine-parts/55373/main-jet-set-5mm-m5-55-115-for-dellorto-phbg-sha-carburetors-25-pieces-by-citomerx-101610
+    title: "Zweiradteile: M5 jet set 55-115 for Dellorto PHBG/SHA (ref. 1486)"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "M5x0.75."
+  ilambretta_jets:
+    url: https://www.ilambretta.co.uk/forum/viewtopic.php?p=9373
+    title: "LCGB forum: Dell'Orto jets measure hole diameter (40 = 0.40 mm)"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: ""
+  ducati_dellorto:
+    url: https://www.ducatimeccanica.com/dellorto_guide/dellorto_5.html
+    title: "Dellorto motorcycle carburetor tuning guide, section 5"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Direction only: lower density richens the mixture, so use a smaller jet. No table."
+  longacre:
+    url: https://www.longacreracing.com/instructions/text/5088PI_b_p.html
+    title: "Longacre air density gauge instructions"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Change jet area by the same % as air density. Manufacturer of the gauge, not of the carb."
+  engtips:
+    url: https://eng-tips.com/threads/carburetor-jetting.138471
+    title: "Eng-Tips: carburetor jetting (0.25 power of density on diameter)"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Agrees with the sqrt-area derivation."
+  wiki_4stroking:
+    url: https://en.wikipedia.org/wiki/Four-stroking
+    title: "Wikipedia: Four-stroking"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: ""
+  motocrosshideout:
+    url: https://motocrosshideout.com/running-rich-vs-lean/
+    title: "Motocross Hideout: running rich vs lean"
+    confidence: anecdote
+    accessed: 2026-10-18
+    notes: "Lean causes heat, detonation and seizure; err rich."
+
+model:
+  value: "Dell'Orto SHA 14-12L"
+  bore_mm: {value: 14, sources: [myrons_sha, mofakult_1412l], confidence: expert_consensus}
+  venturi_mm: {value: 12, sources: [myrons_sha], confidence: anecdote}
+  venturi_nogo_in: {value: 0.475, sources: [wka_tm_2022_002, amr_kidkart_2018, kra_newcastle_rules], confidence: sanctioning_body}
+  atomizer_nogo_in:
+    bottom_hole: {value: 0.035, sources: [wka_tm_2022_002, amr_kidkart_2018], confidence: sanctioning_body}
+    top_hole: {value: 0.049, sources: [wka_tm_2022_002, amr_kidkart_2018], confidence: sanctioning_body}
+  sources: [wka_tm_2022_002, kra_newcastle_rules, amr_kidkart_2018, racing90_c52, zipnorth_c50_carb]
+  confidence: sanctioning_body
+  notes: "WKA: SHA-14-12L only, all parts 'as cast', no repair of a broken body (thread inserts allowed)."
+
+main_jet:
+  stock:
+    value: null
+    confidence: unknown
+    notes: "Comer factory jet not found. A bare SHA 14/12L retails with #57 (myrons_sha, mofakult_1412l); the 14.12N variant with #58 (mieloch_1412n)."
+  type: {value: "Dell'Orto 5 mm round main jet (1486 family)", sources: [zipnorth_c50_carb, mopedarmy_sha, zweirad_jets], confidence: expert_consensus}
+  thread:
+    value: "M5x0.75"
+    sources: [zipnorth_c50_carb, myrons_sha, zweirad_jets]
+    confidence: expert_consensus
+    conflict: {value: "M5x0.80", sources: [chebco_jets], confidence: anecdote}
+  available_sizes:
+    value: [54, 55, 56, 57, 58, 59, 60, 61, 62]
+    sources: [pkt_jet_holder, kartpulse_comer_jetting, mieloch_jets]
+    confidence: expert_consensus
+    notes: "PKT kid kart kit is 54-58; 59-62 come from a pin-gauged set. Confirm which sizes the user owns."
+  numbering:
+    value: "Nominal hole diameter in 0.01 mm. Measured genuine jets run about 5-6% larger than the number; one step is about +1% diameter, about +2% area."
+    measured_diameters_in: {57: 0.0240, 59: 0.0245, 61: 0.0250, 62: 0.0255}
+    measured_diameters_mm_6mm_jets: {54: 0.580, 56: 0.600, 58: 0.615, 60: 0.627}
+    sources: [ilambretta_jets, myrons_jets, kartpulse_comer_jetting]
+    confidence: anecdote
+  legal_max:
+    value: null
+    sources: [wka_tm_2022_002]
+    confidence: track_official
+    notes: "WKA 2022 section 621.1.2: jet size non-tech, so no maximum. Club layers differ; see by_rule_set."
+  by_rule_set:
+    - {rule_set: wka_2022, max: null, notes: "non-tech", sources: [wka_tm_2022_002], confidence: track_official}
+    - {rule_set: kra_newcastle, min: 54, max: 58, sources: [kra_newcastle_rules], confidence: anecdote}
+    - {rule_set: amr_2018, hole_go_in: 0.019, hole_nogo_in: 0.026, sources: [amr_kidkart_2018, skyey_blog, kartpulse_comer_jetting], confidence: expert_consensus}
+    - {rule_set: wka_2010_superseded, min: 54, max: 58, sources: [ovka_wka_2010, pkt_changing_jets, ntk_7786], confidence: expert_consensus}
+  adjustable_under_rules:
+    value: true
+    sources: [wka_tm_2022_002, kra_newcastle_rules, amr_kidkart_2018]
+    confidence: sanctioning_body
+    notes: "No rule set found seals the carb or fixes the jet. The user's VT/NY club rules are unknown."
+  typical_run:
+    value: 58
+    sources: [ntk_7786, ntk_forum_8846]
+    confidence: anecdote
+    notes: "Texas, about 2011, with a K&N RC-1250. No northeast US data was found."
+
+idle:
+  needle_clip: {value: "none (flat slide, no jet needle)", sources: [mopedarmy_sha, puchshop_sha, myrons_sha], confidence: expert_consensus}
+  idle_jet_or_mixture_screw: {value: "none; idle fuel comes through the small hole at the spray tube base", sources: [mopedarmy_sha, puchshop_sha, myrons_service], confidence: expert_consensus}
+  slide:
+    part: {value: "Dell'Orto 6108 06 64 flat slide (SHA 14-16)", sources: [mofakult_slide, zipnorth_c50_carb], confidence: anecdote}
+    cutaway: {value: null, confidence: unknown, notes: "Listing shows both 'no. 2' and 'type 6'. A higher cutaway is leaner off idle (mopedarmy_sha). Fixed by the 'as cast' rule."}
+  idle_speed_screw: {value: null, confidence: unknown}
+
+float:
+  weight_g: {value: 3.5, measured_range: [3.30, 3.65], sources: [myrons_service], confidence: anecdote}
+  level_mm: {value: null, confidence: unknown}
+  adjustable: {value: null, confidence: unknown}
+  needle_valve: {value: "Dell'Orto PHBG/SHA needle valve (2838 family)", sources: [zipnorth_c50_carb, chebco_needle], confidence: expert_consensus}
+
+filter:
+  wka_rule:
+    value: "Aftermarket fabric and wire-mesh filter may replace the factory filter; flange and filter dimensions are specified; must not be modified"
+    dimensions: null
+    sources: [wka_tm_2022_002]
+    confidence: track_official
+  other_rules:
+    - {rule_set: kra_newcastle, value: "non-tech", sources: [kra_newcastle_rules], confidence: anecdote}
+    - {rule_set: uas, value: "non-tech; no external scoop or ram effect", sources: [uas_kidkart], confidence: anecdote}
+  common_choice: {value: "K&N RC-1250 (2.25 in flange, conical)", sources: [ntk_forum_8846, racing90_rc1250], confidence: anecdote}
+
+jetting:
+  method: reference_plus_rule
+  reference:
+    jet: null
+    density_altitude_ft: null
+    notes: "No published reference point. The user records jet + DA + plug read from a good session. Until then, output only changes relative to the current jet."
+  rule: "Hold AFR constant: A_jet ∝ sqrt(rho_air), so d_jet ∝ rho^0.25. Target area = A_ref * sqrt(rho/rho_ref). Map area to a jet number using measured diameters (about 2% area per number); snap to the nearest available size; round toward the larger (richer) jet; clamp to the legal max of the active rule layers."
+  derivation: "m_f = Cd*A_j*sqrt(2*rho_f*dp); dp ≈ m_a^2/(2*rho_a*A_v^2), so sqrt(dp) ∝ m_a/sqrt(rho_a); AFR = m_a/m_f ∝ sqrt(rho_a)/A_j; constant AFR gives A_j ∝ sqrt(rho_a). Standard atmosphere: about -2.9% density per 1000 ft. Gives about 0.4-0.7 jet numbers per 1000 ft DA and about 0.3-0.5 numbers per 10 °F."
+  alternative_rule:
+    value: "Longacre: change jet area by the same % as air density (A ∝ rho), about twice the sqrt rule (about 0.9-1.4 numbers per 1000 ft)."
+    sources: [longacre, kartpulse_density]
+    confidence: anecdote
+    notes: "Recorded as a conflict, not averaged. sqrt rule is the default because it changes the jet less (safer when air thins)."
+  table:
+    - {density_altitude_ft: -1000, rel_density: 1.030, jet_if_58_at_0ft: 58.4}
+    - {density_altitude_ft: 0, rel_density: 1.000, jet_if_58_at_0ft: 58.0}
+    - {density_altitude_ft: 1000, rel_density: 0.971, jet_if_58_at_0ft: 57.6}
+    - {density_altitude_ft: 2000, rel_density: 0.943, jet_if_58_at_0ft: 57.2}
+    - {density_altitude_ft: 3000, rel_density: 0.915, jet_if_58_at_0ft: 56.7}
+  table_notes: "Illustration only (sqrt rule, nominal diameters, hypothetical reference of 58 at 0 ft). Not a published table."
+  direction: {value: "lower density (heat, altitude, low pressure, humidity) richens the mixture, so use a smaller jet; cold dense air leans it, so use a larger jet", sources: [ducati_dellorto, longacre], confidence: expert_consensus}
+  sources: [engtips, ducati_dellorto, longacre, kartpulse_density, kartpulse_comer_jetting]
+  confidence: inferred
+
+symptoms:
+  - tag: rich_bog
+    signs: "Sluggish, lugging off corners, sputter, smoke, wet black plug, oil spitting from the exhaust"
+    fix: "First rule out choke, dirty filter and fouled plug; then one jet size smaller"
+    sources: [kartpulse_leanrich, motocrosshideout, kartpulse_plug]
+    confidence: expert_consensus
+  - tag: rich_top_end
+    signs: "Four-stroking (uneven blubbering) at full throttle or top speed; flat top end"
+    fix: "One jet size smaller, checked with a plug chop"
+    sources: [wiki_4stroking, motocrosshideout]
+    confidence: expert_consensus
+  - tag: lean_ping
+    signs: "Over-revs or 'screams' then goes flat, sharp popping or pinging, overheating, white or grey chalky plug; seizure risk"
+    fix: "Go one jet size LARGER right away; check intake air leaks, float and needle valve, fuel line and filter. Never lean out to chase speed."
+    sources: [motocrosshideout, wiki_4stroking, kartpulse_leanrich]
+    confidence: expert_consensus
+  - tag: lean_bog
+    signs: "Hesitates or nearly dies when the throttle is snapped open, then surges"
+    fix: "Richer jet; check fuel delivery"
+    sources: [motocrosshideout]
+    confidence: anecdote
+  - tag: no_idle
+    signs: "Needs choke to idle; dies when the throttle closes"
+    fix: "Clean the idle hole and spray tube; check the float and needle valve and for intake leaks. Not a jet change."
+    sources: [ntk_7786, myrons_service]
+    confidence: anecdote
+  - tag: plug_read
+    signs: "Light to dark tan or chocolate is good; white or grey is lean (or plug too hot); black and wet is rich. Read after a full-throttle plug chop; castor two-stroke plugs are hard to read; EGT is preferred."
+    fix: "Use as a sanity check for main jet changes"
+    sources: [kartpulse_plug, kartpulse_leanrich]
+    confidence: expert_consensus

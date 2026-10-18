@@ -1,0 +1,36 @@
+# DRAFT from research track B (search summaries only; see research/engine-comer-c52.md)
+# Local promoters may add rules (e.g. mandatory 10/89); layer track rules on top.
+schema_version: 1
+updated: 2026-10-18
+body: WKA
+class: "Kid Kart (Comer)"
+limits:
+  - {field: engine_model, op: one_of, value: ["Comer C51", "Comer C52"], units: null, section: "621 (TM 2022-002)", sources: [wka_tm_2022_002, wka_2023_changes], confidence: sanctioning_body, notes: "CONFLICT: WKA series pages (wka_mfg_cup) still say 'Comer C51 only' for Kid Kart; confirm C52 eligibility"}
+  - {field: engine_stock, op: eq, value: true, units: null, section: "621", sources: [wka_tm_2022_002], confidence: sanctioning_body, notes: "no grinding/aftermarket except specified"}
+  - {field: restrictor, op: eq, value: null, units: in, section: null, sources: [eldora_2020], confidence: unknown, notes: "no restrictor found in 621 summaries; Eldora mentions 'WKA restrictor'"}
+  - {field: carb_model, op: eq, value: "Dell'Orto SHA-14-12L", units: null, section: "621.1", sources: [wka_tm_2022_002_pdf], confidence: sanctioning_body}
+  - {field: carb_sealed, op: eq, value: null, units: null, section: "621.1", sources: [wka_tm_2022_002_pdf], confidence: unknown, notes: "parts must be 'as cast'; sealing not stated in summaries"}
+  - {field: main_jet, op: max, value: null, units: dellorto_size, section: null, sources: [], confidence: unknown, notes: "no WKA jet rule seen; see Track C"}
+  - {field: ignition_timing, op: range, value: {min: 0.055, max: 0.067}, units: in_btdc, section: "621", sources: [wka_tm_2022_002], confidence: track_official, notes: "capped (single doc)"}
+  - {field: combustion_chamber_c52, op: min, value: 7.7, units: cc, section: "621", sources: [wka_tm_2022_002_pdf], confidence: track_official}
+  - {field: exhaust_port_height_c52, op: min, value: 1.206, units: in, section: "621", sources: [wka_tm_2022_002_pdf], confidence: track_official}
+  - {field: intake_port_height_c52, op: max, value: 0.435, units: in, section: "621", sources: [wka_tm_2022_002_pdf], confidence: track_official}
+  - {field: muffler, op: eq, value: OEM, units: null, section: "621", sources: [wka_tm_2022_002], confidence: track_official, notes: "exit-hole limits exist; values unknown"}
+  - {field: clutch_engagement_rpm, op: max, value: null, units: rpm, section: null, sources: [], confidence: unknown, notes: "WKA regulates shoe/spring dimensions, not RPM (values not visible)"}
+  - {field: driver_sprocket, op: eq, value: 10, units: teeth, section: "621.17.1", sources: [wka_tm_2022_002_pdf], confidence: sanctioning_body, notes: "Comer 10T clutch drum"}
+  - {field: chain, op: eq, value: "#219", units: null, section: "621.17.1", sources: [wka_tm_2022_002_pdf], confidence: sanctioning_body}
+  - {field: axle_sprocket, op: one_of, value: any, units: teeth, section: "621 (non-tech)", sources: [wka_tm_2022_002_pdf], confidence: track_official, notes: "no national gear rule; suggested 10/89; local promoters may mandate"}
+  - {field: fuel, op: eq, value: "spec 87 octane gasoline (WKA-supplied at nationals)", units: null, section: "214 / series rules", sources: [wka_mfg_cup, wka_tm_2019_001], confidence: sanctioning_body}
+  - {field: oil_ratio, op: eq, value: null, units: "fuel:oil", section: null, sources: [], confidence: unknown, notes: "no WKA ratio rule found"}
+  - {field: min_weight, op: min, value: 150, units: lb, section: "214.1 / series class table", sources: [wka_mfg_cup, wka_fl_winter], confidence: sanctioning_body, notes: "kart + driver; pages may predate C52"}
+  - {field: tire_spec, op: eq, value: null, units: null, section: null, sources: [], confidence: unknown, notes: "WKA Comer kid kart tire not found; clubs use MG Red, max circumference 33–33.375 in"}
+  - {field: driver_age, op: range, value: {min: 5, max: 7}, units: years_attained, section: "214.1 / series class table", sources: [wka_mfg_cup, wka_fl_winter], confidence: sanctioning_body, notes: "clubs commonly 5–8"}
+
+sources:
+  wka_tm_2022_002: {url: "https://www.worldkarting.com/tm-update-2022-002/", title: "WKA TM Update 2022-002", confidence: sanctioning_body, accessed: 2026-10-18, notes: "search summaries only"}
+  wka_tm_2022_002_pdf: {url: "https://www.worldkarting.com/wp-content/uploads/2022/04/Tech-Update-2022-002-COMER-C52.pdf", title: "Tech Update 2022-002 COMER C52 (PDF)", confidence: sanctioning_body, accessed: 2026-10-18, notes: "fetch failed; summaries only"}
+  wka_2023_changes: {url: "https://www.worldkarting.com/documents/2022/10/2023-wka-tech-manual-approved-changes.pdf/", title: "2023 WKA Tech Manual Approved Changes", confidence: sanctioning_body, accessed: 2026-10-18, notes: ""}
+  wka_mfg_cup: {url: "https://www.worldkarting.com/series/manufacturers-cup/", title: "WKA Manufacturers Cup Series", confidence: sanctioning_body, accessed: 2026-10-18, notes: "possibly outdated"}
+  wka_fl_winter: {url: "https://www.worldkarting.com/series/florida-winter-cup/", title: "WKA Florida Winter Cup Series", confidence: sanctioning_body, accessed: 2026-10-18, notes: ""}
+  wka_tm_2019_001: {url: "https://nicole-gaines-8xm9.squarespace.com/tech-updates/tm-update-2019-001", title: "WKA TM Update 2019-001", confidence: track_official, accessed: 2026-10-18, notes: "capped"}
+  eldora_2020: {url: "https://www.eldoraspeedway.com/wp-content/uploads/2020/03/2020-class-specifications.pdf", title: "Little Eldora 2020 class specs", confidence: track_official, accessed: 2026-10-18, notes: "context only"}

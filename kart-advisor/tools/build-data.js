@@ -24,11 +24,15 @@ export function loadYamlTree(dir = dataDir) {
 
 // Shape the files into the knowledge base the engine expects.
 export function toKnowledgeBase(files) {
-  const kb = { tracks: {}, rules: {}, generated: new Date().toISOString().slice(0, 10) };
+  // sourceIndex maps "<fileKey>:<id>" (fileKey = path without .yaml) to the source record,
+  // so the engine can cite any source from any file.
+  const kb = { tracks: {}, rules: {}, sourceIndex: {}, generated: new Date().toISOString().slice(0, 10) };
   for (const [name, doc] of Object.entries(files)) {
-    const m = name.match(/^(tracks|rules)\/(.+)\.ya?ml$/);
-    if (m) kb[m[1]][doc.id || m[2]] = doc;
-    else kb[name.replace(/\.ya?ml$/, '').replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = doc;
+    const fileKey = name.replace(/\.ya?ml$/, '');
+    for (const [id, s] of Object.entries(doc.sources || {})) kb.sourceIndex[`${fileKey}:${id}`] = { id: `${fileKey}:${id}`, ...s };
+    const m = fileKey.match(/^(tracks|rules)\/(.+)$/);
+    if (m) kb[m[1]][doc.id || m[2]] = { ...doc, fileKey };
+    else kb[fileKey.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = { ...doc, fileKey };
   }
   return kb;
 }
