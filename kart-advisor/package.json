@@ -1,0 +1,15 @@
+{
+  "name": "kart-advisor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Setup advisor for a TopKart kid kart with a Comer C52 (rules-based, offline-first).",
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build-data.js",
+    "start": "node tools/build-data.js && node tools/serve.js",
+    "test": "node tools/build-data.js && node --test \"tests/**/*.test.js\""
+  },
+  "devDependencies": {
+    "js-yaml": "4.1.0"
+  }
+}

@@ -1,0 +1,28 @@
+# Sources for the air density / density altitude maths in engine/air.js.
+schema_version: 1
+updated: 2026-10-18
+sources:
+  icao_isa:
+    kind: standard
+    url: https://en.wikipedia.org/wiki/International_Standard_Atmosphere
+    title: International Standard Atmosphere (ICAO Doc 7488 / ISO 2533), summary
+    confidence: expert_consensus
+    accessed: 2026-10-18
+    notes: ISA sea-level constants, lapse rate and pressure/density exponents.
+  tetens:
+    kind: standard
+    url: https://en.wikipedia.org/wiki/Tetens_equation
+    title: Tetens equation for saturation vapour pressure
+    confidence: expert_consensus
+    accessed: 2026-10-18
+  density_altitude:
+    kind: standard
+    url: https://www.weather.gov/epz/wxcalc_densityaltitude
+    title: NWS density altitude calculator (method reference)
+    confidence: expert_consensus
+    accessed: 2026-10-18
+    notes: Not fetched from this session (network blocked); method is the standard one and is checked against ISA reference points in tests/air.test.js.
+method:
+  air_density: {value: "rho = Pd/(Rd*T) + Pv/(Rv*T); Pv = RH * es(T)", sources: [icao_isa, tetens], confidence: expert_consensus}
+  density_altitude: {value: "h = (T0/L) * (1 - (rho/rho0)^(1/(g/(Rd*L) - 1)))", sources: [icao_isa, density_altitude], confidence: expert_consensus}
+  station_pressure: {value: "P = P_sea_level * (1 - L*h/T0)^(g/(Rd*L))", sources: [icao_isa], confidence: expert_consensus}
