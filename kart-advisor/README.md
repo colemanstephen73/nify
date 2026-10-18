@@ -22,7 +22,7 @@ npm start          # builds data/ → app/data.json, serves http://localhost:808
 
 ## Using it at the track
 1. **My kart page:** enter what you normally run (pressures, widths, gear, jet, kart weight). Recommendations are changes from these numbers, and blanks are never guessed.
-2. **Setup page:** track, rules, weather (**Fill from weather forecast** uses Open-Meteo at the track's coordinates), track temperature (IR gun), surface, rubber, tires, driver, and how the kart felt. Then press **Get setup**.
+2. **Setup page:** track, rules, weather (**Fill from weather forecast** uses Open-Meteo at the track's coordinates), track temperature (IR gun), surface, rubber, tires, driver, and how the kart felt. The setup sheet beside the form updates as you type.
 3. Read the sheet. **Steps and sources** under each line shows every rule that touched it, with links.
 4. **Save to session log.** Afterwards, add what you actually ran and the lap times on the **Session log** page. Tick **Engine ran clean** on a session with a tan plug: that becomes the jetting reference, and jet changes for later weather are calculated from it.
 5. The **What helped** list on the Session log page compares sessions in similar conditions. It is evidence only and never changes recommendations.
