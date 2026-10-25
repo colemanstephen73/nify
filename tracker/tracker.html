@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Karting Progress Tracker</title>
+<style>
+  :root {
+    --bg: #f7f6f2; --surface: #ffffff; --ink: #1d1d1b; --muted: #5f5e58;
+    --line: #dddad1; --accent: #1f6feb; --accent-ink: #ffffff;
+    --warn-bg: #fff3cd; --warn-ink: #6b4e00; --ok-bg: #e6f4ea; --ok-ink: #1e5631;
+    --chip: #efede6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #151514; --surface: #1f1f1d; --ink: #ecebe6; --muted: #a7a59d;
+      --line: #34332f; --accent: #6ea8ff; --accent-ink: #0b1220;
+      --warn-bg: #3b3115; --warn-ink: #ffd877; --ok-bg: #173022; --ok-ink: #9ee3b4;
+      --chip: #2a2a27;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #151514; --surface: #1f1f1d; --ink: #ecebe6; --muted: #a7a59d;
+    --line: #34332f; --accent: #6ea8ff; --accent-ink: #0b1220;
+    --warn-bg: #3b3115; --warn-ink: #ffd877; --ok-bg: #173022; --ok-ink: #9ee3b4;
+    --chip: #2a2a27;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main { max-width: 960px; margin: 0 auto; padding: 16px; }
+  h1 { font-size: 1.5rem; margin: 8px 0 4px; }
+  h2 { font-size: 1.1rem; margin: 0 0 12px; }
+  p.lead { color: var(--muted); margin: 0 0 16px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  button, .btn {
+    font: inherit; border: 1px solid var(--line); background: var(--chip); color: var(--ink);
+    border-radius: 8px; padding: 8px 12px; cursor: pointer; min-height: 40px;
+  }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  input[type=file] { display: none; }
+  label.btn { display: inline-flex; align-items: center; }
+  form.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  form.grid .full { grid-column: 1 / -1; }
+  form label { display: flex; flex-direction: column; font-size: .9rem; color: var(--muted); gap: 4px; }
+  input, select, textarea {
+    font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px; min-height: 40px; width: 100%;
+  }
+  textarea { min-height: 64px; resize: vertical; }
+  .faces { display: flex; gap: 6px; flex-wrap: wrap; }
+  .faces button { font-size: 1.6rem; padding: 4px 10px; line-height: 1; }
+  .faces button[aria-pressed="true"] { outline: 3px solid var(--accent); }
+  .scores button { min-width: 48px; }
+  .scores button[aria-pressed="true"] { outline: 3px solid var(--accent); }
+  .banner { border-radius: 12px; padding: 12px 16px; margin-bottom: 16px; font-weight: 600; }
+  .banner.warn { background: var(--warn-bg); color: var(--warn-ink); }
+  .banner.ok { background: var(--ok-bg); color: var(--ok-ink); }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .stat { background: var(--bg); border-radius: 8px; padding: 10px; }
+  .stat b { display: block; font-size: 1.3rem; }
+  .stat span { color: var(--muted); font-size: .85rem; }
+  .trend { font-size: 1.5rem; letter-spacing: 2px; margin-top: 8px; overflow-wrap: anywhere; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; }
+  td.actions { white-space: nowrap; }
+  td.actions button { min-height: 32px; padding: 4px 8px; }
+  .muted { color: var(--muted); font-size: .9rem; }
+  .print-only { display: none; }
+  @media (max-width: 640px) {
+    form.grid { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    table thead { display: none; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    tr { border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; padding: 6px 8px; background: var(--surface); }
+    td { border: none; padding: 3px 0; }
+    td::before { content: attr(data-label) ": "; color: var(--muted); font-weight: 600; }
+    td.actions::before { content: ""; }
+  }
+  @media print {
+    :root { --bg: #fff; --surface: #fff; --ink: #000; --muted: #333; --line: #999; }
+    body { font-size: 11pt; }
+    .no-print { display: none !important; }
+    .print-only { display: block; }
+    .card { border: none; padding: 0; }
+    table, tbody, tr, td { display: revert; }
+    table thead { display: table-header-group; }
+    td::before { content: none; }
+    tr { break-inside: avoid; }
+    body.print-blank #log-section { display: none; }
+    body:not(.print-blank) #blank-section { display: none; }
+    #blank-section td { height: 34px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>🏎️ Karting Progress Tracker</h1>
+    <p class="lead">Log track, sim and off-track sessions. Everything stays on this device: nothing is uploaded.
+      Use <b>Export CSV</b> to back up or move your log.</p>
+  </header>
+
+  <div id="banner" class="banner ok" role="status">No sessions yet. Add your first one below.</div>
+
+  <section class="card no-print">
+    <h2>Your log file</h2>
+    <div class="row">
+      <label class="btn" for="file">📂 Import CSV</label>
+      <input type="file" id="file" accept=".csv,text/csv">
+      <button type="button" id="export" class="primary">⬇️ Export CSV</button>
+      <button type="button" id="print">🖨️ Print log</button>
+      <button type="button" id="printBlank">🖨️ Print blank sheet</button>
+      <button type="button" id="clear">🗑️ Clear all</button>
+    </div>
+    <p class="muted" id="storageNote">Import <code>progress-tracker.csv</code> to start, or just add sessions.
+      Your entries are kept in this browser only. Export now and then so you don't lose them.</p>
+  </section>
+
+  <section class="card">
+    <h2>Summary</h2>
+    <div class="stats">
+      <div class="stat"><b id="sTotal">0</b><span>sessions</span></div>
+      <div class="stat"><b id="sTrack">0</b><span>track</span></div>
+      <div class="stat"><b id="sSim">0</b><span>sim</span></div>
+      <div class="stat"><b id="sFun">–</b><span>avg fun (last 5)</span></div>
+    </div>
+    <div class="trend" id="trend" aria-label="Fun ratings of the last 10 sessions"></div>
+    <p class="muted">Fun faces of the last 10 sessions, oldest first.</p>
+  </section>
+
+  <section class="card no-print">
+    <h2 id="formTitle">Add a session</h2>
+    <form id="form" class="grid">
+      <label>Date <input type="date" name="date" required></label>
+      <label>Session type
+        <select name="session_type" required>
+          <option value="track">Track</option>
+          <option value="sim">Sim</option>
+          <option value="off-track">Off-track</option>
+          <option value="assessment">Assessment</option>
+          <option value="rest">Rest</option>
+        </select>
+      </label>
+      <label>Focus (card) <input name="focus" list="focusList" placeholder="e.g. TR-02 Sponge & Toothpaste"></label>
+      <label>Drill <input name="drill" list="drillList" placeholder="e.g. D01"></label>
+      <div class="full">
+        <span class="muted">Score (1 not yet · 2 sometimes · 3 every time)</span>
+        <div class="row scores" id="scoreBtns">
+          <button type="button" data-v="1">1</button>
+          <button type="button" data-v="2">2</button>
+          <button type="button" data-v="3">3</button>
+          <button type="button" data-v="">none</button>
+        </div>
+      </div>
+      <div class="full">
+        <span class="muted">Fun rating: your child points to a face</span>
+        <div class="faces" id="funBtns">
+          <button type="button" data-v="1" aria-label="1, not fun">😞</button>
+          <button type="button" data-v="2" aria-label="2">🙁</button>
+          <button type="button" data-v="3" aria-label="3">😐</button>
+          <button type="button" data-v="4" aria-label="4">🙂</button>
+          <button type="button" data-v="5" aria-label="5, best fun">🤩</button>
+        </div>
+      </div>
+      <label class="full">Notes (best bit in their words, lap spread, settings…)
+        <textarea name="notes"></textarea>
+      </label>
+      <div class="full row">
+        <button type="submit" class="primary" id="saveBtn">Save session</button>
+        <button type="button" id="cancelEdit" hidden>Cancel edit</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="card" id="log-section">
+    <div class="row no-print" style="justify-content:space-between;margin-bottom:8px">
+      <h2 style="margin:0">Log</h2>
+      <select id="filter" aria-label="Filter by type" style="width:auto">
+        <option value="">All types</option>
+        <option value="track">Track</option>
+        <option value="sim">Sim</option>
+        <option value="off-track">Off-track</option>
+        <option value="assessment">Assessment</option>
+        <option value="rest">Rest</option>
+      </select>
+    </div>
+    <h2 class="print-only">Karting log</h2>
+    <table>
+      <thead><tr><th>Date</th><th>Type</th><th>Focus</th><th>Drill</th><th>Score</th><th>Fun</th><th>Notes</th><th class="no-print"></th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <p class="muted" id="emptyMsg">Nothing logged yet.</p>
+  </section>
+
+  <section class="card print-only" id="blank-section">
+    <h2>Karting log: write-in sheet</h2>
+    <p>Fun: 😞1 🙁2 😐3 🙂4 🤩5 · Score: 1 not yet · 2 sometimes · 3 every time · Fun dropped 2 in a row → TR-00</p>
+    <table>
+      <thead><tr><th style="width:12%">Date</th><th style="width:10%">Type</th><th style="width:20%">Focus</th><th style="width:10%">Drill</th><th style="width:8%">Score</th><th style="width:8%">Fun</th><th>Notes</th></tr></thead>
+      <tbody id="blankRows"></tbody>
+    </table>
+  </section>
+
+  <datalist id="focusList"></datalist>
+  <datalist id="drillList"></datalist>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var COLS = ["date", "session_type", "focus", "drill", "score", "fun_rating", "notes"];
+  var KEY = "karting-tracker-v1";
+  var FACES = { 1: "😞", 2: "🙁", 3: "😐", 4: "🙂", 5: "🤩" };
+  var FOCUS = [
+    "TR-00 Fun Only", "TR-01 Hello Kart", "TR-02 Sponge & Toothpaste", "TR-03 Statue Stop",
+    "TR-04 Pirate Telescope", "TR-05 Flags & Track Rules", "TR-06 Baby Bird Hands",
+    "TR-07 Flat Out to the Cone", "TR-08 Brake First, Then Turn", "TR-09 Wait for the Turn Cone",
+    "TR-10 Eyes Through the Corner", "TR-11 Roll to the Edge", "TR-12 Cones on Holiday",
+    "TR-13 Grapes", "TR-14 Line Explorer", "TR-15 Traffic Buddy", "TR-16 Different Day, Same Lap",
+    "TR-17 Show Me!", "SIM-01 Set-up & Free Drive", "SIM-02 Statue Stop", "SIM-03 Gold Laps",
+    "SIM-04 Pirate Telescope", "SIM-05 Flat Out to the Marker", "SIM-06 Wait for the Turn",
+    "SIM-07 Roll to the Edge", "SIM-08 Treasure Markers", "SIM-09 10-Lap Grapes",
+    "SIM-10 Line Explorer", "SIM-11 Video Detective", "SIM-12 Your Choice",
+    "Phase 1 check", "Phase 2 check", "Phase 3 check"
+  ];
+  var DRILLS = [];
+  for (var d = 1; d <= 19; d++) DRILLS.push("D" + (d < 10 ? "0" : "") + d);
+  for (var g = 1; g <= 13; g++) DRILLS.push("G" + (g < 10 ? "0" : "") + g);
+  for (var a = 1; a <= 30; a++) DRILLS.push("A" + (a < 10 ? "0" : "") + a);
+
+  var rows = [];
+  var editIndex = -1;
+  var score = "", fun = "";
+
+  function $(id) { return document.getElementById(id); }
+
+  function fillList(id, items) {
+    var el = $(id);
+    items.forEach(function (v) { var o = document.createElement("option"); o.value = v; el.appendChild(o); });
+  }
+  fillList("focusList", FOCUS);
+  fillList("drillList", DRILLS);
+
+  // ---------- storage (this browser only) ----------
+  function load() {
+    try { var s = localStorage.getItem(KEY); if (s) rows = JSON.parse(s) || []; } catch (e) { rows = []; }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(rows)); }
+    catch (e) { $("storageNote").textContent = "This browser can't keep your entries. Export CSV before closing the page."; }
+  }
+
+  // ---------- CSV ----------
+  function parseCSV(text) {
+    var out = [], row = [], field = "", q = false, i, c;
+    text = text.replace(/^﻿/, "");
+    for (i = 0; i < text.length; i++) {
+      c = text[i];
+      if (q) {
+        if (c === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; }
+        else field += c;
+      } else if (c === '"') q = true;
+      else if (c === ",") { row.push(field); field = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && text[i + 1] === "\n") i++;
+        row.push(field); field = ""; out.push(row); row = [];
+      } else field += c;
+    }
+    if (field !== "" || row.length) { row.push(field); out.push(row); }
+    return out.filter(function (r) { return r.some(function (v) { return v.trim() !== ""; }); });
+  }
+  function toCSV() {
+    function esc(v) { v = v == null ? "" : String(v); return /[",\n\r]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+    var lines = [COLS.join(",")];
+    sorted().forEach(function (r) { lines.push(COLS.map(function (k) { return esc(r[k]); }).join(",")); });
+    return lines.join("\n") + "\n";
+  }
+
+  function sorted() {
+    return rows.slice().sort(function (x, y) { return (x.date || "").localeCompare(y.date || ""); });
+  }
+
+  // ---------- fun rule ----------
+  // Drop rule: two drops in a row (A > B > C), or two ratings of 1–2 in a row.
+  function funCheck() {
+    var f = sorted().filter(function (r) { return r.session_type !== "rest" && r.fun_rating !== ""; })
+      .map(function (r) { return Number(r.fun_rating); }).filter(function (n) { return n >= 1 && n <= 5; });
+    var b = $("banner");
+    if (!f.length) { b.className = "banner ok"; b.textContent = rows.length ? "No fun ratings yet: ask for a face after each session." : "No sessions yet. Add your first one below."; return; }
+    var n = f.length;
+    var twoDrops = n >= 3 && f[n - 1] < f[n - 2] && f[n - 2] < f[n - 3];
+    var twoLow = n >= 2 && f[n - 1] <= 2 && f[n - 2] <= 2;
+    if (twoDrops || twoLow) {
+      b.className = "banner warn";
+      b.textContent = "⚠️ Fun has dropped " + (twoDrops ? "two sessions in a row" : "to 1–2 twice in a row") +
+        ". Next session: TR-00 Fun Only. No drills, no debrief questions.";
+    } else {
+      b.className = "banner ok";
+      b.textContent = "✅ Fun check OK. Last rating: " + FACES[f[n - 1]] + " " + f[n - 1] + "/5.";
+    }
+  }
+
+  // ---------- render ----------
+  function render() {
+    var filter = $("filter").value;
+    var tbody = $("rows");
+    tbody.textContent = "";
+    var list = sorted().map(function (r) { return { r: r, i: rows.indexOf(r) }; }).reverse();
+    var shown = 0;
+    list.forEach(function (item) {
+      var r = item.r;
+      if (filter && r.session_type !== filter) return;
+      shown++;
+      var tr = document.createElement("tr");
+      var cells = [
+        ["Date", r.date], ["Type", r.session_type], ["Focus", r.focus], ["Drill", r.drill],
+        ["Score", r.score], ["Fun", r.fun_rating ? (FACES[r.fun_rating] || "") + " " + r.fun_rating : ""], ["Notes", r.notes]
+      ];
+      cells.forEach(function (c) {
+        var td = document.createElement("td"); td.setAttribute("data-label", c[0]); td.textContent = c[1] || ""; tr.appendChild(td);
+      });
+      var act = document.createElement("td"); act.className = "actions no-print";
+      var e = document.createElement("button"); e.type = "button"; e.textContent = "Edit";
+      e.addEventListener("click", function () { startEdit(item.i); });
+      var del = document.createElement("button"); del.type = "button"; del.textContent = "Delete";
+      del.addEventListener("click", function () {
+        if (confirm("Delete this session?")) { rows.splice(item.i, 1); save(); render(); }
+      });
+      act.appendChild(e); act.appendChild(document.createTextNode(" ")); act.appendChild(del);
+      tr.appendChild(act);
+      tbody.appendChild(tr);
+    });
+    $("emptyMsg").hidden = shown > 0;
+
+    var s = sorted();
+    $("sTotal").textContent = s.length;
+    $("sTrack").textContent = s.filter(function (r) { return r.session_type === "track"; }).length;
+    $("sSim").textContent = s.filter(function (r) { return r.session_type === "sim"; }).length;
+    var funs = s.filter(function (r) { return r.fun_rating !== ""; }).map(function (r) { return Number(r.fun_rating); });
+    var last5 = funs.slice(-5);
+    $("sFun").textContent = last5.length ? (last5.reduce(function (a, b) { return a + b; }, 0) / last5.length).toFixed(1) : "–";
+    $("trend").textContent = funs.slice(-10).map(function (n) { return FACES[n] || ""; }).join(" ");
+    funCheck();
+  }
+
+  // ---------- form ----------
+  function pick(groupId, value) {
+    Array.prototype.forEach.call($(groupId).querySelectorAll("button"), function (b) {
+      b.setAttribute("aria-pressed", b.getAttribute("data-v") === value ? "true" : "false");
+    });
+  }
+  $("scoreBtns").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return; score = b.getAttribute("data-v"); pick("scoreBtns", score);
+  });
+  $("funBtns").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return; fun = b.getAttribute("data-v"); pick("funBtns", fun);
+  });
+
+  function resetForm() {
+    var f = $("form"); f.reset();
+    var now = new Date();
+    f.date.value = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+    score = ""; fun = ""; pick("scoreBtns", "__"); pick("funBtns", "__");
+    editIndex = -1; $("formTitle").textContent = "Add a session"; $("saveBtn").textContent = "Save session";
+    $("cancelEdit").hidden = true;
+  }
+  function startEdit(i) {
+    var r = rows[i], f = $("form");
+    editIndex = i;
+    f.date.value = r.date; f.session_type.value = r.session_type || "track";
+    f.focus.value = r.focus || ""; f.drill.value = r.drill || ""; f.notes.value = r.notes || "";
+    score = r.score || ""; fun = r.fun_rating || ""; pick("scoreBtns", score); pick("funBtns", fun);
+    $("formTitle").textContent = "Edit session"; $("saveBtn").textContent = "Update session";
+    $("cancelEdit").hidden = false;
+    f.scrollIntoView({ behavior: "smooth" });
+  }
+  $("cancelEdit").addEventListener("click", resetForm);
+
+  $("form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var f = e.target;
+    var r = {
+      date: f.date.value, session_type: f.session_type.value, focus: f.focus.value.trim(),
+      drill: f.drill.value.trim(), score: score, fun_rating: fun, notes: f.notes.value.trim()
+    };
+    if (editIndex >= 0) rows[editIndex] = r; else rows.push(r);
+    save(); render(); resetForm();
+  });
+
+  // ---------- import / export / print ----------
+  $("file").addEventListener("change", function (e) {
+    var file = e.target.files[0]; if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      var data = parseCSV(String(reader.result));
+      if (!data.length) { alert("That file is empty."); return; }
+      var head = data[0].map(function (h) { return h.trim().toLowerCase(); });
+      var idx = COLS.map(function (c) { return head.indexOf(c); });
+      if (idx[0] < 0) { alert("This doesn't look like the tracker CSV (no 'date' column)."); return; }
+      var imported = data.slice(1).map(function (line) {
+        var r = {}; COLS.forEach(function (c, k) { r[c] = idx[k] >= 0 ? (line[idx[k]] || "").trim() : ""; }); return r;
+      });
+      if (rows.length && !confirm("Replace your " + rows.length + " current entries with " + imported.length + " from the file? (Cancel = add them instead)")) {
+        rows = rows.concat(imported);
+      } else {
+        rows = imported;
+      }
+      save(); render();
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  });
+
+  $("export").addEventListener("click", function () {
+    var blob = new Blob([toCSV()], { type: "text/csv" });
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement("a");
+    link.href = url; link.download = "progress-tracker.csv";
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  });
+
+  $("clear").addEventListener("click", function () {
+    if (rows.length && confirm("Delete ALL entries from this browser? Export first if you want a backup.")) {
+      rows = []; save(); render();
+    }
+  });
+
+  var blank = $("blankRows");
+  for (var b = 0; b < 18; b++) {
+    var tr = document.createElement("tr");
+    for (var c = 0; c < 7; c++) tr.appendChild(document.createElement("td"));
+    blank.appendChild(tr);
+  }
+  $("print").addEventListener("click", function () { document.body.classList.remove("print-blank"); window.print(); });
+  $("printBlank").addEventListener("click", function () {
+    document.body.classList.add("print-blank"); window.print();
+    setTimeout(function () { document.body.classList.remove("print-blank"); }, 500);
+  });
+  $("filter").addEventListener("change", render);
+
+  load(); resetForm(); render();
+})();
+</script>
+</body>
+</html>
