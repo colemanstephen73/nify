@@ -1,0 +1,805 @@
+<title>Kid Kart Coaching Course</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+  /* Layout: course map (weekends → lessons), then one step at a time with a big Next button, like a pit board. */
+  :root {
+    --bg: #f2f3f0; --surface: #ffffff; --ink: #1a1d1b; --muted: #5b625d; --line: #d7dbd6;
+    --accent: #d2361b; --accent-ink: #ffffff; --chip: #e9ece7;
+    --say-bg: #fff4e5; --say-ink: #5c3400; --watch-bg: #e8f1fb; --watch-ink: #163a63;
+    --ok-bg: #e3f2e7; --ok-ink: #1d5a2e; --warn-bg: #fdecea; --warn-ink: #7c1d12;
+    --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+    --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #111312; --surface: #1b1e1c; --ink: #e8ebe8; --muted: #a0a7a2; --line: #2f3330;
+      --accent: #ff6a4d; --accent-ink: #1a0b07; --chip: #252926;
+      --say-bg: #33240f; --say-ink: #ffd9a3; --watch-bg: #142436; --watch-ink: #b9d6f7;
+      --ok-bg: #16301f; --ok-ink: #9fe0b2; --warn-bg: #3a1a15; --warn-ink: #ffb3a6;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #111312; --surface: #1b1e1c; --ink: #e8ebe8; --muted: #a0a7a2; --line: #2f3330;
+    --accent: #ff6a4d; --accent-ink: #1a0b07; --chip: #252926;
+    --say-bg: #33240f; --say-ink: #ffd9a3; --watch-bg: #142436; --watch-ink: #b9d6f7;
+    --ok-bg: #16301f; --ok-ink: #9fe0b2; --warn-bg: #3a1a15; --warn-ink: #ffb3a6;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink); font: 17px/1.5 var(--body);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 12px 40px;
+  }
+  main { max-width: 720px; margin: 0 auto; display: grid; gap: 16px; }
+  h1, h2, h3 { font-family: var(--display); letter-spacing: .02em; text-wrap: balance; margin: 0; line-height: 1.1; }
+  h1 { font-size: 2.2rem; text-transform: uppercase; }
+  h1 span, .eyebrow { color: var(--accent); }
+  h2 { font-size: 1.6rem; }
+  h3 { font-size: 1.2rem; text-transform: uppercase; }
+  p { margin: 0; }
+  .eyebrow { font: 700 .85rem var(--body); letter-spacing: .08em; text-transform: uppercase; }
+  .muted { color: var(--muted); }
+  .small { font-size: .9rem; }
+  button, a.btn {
+    font: 600 1rem var(--body); border: 1px solid var(--line); background: var(--chip); color: var(--ink);
+    border-radius: 10px; padding: 10px 16px; min-height: 48px; cursor: pointer; text-decoration: none;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  button.link { background: none; border: none; color: var(--accent); padding: 4px 0; min-height: 36px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .grow { flex: 1 1 auto; }
+
+  /* Course map */
+  .phase { display: grid; gap: 10px; }
+  .phase-head { display: grid; gap: 2px; }
+  .week { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 8px; background: var(--surface); }
+  .week-title { font: 700 1.1rem var(--display); text-transform: uppercase; letter-spacing: .03em; }
+  .lessons { display: grid; gap: 6px; }
+  .lesson-btn { justify-content: space-between; text-align: left; width: 100%; background: var(--bg); }
+  .lesson-btn .lt { display: grid; gap: 0; }
+  .lesson-btn .lt small { color: var(--muted); font-weight: 500; }
+  .tag { font: 700 .72rem var(--body); letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: var(--chip); color: var(--muted); white-space: nowrap; }
+  .tag.done { background: var(--ok-bg); color: var(--ok-ink); }
+  .tag.part { background: var(--say-bg); color: var(--say-ink); }
+
+  /* Lesson */
+  .progress { height: 8px; background: var(--chip); border-radius: 999px; overflow: hidden; }
+  .progress > div { height: 100%; background: var(--accent); width: 0; }
+  @media (prefers-reduced-motion: no-preference) { .progress > div { transition: width .25s; } }
+  .steps-nav { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
+  .steps-nav button { min-height: 36px; min-width: 36px; padding: 4px 10px; font-size: .9rem; flex: 0 0 auto; }
+  .steps-nav button[aria-current="step"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .steps-nav button.done:not([aria-current="step"]) { background: var(--ok-bg); color: var(--ok-ink); }
+  .block { border-radius: 10px; padding: 12px 14px; display: grid; gap: 6px; }
+  .block .lbl { font: 700 .78rem var(--body); letter-spacing: .08em; text-transform: uppercase; }
+  .say { background: var(--say-bg); color: var(--say-ink); }
+  .say q { font-size: 1.15rem; font-weight: 600; quotes: "“" "”"; }
+  .watch { background: var(--watch-bg); color: var(--watch-ink); }
+  .ifthen { background: var(--warn-bg); color: var(--warn-ink); }
+  .good { background: var(--ok-bg); color: var(--ok-ink); }
+  ul.clean { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+  .checks { display: grid; gap: 6px; }
+  .checks label { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; cursor: pointer; }
+  .checks input { width: 22px; height: 22px; flex: 0 0 auto; margin-top: 2px; accent-color: var(--accent); }
+  .showbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .emoji-strip { font-size: 2rem; letter-spacing: 4px; }
+  .cue-chip { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: .92rem; background: var(--bg); }
+  .cue-chip b { font-family: var(--display); }
+  .stepfoot { display: grid; grid-template-columns: auto 1fr; gap: 8px; }
+  .stepfoot .primary { min-height: 56px; font-size: 1.1rem; }
+  .gate { display: grid; gap: 8px; }
+  .gate-out { border-radius: 10px; padding: 12px 14px; font-weight: 600; }
+
+  /* Child view */
+  #kid { position: fixed; inset: 0; z-index: 50; background: var(--surface); display: grid; place-items: center; text-align: center;
+    padding: max(24px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+  #kid[hidden] { display: none; }
+  #kid .big { font-size: min(28vw, 9rem); line-height: 1.1; }
+  #kid .phrase { font: 700 clamp(1.6rem, 7vw, 3rem)/1.15 var(--display); text-transform: uppercase; max-width: 16ch; margin: 16px auto 0; text-wrap: balance; }
+  #kid .hint { margin-top: 12px; color: var(--muted); }
+  #kid .faces { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; font-size: min(16vw, 4.5rem); }
+  #kid .faces span { cursor: default; }
+  #kid button { margin-top: 24px; }
+  @media (max-width: 520px) { h1 { font-size: 1.9rem; } body { font-size: 16px; } }
+</style>
+
+<main id="app"></main>
+<div id="kid" hidden role="dialog" aria-modal="true" aria-label="Show your child"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------- Reference data (from the program files) ---------- */
+  var CUES = {
+    B1: ["🧽", "Squeeze the brake like a sponge.", "Squeeze a fist slowly"],
+    B2: ["🗿", "Stop at the cone, like a statue.", "Flat palm: stop"],
+    B3: ["🚂↪️", "Brake first, then turn.", "Palm down, then a curving hand"],
+    B4: ["🧽", "Let the sponge go slowly.", "Open your fist slowly"],
+    T1: ["🪥", "Squeeze the go-pedal like toothpaste.", "Thumb pressing slowly"],
+    T2: ["🦶⬇️", "Foot to the floor until the cone.", "Gentle stamp, then point at the cone"],
+    T3: ["⬆️👍", "Wheel straight? Then go!", "Hands level, then thumbs up"],
+    T4: ["👣", "Feet take turns.", "One hand up, the other down"],
+    T5: ["🤫", "Quiet foot in the pits.", "Finger to lips"],
+    W1: ["🐦", "Hold the wheel like a baby bird.", "Cupped hands"],
+    W2: ["🕘🕒", "Hands on the clock: 9 and 3.", "Point at both sides"],
+    W3: ["🌈", "Paint a smooth rainbow.", "One smooth arc of your hand"],
+    W4: ["⏳🔶", "Wait for the turn cone.", "One finger up, then point"],
+    W5: ["⚽➡️", "Let it roll to the edge.", "Hand rolling outward"],
+    V1: ["🏴‍☠️🔭", "Pirate telescope: look far!", "Hands like a telescope"],
+    V2: ["👀➡️", "Middle of the corner, then the exit kerb.", "Point to the middle, then the exit"],
+    V3: ["👀🙌🏎️", "Hands follow eyes, kart follows hands.", "Point: eyes, hands, forward"],
+    V4: ["🕳️", "Look at the gap, not the wall.", "Point at an open space"],
+    V5: ["🔭➡️", "At the turn, look at the exit.", "Point one corner ahead"],
+    R1: ["⬆️", "Your lap is in front of you.", "Point forward"],
+    R2: ["🟩🟨🟥🏁", "Green go · yellow slow snail · red statue · chequered party.", "Hold up each flag card"],
+    R3: ["🚂", "Be a train on its track.", "Flat hand sliding straight"],
+    R4: ["✋", "Hand up, slowing down.", "Hand up"],
+    R5: ["✋🧍", "Stopped? Hand up, stay put, wait for help.", "Hand up, freeze"]
+  };
+
+  var DRILLS = {
+    D01: { name: "Paddock Pedal Game", setup: "Kart on a stand or chocked, ENGINE OFF, kill switch off. Child in the seat. You stand in front with picture cards 🧽 (brake) and 🪥 (go).", how: "Show a card; they squeeze that pedal slowly, hold, let go slowly. 10–20 calls, about 2 minutes.", fix: [["They press both pedals together", "Slow your calls right down. Praise “feet took turns!”"], ["They stamp", "Say the cue again, slower: “squeeze… hold… let go slowly.”"]] },
+    D02: { name: "Stop Box", setup: "Four soft cones at the edge of a straight (or the pit lane, if allowed) making a box about 3 kart lengths long. Only with the track's permission and no other karts moving.", how: "Drive in slowly and stop with the kart's nose inside the box.", fix: [["They stamp and slide", "Go back to B1: “squeeze like a sponge.”"], ["They stop early", "That's fine. Praise it."], ["They overshoot", "Slower approach next lap. Make the box bigger."]] },
+    D03: { name: "Follow the Leader", setup: "An adult, coach or experienced older driver leads at a gentle steady pace — ONLY in a session the track approves. No lead kart? Do it on foot: walk the racing line with your child behind you holding a paper-plate wheel.", how: "Child follows the leader's line. Leader keeps several kart lengths of gap and never brakes suddenly. No overtaking.", fix: [["They look back for the leader after getting dropped", "R1: “Your lap is in front of you.”"], ["They get too close", "Leader slows gently; tell your child “stay one big gap behind.”"]] },
+    D04: { name: "Flag Game", setup: "Flag cards or real flags: 🟩 🟨 🟥 🏁.", how: "Paddock first: show a flag, they do the action — green drive fast, yellow slow snail, red freeze like a statue, chequered cheer. On track only where a marshal or allowed helper can show flags from a safe spot.", fix: [["They stop dead for yellow", "Yellow means SLOW, not stop. Act out a snail."]] },
+    D05: { name: "Pirate Telescope", setup: "A helper in the spectator area at the end of the main straight holds up a bright towel or big picture card. Never on the track side of the barrier.", how: "Change the colour each lap. After the run ask: “What did the pirate see?”", fix: [["They didn't see anything", "Bigger, brighter target. Make it a game, not a test."], ["They drift toward the target", "Move the target to the exit side, so looking at it means looking down the track."]] },
+    D06: { name: "Flat Out Until the Cone", setup: "One soft cone at the track edge, well before a corner. Day 1: put it where your child already lifts off easily.", how: "“Foot to the floor until the cone, then your normal corner.” After 2 good runs, move the cone about one kart length closer — only if your child says yes.", fix: [["They brake hard and late after the cone", "Move the cone BACK one step. Fear is information, not failure."], ["They lift before the cone", "Leave it where it is. Praise any lap they held it."]] },
+    D07: { name: "Brake at the Cone", setup: "One soft cone at the track edge where braking (or lifting) should START. Ask your club which corners need braking in a Kid Kart.", how: "“Squeeze the brake at the cone, finish, then turn.”", fix: [["They stamp", "B1: “squeeze like a sponge.”"], ["They brake while turning", "B3 again, and move the cone a little earlier."]] },
+    D08: { name: "Wait for the Turn Cone", setup: "One soft cone on the OUTSIDE edge where the kart should start turning.", how: "“Keep it straight… wait… turn at the cone.”", fix: [["They turn before the cone", "Totally normal — it's the most common beginner mistake. Repeat W4, praise any lap they waited."], ["They wait, then turn sharply", "W3: “paint a smooth rainbow.”"]] },
+    D09: { name: "Roll to the Edge", setup: "One cone outside the exit kerb, or a helper behind the barrier holding a picture.", how: "“Look at the exit cone, let the kart roll out to it. Wheel straight, then go.”", fix: [["They steer toward the edge (wiggle)", "“Let it roll — don't steer it.”"], ["They stay tight on the inside", "Point at the exit target before the run."]] },
+    D10: { name: "Cones on Holiday", setup: "Remove the cones. On a walk, your child picks a real “treasure” (post, kerb end, crack, sign) for each cone's job and you photograph it.", how: "“Today the cones are on holiday. Use the yellow post instead.”", fix: [["The skill drops a little", "Normal at first. Only bring cones back if it drops for a whole day."]] },
+    D11: { name: "Same Lap Again (Grapes)", setup: "Lap timing: transponder, lap timer or phone stopwatch. A notebook. Grape stickers 🍇.", how: "“Make every lap the same, like stickers in a row.” Write lap times. Spread = slowest minus fastest. Tell your child “close together!” — not the numbers.", fix: [["They chase one fast lap", "Praise the bunch of grapes, never the fastest lap."]] },
+    D12: { name: "Line Explorer", setup: "Pick one corner on the track walk. Name three lines: wide whale 🐋, middle fish 🐟, tight crab 🦀.", how: "One lap of each, in order. Then your child picks their favourite for the rest of the run.", fix: [["The crab line hits the kerb hard", "Tight means close, not on top."]] },
+    D13: { name: "Traffic Buddy", setup: "ONLY in a track-approved session with other karts. Agree it with the other driver's parent or coach first.", how: "“If someone comes past, be a train on its track.”", fix: [["They swerve or stop", "R3 again before the next run. Shorter session."], ["They keep looking behind", "R1: “Your lap is in front of you.”"]] },
+    D14: { name: "Video Detective", setup: "Camera securely mounted on the kart (many series ban helmet cameras) or a phone filming from a spectator spot.", how: "Show ONE clip under 2 minutes. Ask “What do you see?” then “Find one place you were smooth.”", fix: [["You start explaining the whole clip", "Stop. Let your child talk first."]] },
+    D15: { name: "Calm Hands", setup: "Stickers on the gloves at 9 and 3 (if allowed). Phone for a short video.", how: "One run of “baby bird hands”. Watch: quiet on the straights? One smooth arc in corners?", fix: [["“Calm” becomes floppy", "The bird mustn't fly away — firm, not tight."], ["Big sim-style steering", "W3: one smooth rainbow per corner."]] },
+    D16: { name: "Track Walk Treasure Hunt", setup: "Walk the track ONLY when it is closed and the track allows it. Hold hands near the edge.", how: "Give each corner a fun name (“Dinosaur Corner”). Find treasures: kerb colours, signs, posts. Photograph each corner — that's your picture map for between-run chats.", fix: [] },
+    D17: { name: "10-Lap Grapes (sim)", setup: "Short kart track, easy kart. Pen and paper.", how: "10 laps in a row, NO restarts. Write lap times; mark laps with an off-track as “oops”. Spread = slowest − fastest.", fix: [["They want to restart after a mistake", "“Real karts don't restart — keep going!”"]] },
+    D18: { name: "Sim Stop Box", setup: "Pick 3 features in the sim: a sign, a kerb end, a tyre wall.", how: "You point at the one to stop next to. One lap, then stop. Repeat with a different feature.", fix: [] },
+    D19: { name: "Gold Laps (no touching)", setup: "Phase track, rental kart.", how: "A lap with no wall, grass or barrier touch = ⭐ gold lap. How many before the timer ends?", fix: [["They go very slowly to avoid touches", "That's fine at first. Smooth beats fast."]] }
+  };
+
+  var GAMES = {
+    G01: "Red Light, Green Light: call 🟩 green (run or “drive”), 🟥 red (freeze), 🟨 yellow (slow motion).",
+    G02: "Flag Statues: your child “drives” with a paper-plate wheel; you show a flag — 🟩 fast, 🟨 slow snail, 🟥 statue, 🏁 finish-party dance.",
+    G03: "Partner Toss: gentle underarm beanbag toss, 2–3 big steps apart. Count catches in a row.",
+    G04: "Ball Drop Catch: hold a tennis ball at shoulder height, drop it without warning, they catch after one bounce.",
+    G07: "Look-Far Game: from across the paddock, hold up coloured cards or fingers; they call them out.",
+    G08: "Scooter or Balance-Bike Slalom (helmet on): 4–6 cones in a wavy line. “Look at the NEXT cone, not this one.”",
+    G09: "Shadow Tag: your child walks a set path; you run past on either side; they stay on their path like a train on its track.",
+    G10: "Sponge Squeeze: wet sponge over a cup. “Make it rain slowly… now a storm… now slowly again.”",
+    G11: "Mirror Me: face each other, move your hands slowly like steering; your child copies like a mirror.",
+    G12: "Paper-Plate Driver: your child holds a paper plate as a wheel and follows you along the line, hands at 9 and 3."
+  };
+
+  var CHOICE = "Show the four choice pictures and let your child point: 🐢 snail lap waving at you, then normal driving · 🎯 pirate target (you hold up a colour) · 🔁 repeat today's favourite drill · 🆓 free run (no cue, no questions after).";
+
+  /* ---------- Track cards ---------- */
+  var TR = {
+    "TR-00": { title: "Fun Only Day", focus: "Enjoy driving. No cues. Really, none.", strip: "🎉🏎️🐢🆓🍦", cues: [], kit: ["A non-karting treat for afterwards"], warm: "Any game your child chooses.",
+      runs: [
+        { label: "Runs 1–3 · Free runs", drill: null, cue: null, before: "Nothing to set up.", watch: "Smiling at the pit gate.", ask: "Did you have fun?" },
+        { label: "Run 4 · Snail & wave", drill: null, cue: null, before: "Tell them: one slow lap waving at you.", watch: "A wave.", ask: "What shall we have for lunch?" }
+      ],
+      twist: "No afternoon plan. Your child picks a choice run, or stops. Max 6 runs in total — stopping after 2 is fine.", score: [], next: "Repeat the last card your child enjoyed." },
+    "TR-01": { title: "Hello Kart", focus: "Feel at home in the kart again, and copy a smooth line.", strip: "👋🏎️ 🗺️ 🚶➡️🏎️ 👀⬆️", cues: ["R1", "V1", "T5"], kit: ["Phone for corner photos", "Paper plate (steering wheel)"], warm: "D16 track walk (name corners, photograph them), then G12 — your child walks the line behind you holding the paper plate.", warmDrill: "D16",
+      runs: [
+        { label: "Run 1 · Free, gentle pace", drill: null, cue: "T5", before: "No drill. YOU just watch — this is the baseline. Note: pedals smooth? Hands calm? Eyes up? Looks behind?", watch: "Leaves the pits calmly.", ask: "Point to your favourite corner on the photos." },
+        { label: "Run 2 · Follow the Leader", drill: "D03", cue: "R1", watch: "Stays behind the leader for most of a lap.", ask: "Was it easy or tricky to follow? Thumb up, sideways or down?" },
+        { label: "Run 3 · Follow a quicker leader", drill: "D03", cue: "R1", before: "Leader goes slightly quicker — still steady.", watch: "Eyes forward, not checking behind.", ask: "What colour was the kerb at Dinosaur Corner?" },
+        { label: "Run 4 · Show me Dinosaur Corner", drill: null, cue: "V1", before: "Free run: “Show me your favourite corner!”", watch: "Smiles, smooth.", ask: "Tell me about that run!" }
+      ],
+      twist: "Runs 6–9: the leader drives a slightly different line for 2 laps and your child copies it, then free running. Run 10 = your child's choice.", score: ["A01–A13 baseline (watch only)", "D03 follow score 1–3"] },
+    "TR-02": { title: "Sponge & Toothpaste", focus: "Smooth pedals: squeeze on, squeeze off, one at a time.", strip: "🧽 🪥 👣", cues: ["T1", "B1", "T4"], kit: ["A real sponge and a cup of water", "Picture cards 🧽 and 🪥"], warm: "G10 Sponge Squeeze, then D01 Paddock Pedal Game in the kart with the engine OFF.", warmDrill: "D01",
+      runs: [
+        { label: "Run 1 · Yesterday's cue", drill: null, cue: "R1", before: "Sunday warm-up run: repeat yesterday's main cue only.", watch: "Eyes forward.", ask: "Tell me about that run!" },
+        { label: "Run 2 · Toothpaste out of the corners", drill: null, cue: "T1", before: "Before the run, squeeze an imaginary toothpaste tube together.", watch: "The engine note rises smoothly out of each corner — no stab-stab.", ask: "Was your toothpaste slow or fast?" },
+        { label: "Run 3 · Sponge before the corners", drill: null, cue: "B1", watch: "Gentle slowing, no skids, the kart doesn't lurch.", ask: "Show me with your hand how you pressed the sponge." },
+        { label: "Run 4 · Feet take turns", drill: null, cue: "T4", watch: "Never both pedals at once (the kart doesn't pitch or bog in corners).", ask: "Which corner had the smoothest toothpaste? Point on the photos." }
+      ],
+      twist: "Do D01 again in the paddock with EYES CLOSED (you call “sponge!” / “toothpaste!”). Then runs 6–9 repeat runs 2–4 in any order your child picks. Run 10 = choice.", score: ["A02 smooth throttle", "A03 feet take turns", "A04 smooth brake"] },
+    "TR-03": { title: "Statue Stop", focus: "Stop on a chosen spot, every time.", strip: "🗿 📦 🧽", cues: ["B2", "B1"], kit: ["4 soft cones (track permission)"], warm: "G01 Red Light, Green Light — freeze on red.",
+      runs: [
+        { label: "Run 1 · Big box", drill: "D02", cue: "B2", before: "Normal warm-up laps. On the last lap, stop in the BIG box.", watch: "Stops in the box, even if early.", ask: "Were you a good statue? Show me!" },
+        { label: "Run 2 · Big box, faster entry", drill: "D02", cue: "B2", watch: "Smooth stop, no slide.", ask: "Did the kart stop IN the box, before it, or after it? Point." },
+        { label: "Run 3 · Smaller box", drill: "D02", cue: "B2", before: "Move the cones closer together (only when no karts are moving).", watch: "Stops inside 2 times out of 3.", ask: "Was the small box tricky?" },
+        { label: "Run 4 · Real feature", drill: "D02", cue: "B2", before: "No cones: “Stop next to the white post.”", watch: "Stops near the post.", ask: "Which stop was your best?" }
+      ],
+      twist: "Runs 6–9: before each run, show a picture card for WHERE to stop (🟦 blue post · 🟥 red kerb · 📦 box). Your child stops at whichever one you showed. Run 10 = choice.", score: ["A05 stops on a mark"] },
+    "TR-04": { title: "Pirate Telescope", focus: "Eyes up and far.", strip: "🏴‍☠️🔭 🎨 ⬆️", cues: ["V1", "R1"], kit: ["3 coloured towels or big picture cards", "A helper in the spectator area"], warm: "G07 Look-Far Game across the paddock.",
+      runs: [
+        { label: "Run 1 · Yesterday's cue", drill: null, cue: "B2", before: "Sunday warm-up: statue stop on the last lap.", watch: "Stops on the mark.", ask: "Good statue?" },
+        { label: "Run 2 · Target at the end of the straight", drill: "D05", cue: "V1", watch: "Names at least one colour.", ask: "What did the pirate see?" },
+        { label: "Run 3 · Target toward the next corner's exit", drill: "D05", cue: "V1", watch: "Names 2+ colours.", ask: "Where was the treasure hiding? Point on the photos." },
+        { label: "Run 4 · Two targets", drill: "D05", cue: "R1", watch: "Names both; head stays forward (count head turns behind on one lap).", ask: "Which treasure was easier to spot?" }
+      ],
+      twist: "Runs 6–9: the helper holds up ANIMAL pictures instead of colours. Every animal spotted = one sticker. Run 10 = choice.", score: ["A08 eyes far", "A09 rarely looks behind"] },
+    "TR-05": { title: "Flags & Track Rules", focus: "Know the flags and what to do after a spin.", strip: "🟩🟨🟥🏁 ✋ 🅿️", cues: ["R2", "R5", "W1"], kit: ["Flag cards or real flags", "Ask your track: what must a driver do after a spin? Pit-entry rule?"], warm: "G02 Flag Statues in the paddock.",
+      runs: [
+        { label: "Run 1 · Yesterday's cue", drill: null, cue: "W1", before: "Sunday warm-up: baby bird hands.", watch: "Calm hands.", ask: "Did the bird stay happy?" },
+        { label: "Run 2 · Normal laps + flag quiz", drill: "D04", cue: "R2", before: "Normal laps. AFTER the run: show 4 flag cards in random order.", watch: "3–4 of 4 correct.", ask: "What does yellow mean? Show me with your hands." },
+        { label: "Run 3 · Flags on track", drill: "D04", cue: "R2", before: "ONLY if a marshal or allowed helper can show flags from a safe spot. Otherwise repeat the paddock quiz faster.", watch: "Correct reaction.", ask: "Which flag did you see?" },
+        { label: "Run 4 · Pit-in practice", drill: null, cue: "R2", before: "Practise your track's pit-entry routine: signal (if your track uses one), slow, enter correctly.", watch: "Follows the routine.", ask: "Show me how you come into the pits." }
+      ],
+      extra: { title: "Spin role-play (between runs, engine off)", say: "Oh no, a spin!", body: "Your child sits still, puts a hand up and waits until you say “marshal is here”. Make it a game and repeat it 3 times. Teach YOUR track's rule." },
+      twist: "Runs 6–9: your child shows the flags to YOU and you act them out wrong on purpose — they correct you. Run 10 = choice.", score: ["A11 flags", "A12 pit routine", "A13 spin routine"] },
+    "TR-06": { title: "Baby Bird Hands", focus: "Relaxed hands, small smooth steering (swapping big sim-style inputs for real-kart ones).", strip: "🐦 🕘🕒 🌈", cues: ["W1", "W2", "W3"], kit: ["Stickers for the gloves at 9 and 3", "Phone for a short video"], warm: "G11 Mirror Me, then hold a soft toy bird gently.", warmDrill: "D15",
+      runs: [
+        { label: "Run 1 · Hands on the clock", drill: null, cue: "W2", watch: "Hands at 9 and 3.", ask: "Where were your hands?" },
+        { label: "Run 2 · Baby bird run", drill: "D15", cue: "W1", watch: "Quiet hands on the straights.", ask: "Did the bird fly away, get squashed, or stay happy?" },
+        { label: "Run 3 · Rainbow run", drill: "D15", cue: "W3", watch: "One smooth turn per corner, no sawing at the wheel.", ask: "Which corner had the best rainbow? Point on the photos." },
+        { label: "Run 4 · Video run", drill: "D14", cue: "W1", before: "Film one lap from the fence.", watch: "—", ask: "Tell me about that run!" }
+      ],
+      twist: "Watch ONE 30-second clip from run 4 together: “Were your hands birds or dinosaurs?” Then runs 6–9 with bird hands at your child's own chosen speed. Run 10 = choice.", score: ["A06 calm hands", "A07 smooth steering", "A25 small inputs (not sim-style)"] },
+    "TR-07": { title: "Flat Out to the Cone", focus: "Full throttle all the way to a marker.", strip: "🦶⬇️ 🔶 🏁", cues: ["T2", "V1"], kit: ["1 soft cone (track permission)"], warm: "G01 Red Light, Green Light with a “foot to the floor” stamp on green.",
+      runs: [
+        { label: "Run 1 · Cone far from the corner", drill: "D06", cue: "T2", watch: "Holds full throttle to the cone.", ask: "Was your foot on the floor all the way to the cone? Thumb up, sideways, down?" },
+        { label: "Run 2 · Same spot", drill: "D06", cue: "T2", watch: "Every lap.", ask: "Shall we move the cone closer, or keep it here? (THEIR choice)" },
+        { label: "Run 3 · One kart length closer", drill: "D06", cue: "T2", before: "Move the cone ONLY if run 2 was solid AND your child said yes.", watch: "Holds it, then slows calmly.", ask: "How did that feel?" },
+        { label: "Run 4 · Eyes past the cone", drill: "D06", cue: "V1", watch: "Eyes past the cone, not on it.", ask: "What did you see past the cone?" }
+      ],
+      twist: "Runs 6–9: put the cone on a DIFFERENT straight and start it far back again. Run 10 = choice.", score: ["A14 full throttle to a marker"] },
+    "TR-08": { title: "Brake First, Then Turn", focus: "Finish braking (or lifting) in a straight line, then turn.", strip: "🧽 🚂 ↪️", cues: ["T2", "B3", "B1"], kit: ["1 soft cone", "Ask your club which corners need braking in a Kid Kart"], warm: "G10 sponge squeeze, then a “train stops before the bend” walk: walk, stop, then turn.",
+      runs: [
+        { label: "Run 1 · Yesterday's cue", drill: null, cue: "T2", before: "Sunday warm-up: flat out to the cone.", watch: "Full commitment.", ask: "Foot on the floor?" },
+        { label: "Run 2 · Brake at the cone", drill: "D07", cue: "B3", watch: "Brakes at the cone.", ask: "Was the train stopped before the bend?" },
+        { label: "Run 3 · Brake, finish, turn", drill: "D07", cue: "B3", watch: "Brakes, finishes, THEN turns.", ask: "Show me with your hands: brake… then turn." },
+        { label: "Run 4 · Smooth sponge", drill: "D07", cue: "B1", watch: "Smooth squeeze, no lurch.", ask: "Was your sponge gentle?" }
+      ],
+      twist: "Runs 6–9: D07 at a SECOND corner. Your child chooses the cone spot on a walk (you check it's sensible). Run 10 = choice.", score: ["A15 brakes before turning"] },
+    "TR-09": { title: "Wait for the Turn Cone", focus: "Turn in at the right point, not early — the most common beginner mistake.", strip: "⏳ 🔶 ↪️", cues: ["W4", "W3"], kit: ["1 soft cone at the turn-in point (outside edge)"], warm: "G12 walk the line with the paper plate: put a toy at the turn point and they “wait for the toy”.",
+      runs: [
+        { label: "Run 1 · Warm-up laps", drill: null, cue: null, before: "Settle in. No drill.", watch: "Settled, smooth.", ask: "Tell me about that run!" },
+        { label: "Run 2 · Wait for the cone", drill: "D08", cue: "W4", watch: "Waits for the cone some laps.", ask: "Did you wait for the cone?" },
+        { label: "Run 3 · Again", drill: "D08", cue: "W4", watch: "Waits most laps.", ask: "Was waiting easy or tricky?" },
+        { label: "Run 4 · Wait, then rainbow", drill: "D08", cue: "W3", watch: "Waits, then one smooth turn (not a sharp one).", ask: "Was your rainbow smooth?" }
+      ],
+      twist: "Runs 6–9: D08 at a DIFFERENT corner, with one video run (D14). Watch one clip: “Where did the kart turn — before, at, or after the cone?” Run 10 = choice.", score: ["A16 waits for the turn-in"] },
+    "TR-10": { title: "Eyes Through the Corner", focus: "Look at the middle of the corner, then the exit kerb; hands follow.", strip: "👀 ➡️ ➡️ 🙌 🏎️", cues: ["W4", "V2", "V3"], kit: ["Coloured target for the exit (helper in the spectator area)", "Phone for video"], warm: "G08 Scooter or Balance-Bike Slalom — “look at the next cone, not this one”.",
+      runs: [
+        { label: "Run 1 · Yesterday's cue", drill: null, cue: "W4", before: "Sunday warm-up: wait for the turn.", watch: "Waits.", ask: "Did you wait?" },
+        { label: "Run 2 · Exit target", drill: "D05", cue: "V2", before: "Helper holds the target at the EXIT of one corner.", watch: "Names the exit colour.", ask: "What colour was at the exit?" },
+        { label: "Run 3 · Hands follow eyes", drill: "D05", cue: "V3", watch: "One smooth arc toward the exit.", ask: "Did the kart go where your eyes went?" },
+        { label: "Run 4 · Video run", drill: "D14", cue: "V2", watch: "On video, the helmet turns toward the exit before the kart does.", ask: "On the video, where are your eyes looking? Point." }
+      ],
+      twist: "Runs 6–9: exit targets at TWO corners, then one run with no target: “Can your eyes find the exit on their own?” Run 10 = choice.", score: ["A10 looks through the corner"] },
+    "TR-11": { title: "Roll to the Edge", focus: "Let the kart run out to the track edge on exit, throttle as the wheel straightens.", strip: "⚽➡️ ⬆️ 🦶", cues: ["W5", "T3", "V2"], kit: ["1 exit cone (outside the kerb) or a helper with a picture"], warm: "Roll a ball across the paddock: “See how it rolls out on its own?”",
+      runs: [
+        { label: "Run 1 · Eyes to the exit", drill: null, cue: "V2", watch: "Eyes to the exit.", ask: "Tell me about that run!" },
+        { label: "Run 2 · Roll to the edge", drill: "D09", cue: "W5", watch: "Uses the edge some laps.", ask: "Did your ball roll out to the edge?" },
+        { label: "Run 3 · Wheel straight, then go", drill: "D09", cue: "T3", watch: "Smooth run out, no wiggle.", ask: "Which corner was the best roll? Point." },
+        { label: "Run 4 · Second corner", drill: "D09", cue: "W5", watch: "Uses the edge at a new corner.", ask: "Was this corner easier or harder?" }
+      ],
+      twist: "Runs 6–9: “Ball run” — every corner, the kart is a ball rolling out. Your child counts the corners where they rolled to the edge. Run 10 = choice.", score: ["A17 runs to the edge on exit"] },
+    "TR-12": { title: "Cones on Holiday", focus: "Keep the Phase 2 skills with NO cones, using real track features.", strip: "🔶🏖️ 🔎", cues: ["W5", "V3", "V5"], kit: ["Phone photos of the chosen treasures"], warm: "D16 walk: for each old cone spot, your child picks a real treasure and photographs it.", warmDrill: "D10",
+      runs: [
+        { label: "Run 1 · Yesterday's cue", drill: null, cue: "W5", before: "Sunday warm-up: roll to the edge.", watch: "Uses the edge.", ask: "Did your ball roll?" },
+        { label: "Run 2 · Flat-out treasure", drill: "D10", cue: "V3", before: "The treasure replaces the D06 cone.", watch: "Holds throttle to the treasure.", ask: "Did your treasure work as well as the cone?" },
+        { label: "Run 3 · Brake and turn-in treasures", drill: "D10", cue: "V5", watch: "Waits for the treasure.", ask: "Which treasure is your favourite?" },
+        { label: "Run 4 · Exit treasure", drill: "D10", cue: "V3", watch: "Rolls to the edge.", ask: "Tell me about that run!" }
+      ],
+      twist: "Runs 6–9: your child chooses NEW treasures for one corner and teaches them to you on the photo map. Run 10 = choice.", score: ["A18 skills hold without cones"] },
+    "TR-13": { title: "Grapes", focus: "Laps that are more alike — laps close together are a bunch of grapes.", strip: "🍇 🔁 ⏱️", cues: ["V5"], kit: ["Lap timing (transponder, lap timer or phone stopwatch)", "Notebook", "Grape stickers 🍇"], warm: "G04 Ball Drop Catch — “catch it the same way every time”.",
+      runs: [
+        { label: "Run 1 · Warm-up laps", drill: null, cue: null, before: "No timing talk.", watch: "Settled.", ask: "Tell me about that run!" },
+        { label: "Run 2 · 3-lap grapes", drill: "D11", cue: "V5", before: "Time 3 laps. Just measure.", watch: "—", ask: "Were your laps the same, or all different?" },
+        { label: "Run 3 · 3-lap grapes", drill: "D11", cue: "V5", watch: "Spread the same or smaller than run 2.", ask: "Which corner is hardest to make the same?" },
+        { label: "Run 4 · 5-lap grapes", drill: "D11", cue: "V5", watch: "—", ask: "Did you get a big bunch of grapes?" }
+      ],
+      twist: "Runs 6–9: “Copy-cat laps” — your child chooses which lap to copy (“the one where you rolled to the edge at Dinosaur Corner”) and tries to make every lap like that one. Run 10 = choice.", score: ["A19 lap spread (compare only with their own earlier spreads)"] },
+    "TR-14": { title: "Line Explorer", focus: "Drive different lines on purpose to learn what the kart does.", strip: "🐋 🐟 🦀", cues: ["V5", "V2", "W5"], kit: ["Photo map with the chosen corner marked", "Whale, fish and crab picture cards"], warm: "G12: walk the three lines on foot with the paper plate.",
+      runs: [
+        { label: "Run 1 · Yesterday's cue", drill: null, cue: "V5", before: "Sunday warm-up: look at the exit.", watch: "Eyes ahead.", ask: "Tell me about that run!" },
+        { label: "Run 2 · Whale, fish, crab", drill: "D12", cue: "V2", watch: "Shows all three lines.", ask: "Which animal was fastest? Which was most fun?" },
+        { label: "Run 3 · You call the animal", drill: "D12", cue: "V2", before: "Show a picture card at the fence before each lap.", watch: "Matches the card.", ask: "Was the crab line bumpy?" },
+        { label: "Run 4 · Best animal", drill: "D12", cue: "W5", before: "Your child picks the best animal and drives it all run.", watch: "Same line every lap.", ask: "Why is that animal the best?" }
+      ],
+      twist: "Runs 6–9: D12 at a DIFFERENT corner. Which animal is best there? It might be different — that's the lesson. Run 10 = choice.", score: ["A21 drives a requested line"] },
+    "TR-15": { title: "Traffic Buddy", focus: "Stay calm and steady when another kart passes.", strip: "🚂 🏎️🏎️ ⬆️", cues: ["R3", "R1"], kit: ["A track-approved session with other karts", "Agreement with the other driver's parent or coach"], warm: "G09 Shadow Tag.",
+      runs: [
+        { label: "Run 1 · Laps with others on track", drill: null, cue: "R1", watch: "Eyes forward.", ask: "Was it fun to have friends on the track?" },
+        { label: "Run 2 · Buddy passes", drill: "D13", cue: "R3", watch: "Holds the line.", ask: "Did anyone come past? What did your train do?" },
+        { label: "Run 3 · Again", drill: "D13", cue: "R3", watch: "Calm — no swerve, no stop.", ask: "Was it scary, OK, or fun?" },
+        { label: "Run 4 · Free laps in traffic", drill: null, cue: "R1", watch: "Relaxed.", ask: "Tell me about that run!" }
+      ],
+      twist: "Runs 6–9: your child follows the buddy (D03) for a lap, then the buddy follows your child: “Show them your best line.” Run 10 = choice.", score: ["A22 calm when passed"] },
+    "TR-16": { title: "Different Day, Same Lap", focus: "Keep the laps alike when something changes.", strip: "🌦️ 🔄 🍇", cues: ["R3", "V5", "V1"], kit: ["Lap timing", "ONE change: a different track, reverse direction (if offered), cooler/wetter day, different time of day, or a small kart change your coach recommends"], warm: "Any warm-up game your child picks.",
+      runs: [
+        { label: "Run 1 · Yesterday's cue", drill: null, cue: "R3", before: "Sunday warm-up: train on its track.", watch: "Steady line.", ask: "Tell me about that run!" },
+        { label: "Run 2 · Explore", drill: null, cue: "V1", before: "“What's different today?”", watch: "Tells you one difference.", ask: "What felt different today?" },
+        { label: "Run 3 · 3-lap grapes", drill: "D11", cue: "V5", watch: "— (measure)", ask: "Did your treasures still work?" },
+        { label: "Run 4 · 5-lap grapes", drill: "D11", cue: "V5", watch: "Spread similar to a normal day.", ask: "Big bunch of grapes?" }
+      ],
+      twist: "Do a treasure hunt for NEW references on this changed day, then 2 more grape runs. Run 10 = choice.", score: ["A19 spread (note the change)"] },
+    "TR-17": { title: "Show Me!", focus: "Your child picks the drills and teaches YOU what they're doing.", strip: "👧🧑‍🏫 🏎️ ⭐", cues: [], kit: ["Picture cards of drills they've done"], warm: "Your child chooses.",
+      runs: [
+        { label: "Run 1 · Yesterday's cue", drill: null, cue: "V5", watch: "—", ask: "Tell me about that run!" },
+        { label: "Runs 2–4 · Child's three drills", drill: null, cue: null, before: "Show the drill picture cards; your child picks 3 and the order. Before each run, they tell YOU what they'll do.", watch: "They explain the plan before each run.", ask: "What should I do better, Coach?" }
+      ],
+      twist: "You “drive” the paper-plate wheel on foot and your child coaches you with their cue words. Write those words down — they're your new cues.", score: ["None needed — write down the cue words they use"] }
+  };
+
+  /* ---------- Sim cards ---------- */
+  var SIM = {
+    "SIM-01": { title: "Set-up & Free Drive", strip: "🪑 🦶🦶 🐦 🏎️", cues: ["T4", "W1"], cap: 15, goal: "Your child fits the rig safely, and you WATCH their current sim habits.",
+      game: ["Fit check: feet reach full brake with a firm squeeze (check the brake readout); fingers outside the spokes.", "Pedal game in the pits: you say 🧽 or 🪥, they squeeze — same as D01.", "Free drive, 5 minutes. You say NOTHING. Watch: do they lean on walls or cut grass? Restart after mistakes? Press both pedals?"],
+      score: "For you, not them: A23 walls/grass, A24 restarts, A03 feet take turns.", link: "Tomorrow is TR-02 Sponge & Toothpaste. Say: “Tomorrow your feet do the sponge and toothpaste in the real kart.”" },
+    "SIM-02": { title: "Statue Stop", strip: "🗿 🪧 🧽", cues: ["B2", "B1"], cap: 12, goal: "Stop next to a chosen feature, every time.", drill: "D18",
+      game: ["Pick 3 features: a sign, a kerb end, a tyre wall.", "Point at the screen to show which one.", "One lap, then stop next to it. Repeat with a different feature."],
+      score: "1 = past it, 2 = near it, 3 = right next to it. Best 3 of 5.", link: "Tomorrow (TR-04), run 1 is a statue-stop warm-up." },
+    "SIM-03": { title: "Gold Laps", strip: "⭐ 🚫🧱 🌈", cues: ["W3", "V4", "W1"], cap: 12, goal: "Swap sim habits (walls, grass) for clean, smooth real-kart laps.", drill: "D19",
+      game: ["A lap with no wall, grass or barrier touch = ⭐ gold lap.", "Count gold laps until the timer ends.", "Slow is fine. Smooth beats fast."],
+      score: "Number of gold laps. Compare only with their last Gold Laps.", link: "Tomorrow (TR-05), run 1 is baby bird hands." },
+    "SIM-04": { title: "Pirate Telescope", strip: "🏴‍☠️🔭 🖥️🖥️🖥️", cues: ["V1", "V5"], cap: 10, goal: "Eyes up and far — use the side screens to look into corners early.",
+      game: ["While they drive, ask: “What's at the end of this straight?” or “What colour is the kerb at the next corner?”", "They answer BEFORE they get there."],
+      score: "Correct early answers out of 5.", link: "Leads into Phase 2's eyes work (TR-10)." },
+    "SIM-05": { title: "Flat Out to the Marker", strip: "🦶⬇️ 🪧 🏁", cues: ["T2", "V1"], cap: 12, goal: "Full throttle to a chosen feature.",
+      game: ["Pick a feature on one straight as the “cone”.", "2 laps flat to that spot.", "Your child CHOOSES whether to move it closer."],
+      score: "Laps held flat to the marker, out of 5.", link: "Tomorrow (TR-08), run 1 is flat out to the cone." },
+    "SIM-06": { title: "Wait for the Turn", strip: "⏳ 🪧 ↪️", cues: ["W4", "V2"], cap: 12, goal: "Turn in at a chosen feature, not early.",
+      game: ["Choose a turn-in feature for 2 corners.", "Each lap: “wait… turn!” — your child says “NOW!” out loud as they turn. You'll hear if it's on time."],
+      score: "On-time turns out of 6 (3 laps × 2 corners).", link: "Tomorrow (TR-10), run 1 is wait for the turn." },
+    "SIM-07": { title: "Roll to the Edge", strip: "⚽➡️ ⬆️ 🦶", cues: ["W5", "T3"], cap: 12, goal: "Let the kart run to the exit edge, throttle as the wheel straightens.",
+      game: ["Pick 2 corners.", "If the kart rolls out to the exit kerb smoothly, your child shouts “BALL!”", "You count the balls."],
+      score: "Balls out of 6.", link: "Tomorrow (TR-12 Cones on Holiday), run 1 is roll to the edge." },
+    "SIM-08": { title: "Treasure Markers", strip: "🔎 🪧 🧭", cues: ["V3", "V5"], cap: 12, goal: "Find and use real features for flat-out, brake, turn-in and exit, on a NEW track.",
+      game: ["2 slow laps: your child names a treasure for each job at one corner.", "Then 4 laps using them."],
+      score: "Treasures found and used, out of 4 jobs.", link: "Phase 3 starts with TR-13 Grapes, which uses the same treasures." },
+    "SIM-09": { title: "10-Lap Grapes", strip: "🍇 🔟 🔁", cues: ["V5"], cap: 15, goal: "Consistency: 10 laps judged on spread, never the fastest lap.", drill: "D17",
+      game: ["10 laps in a row. NO restarts.", "You write the lap times and mark “oops” laps.", "If 10 laps won't fit in the time cap, do 6."],
+      score: "Spread = slowest − fastest. Show it as grapes. Compare only with the last SIM-09.", link: "Tomorrow (TR-14), run 1 uses the same cue (V5)." },
+    "SIM-10": { title: "Line Explorer", strip: "🐋 🐟 🦀", cues: ["V2", "W5"], cap: 12, goal: "Drive three lines on purpose through one corner.",
+      game: ["1 lap each: whale (wide), fish (middle), crab (tight).", "Your child picks the best and drives it for 3 laps."],
+      score: "Lines shown on request, out of 3.", link: "Tomorrow (TR-16 Different Day) asks your child to adapt — this is practice for that." },
+    "SIM-11": { title: "Video Detective", strip: "🎬 🔎 ⭐", cues: [], cap: 10, goal: "Your child watches their own replay and finds ONE good thing.",
+      game: ["5 minutes of driving.", "3 minutes of the sim's replay: “Find one place you were smooth.” “Where were your eyes?”"],
+      score: "None. Write down what they spotted.", link: "Next track day, use what they spotted as the main cue." },
+    "SIM-12": { title: "Your Choice", strip: "🎉 👉 🏎️", cues: [], cap: 12, goal: "Fun and ownership: your child picks any earlier sim game.",
+      game: ["Show the picture strips of earlier sim games; they point to one.", "Play it with that card's cues."],
+      score: "None.", link: "Ask what they'd like to practise next." }
+  };
+
+  /* ---------- Course plan (weekends) ---------- */
+  var PHASES = [
+    { n: 1, name: "Foundations", line: "Driving the kart becomes automatic.",
+      exit: ["Quiet foot in the pits every time (A01 = 3)", "Feet take turns every time (A03 = 3)", "Stops on a mark every time (A05 = 3)", "Knows all 4 flags (A11 = 3)", "After a spin: hand up, stays put (A13 = 3)", "Smooth pedals, calm hands, eyes up, rarely looks behind — at least “sometimes” (A02, A04, A06–A09, A25 ≥ 2)", "Fun average 3+ over the last 4 sessions"],
+      weeks: [
+        { w: 1, sat: "TR-01", sim: "SIM-01", sun: "TR-02", gate: "Smooth throttle and feet taking turns are at least “sometimes” (A02, A03 ≥ 2).", fallback: "Next weekend: repeat TR-02 on Saturday, then carry on with Week 2's Sunday card." },
+        { w: 2, sat: "TR-03", sim: "SIM-02", sun: "TR-04", gate: "Stops on a mark and eyes far are at least “sometimes” (A05, A08 ≥ 2).", fallback: "Next weekend: repeat whichever card scored 1." },
+        { w: 3, sat: "TR-06", sim: "SIM-03", sun: "TR-05", gate: "Calm hands and flags are at least “sometimes” (A06, A11 ≥ 2).", fallback: "Next weekend: repeat whichever card scored 1." },
+        { w: 4, light: true, sim: "SIM-04" }
+      ] },
+    { n: 2, name: "Confidence", line: "Commit on the straights, wait for the corner, let the eyes lead.",
+      exit: ["Brakes before turning every time (A15 = 3)", "Waits for the turn-in every time (A16 = 3)", "Looks through corners, full throttle to a marker, runs to the edge, keeps it all without cones — at least “sometimes” (A10, A14, A17, A18 ≥ 2)", "All Phase 1 safety items still every time", "Fun average 3+ over the last 4 sessions"],
+      weeks: [
+        { w: 5, sat: "TR-07", sim: "SIM-05", sun: "TR-08", gate: "Full throttle to the marker and braking before turning are at least “sometimes” (A14, A15 ≥ 2).", fallback: "Next weekend: repeat the card that scored 1. If the cone scared them, move it back and do TR-10 / TR-11 first." },
+        { w: 6, sat: "TR-09", sim: "SIM-06", sun: "TR-10", gate: "Waiting for the turn and looking through corners are at least “sometimes” (A16, A10 ≥ 2).", fallback: "Next weekend: repeat the card that scored 1." },
+        { w: 7, sat: "TR-11", sim: "SIM-07", sun: "TR-12", gate: "Rolling to the edge and keeping skills without cones are at least “sometimes” (A17, A18 ≥ 2).", fallback: "Next weekend: repeat the card that scored 1." },
+        { w: 8, light: true, sim: "SIM-08" }
+      ] },
+    { n: 3, name: "Consistency", line: "The same good lap, again and again.",
+      exit: ["Track lap spread smaller or the same on 2 of the last 3 track days, vs the first Phase 3 day (A19)", "Sim 10-lap spread smaller than the first SIM-09, on 2 blocks (A20)", "Calm when passed, every time (A22 = 3)", "Can drive a requested line at least “sometimes” (A21 ≥ 2)", "Fun 3+ and your child WANTS to keep going"],
+      weeks: [
+        { w: 9, sat: "TR-13", sim: "SIM-09", sun: "TR-14", gate: "Fun average is 3 or more (spread is tracked, not gated).", fallback: "Next weekend: a TR-00 day first, then carry on." },
+        { w: 10, sat: "TR-15", sim: "SIM-10", sun: "TR-16", gate: "Calm when passed is at least “sometimes” (A22 ≥ 2).", fallback: "No other karts available? Swap TR-15 for TR-16 and do TR-15 whenever a club session comes up." },
+        { w: 11, sat: "TR-13", sim: "SIM-09", sun: "TR-17", gate: "Compare today's grapes with week 9's.", fallback: "No gate — carry on to the check weekend." },
+        { w: 12, light: true, sim: "SIM-11" }
+      ] }
+  ];
+
+  var SAFETY = ["Brakes: firm pedal, kart doesn't roll when pushed with the brake on", "Throttle springs back to idle by itself", "Kill switch stops the engine — and you know where it is", "Chain guard fitted and tight", "Idle set so the kart doesn't creep (centrifugal clutch)", "Wheel nuts, steering bolts and pins, bumpers all tight", "Seat fit: reaches full brake and throttle with a slight knee bend", "Ballast bolted, never taped", "Helmet (right size, strap snug), neck collar and chest protector if your series requires them, suit, gloves, boots", "Long hair tucked in; nothing loose that could reach the chain", "Cones only if the track allows; soft cones at the edge, placed when no karts are moving", "Water, snacks, shade or warmth, first-aid kit, phone charged"];
+
+  /* ---------- Build lessons ---------- */
+  var LESSONS = [];
+  function lessonId(w, part) { return "w" + w + "-" + part; }
+
+  function cueBlock(ids) { return ids.filter(Boolean); }
+
+  function trackSteps(code, opts) {
+    var c = TR[code], s = [];
+    s.push({ title: "Before you go", kind: "plan", focus: c.focus, kit: c.kit, cues: c.cues, strip: c.strip, note: opts.sunday ? "Sunday: run 1 repeats yesterday's main cue. Today's cards keep to 3 cues in total." : null });
+    s.push({ title: "Safety check", kind: "checks", items: SAFETY, say: null, body: "Tick every line before run 1. Brakes are never disabled or restricted — for any drill." });
+    s.push({ title: "Warm-up game", kind: "warm", body: c.warm, drill: c.warmDrill, cues: c.cues });
+    if (c.cues.length) s.push({ title: "Teach today's cue", kind: "cue", cue: c.cues[0], cues: c.cues });
+    s.push({ title: "Pit routine", kind: "pit" });
+    c.runs.forEach(function (r) { s.push({ title: r.label, kind: "run", run: r }); });
+    if (c.extra) s.push({ title: c.extra.title, kind: "extra", extra: c.extra });
+    s.push({ title: "Run 5 · Your Choice", kind: "choice" });
+    s.push({ title: "Lunch & reset", kind: "lunch" });
+    s.push({ title: "Afternoon twist", kind: "twist", body: c.twist });
+    s.push({ title: "End the day", kind: "end", score: c.score, gate: opts.gate, fallback: opts.fallback, next: opts.next || c.next });
+    return s;
+  }
+  function simSteps(code, opts) {
+    var c = SIM[code], s = [];
+    s.push({ title: "Before you start", kind: "simplan", sim: c, code: code });
+    s.push({ title: "Rig check", kind: "simcheck" });
+    s.push({ title: "Teach the cue", kind: c.cues.length ? "cue" : "nocue", cue: c.cues[0], cues: c.cues });
+    s.push({ title: "The game", kind: "simgame", sim: c });
+    s.push({ title: "Your Choice · 2 minutes", kind: "simchoice" });
+    s.push({ title: "The sim goes to sleep", kind: "simend", sim: c, next: opts.next });
+    return s;
+  }
+  function lightSteps(phase) {
+    return [
+      { title: "This weekend", kind: "lightplan", phase: phase },
+      { title: "Safety check", kind: "checks", items: SAFETY, body: "Tick every line before run 1." },
+      { title: "Favourites morning", kind: "lightfav", phase: phase },
+      { title: "Lunch & reset", kind: "lunch" },
+      { title: "Phase " + phase.n + " check", kind: "phasecheck", phase: phase },
+      { title: "End the day", kind: "lightend", phase: phase }
+    ];
+  }
+
+  PHASES.forEach(function (ph) {
+    ph.weeks.forEach(function (wk) {
+      if (wk.light) {
+        LESSONS.push({ id: lessonId(wk.w, "check"), week: wk.w, phase: ph.n, day: "Saturday", kind: "light", code: "Check", title: "Favourites & Phase " + ph.n + " check", steps: lightSteps(ph) });
+        LESSONS.push({ id: lessonId(wk.w, "sim"), week: wk.w, phase: ph.n, day: "Saturday evening · optional", kind: "sim", code: wk.sim, title: SIM[wk.sim].title, steps: simSteps(wk.sim, { next: "Sunday: another sport, a family outing, or rest. No karting." }) });
+        return;
+      }
+      LESSONS.push({ id: lessonId(wk.w, "sat"), week: wk.w, phase: ph.n, day: "Saturday", kind: "track", code: wk.sat, title: TR[wk.sat].title,
+        steps: trackSteps(wk.sat, { sunday: false, next: "Tonight: " + wk.sim + " " + SIM[wk.sim].title + ". Tomorrow: " + wk.sun + " " + TR[wk.sun].title + "." }) });
+      LESSONS.push({ id: lessonId(wk.w, "sim"), week: wk.w, phase: ph.n, day: "Saturday evening", kind: "sim", code: wk.sim, title: SIM[wk.sim].title, steps: simSteps(wk.sim, { next: "Tomorrow: " + wk.sun + " " + TR[wk.sun].title + "." }) });
+      LESSONS.push({ id: lessonId(wk.w, "sun"), week: wk.w, phase: ph.n, day: "Sunday", kind: "track", code: wk.sun, title: TR[wk.sun].title,
+        steps: trackSteps(wk.sun, { sunday: true, gate: wk.gate, fallback: wk.fallback }) });
+    });
+  });
+  LESSONS.push({ id: "fun-only", week: 0, phase: 0, day: "Any day", kind: "track", code: "TR-00", title: "Fun Only Day", steps: trackSteps("TR-00", { sunday: false }) });
+  var BY_ID = {}; LESSONS.forEach(function (l, i) { l.index = i; BY_ID[l.id] = l; });
+
+  /* ---------- Progress (this device only) ---------- */
+  var KEY = "kid-kart-course-v1", state = { done: {}, last: null, funs: [] };
+  try { var raw = localStorage.getItem(KEY); if (raw) state = Object.assign(state, JSON.parse(raw)); } catch (e) {}
+  function persist() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+  function doneSet(id) { return state.done[id] || (state.done[id] = []); }
+
+  /* ---------- Rendering helpers ---------- */
+  var app = document.getElementById("app"), kid = document.getElementById("kid");
+  function h(tag, attrs, kids) {
+    var el = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) {
+      if (k === "text") el.textContent = attrs[k];
+      else if (k === "class") { if (attrs[k]) el.className = attrs[k]; }
+      else if (k.slice(0, 2) === "on") el.addEventListener(k.slice(2), attrs[k]);
+      else if (attrs[k] !== null && attrs[k] !== undefined && attrs[k] !== false) el.setAttribute(k, attrs[k]);
+    });
+    (kids || []).forEach(function (c) { if (c == null) return; el.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+    return el;
+  }
+  function block(cls, label, kids) { return h("div", { class: "block " + cls }, [h("div", { class: "lbl", text: label })].concat(kids)); }
+  function say(text) { return block("say", "Say", [h("q", { text: text })]); }
+  function list(items) { return h("ul", { class: "clean" }, items.map(function (t) { return h("li", { text: t }); })); }
+  function p(text, cls) { return h("p", { class: cls || null, text: text }); }
+  function cueChip(id) { var c = CUES[id]; return h("span", { class: "cue-chip" }, [h("b", { text: id }), c[0] + " " + c[1]]); }
+
+  function showKid(strip, phrase, hint) {
+    kid.textContent = "";
+    kid.appendChild(h("div", null, [
+      h("div", { class: "big", text: strip }),
+      phrase ? h("div", { class: "phrase", text: phrase }) : null,
+      hint ? p(hint, "hint") : null,
+      h("button", { class: "primary", type: "button", onclick: hideKid, text: "Back to coaching" })
+    ]));
+    kid.hidden = false; kid.querySelector("button").focus();
+  }
+  function showFaces() {
+    kid.textContent = "";
+    kid.appendChild(h("div", null, [
+      h("div", { class: "phrase", text: "How much fun?" }),
+      h("div", { class: "faces", style: "margin-top:16px" }, ["😞", "🙁", "😐", "🙂", "🤩"].map(function (f) { return h("span", { text: f }); })),
+      p("Your child points. Tap Back, then record the face.", "hint"),
+      h("button", { class: "primary", type: "button", onclick: hideKid, text: "Back to coaching" })
+    ]));
+    kid.hidden = false; kid.querySelector("button").focus();
+  }
+  function hideKid() { kid.hidden = true; }
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !kid.hidden) hideKid(); });
+  function showBtn(strip, phrase, hint, label) {
+    return h("button", { type: "button", onclick: function () { showKid(strip, phrase, hint); }, text: label || "Show your child" });
+  }
+
+  /* ---------- Step bodies ---------- */
+  function stepBody(step, lesson) {
+    var out = [];
+    switch (step.kind) {
+      case "plan":
+        out.push(block("good", "Today's one focus", [p(step.focus)]));
+        out.push(h("div", { class: "showbar" }, [h("span", { class: "emoji-strip", text: step.strip }), showBtn(step.strip, lesson.title, "Today we're doing this!", "Show today's picture")]));
+        if (step.cues.length) out.push(h("div", { class: "row" }, step.cues.map(cueChip)));
+        out.push(h("h3", { text: "Pack" }));
+        out.push(list(step.kit.concat(["Gear bag, water, snacks", "Phone (photos, video)"])));
+        if (step.note) out.push(p(step.note, "muted small"));
+        out.push(say("Today we're going to " + (lesson.code === "TR-00" ? "just have fun driving!" : "play " + lesson.title + "!")));
+        out.push(block("watch", "Don't", [p("Talk about times, other kids or “trying hard”. Don't run through the whole plan.")]));
+        break;
+      case "checks":
+        out.push(p(step.body));
+        var ds = doneSet(lesson.id + ":checks:" + step.title);
+        out.push(h("div", { class: "checks" }, step.items.map(function (t, i) {
+          var cb = h("input", { type: "checkbox", id: "chk-" + lesson.id + "-" + i });
+          cb.checked = ds.indexOf(i) >= 0;
+          cb.addEventListener("change", function () { var k = ds.indexOf(i); if (cb.checked && k < 0) ds.push(i); if (!cb.checked && k >= 0) ds.splice(k, 1); persist(); });
+          return h("label", { for: "chk-" + lesson.id + "-" + i }, [cb, h("span", { text: t })]);
+        })));
+        break;
+      case "warm":
+        out.push(p("5–10 minutes in the paddock. Laugh. This is play, not a test."));
+        out.push(block("good", "Do", [p(step.body)]));
+        if (step.drill && DRILLS[step.drill]) out.push(drillCard(step.drill));
+        break;
+      case "cue":
+        var c = CUES[step.cue];
+        out.push(p("Teach ONE cue now. Use the same words all day."));
+        out.push(say(c[1]));
+        out.push(block("good", "Hand sign", [p(c[2] + ". Your child does the sign back to you. Now you can cue from the fence without shouting (where parents are allowed).")]));
+        out.push(h("div", { class: "showbar" }, [h("span", { class: "emoji-strip", text: c[0] }), showBtn(c[0], c[1])]));
+        if (step.cues.length > 1) out.push(h("div", { class: "row" }, [p("Back-up cues if needed:", "muted small")].concat(step.cues.slice(1).map(cueChip))));
+        break;
+      case "nocue":
+        out.push(p("No new cue tonight. Your child does the talking."));
+        break;
+      case "pit":
+        out.push(p("Same routine before every run, all day."));
+        out.push(list(["Helmet on, strap snug (one finger under it)", "Hands on the wheel at 9 and 3", "Engine starts — NO throttle until the helper says go"]));
+        out.push(say(CUES.T5[1]));
+        out.push(block("watch", "Why", [p("The Comer C52 has a centrifugal clutch: the kart moves as soon as the revs rise.")]));
+        out.push(block("watch", "On the grid, say only one of these", [list(["Have fun, I'm watching you!", "I love watching you drive.", "Thumbs up 👍 + the cue's hand sign"])]));
+        break;
+      case "run":
+        var r = step.run, d = r.drill && DRILLS[r.drill];
+        if (d && !r.before) out.push(drillMore(r.drill));
+        if (r.before || d) out.push(block("good", "Set up", [p(r.before || (d.setup + " " + d.how))]));
+        if (d && r.before) out.push(drillCard(r.drill));
+        if (r.cue) out.push(h("div", { class: "row" }, [say(CUES[r.cue][1]), showBtn(CUES[r.cue][0], CUES[r.cue][1])]));
+        else out.push(block("say", "Say", [p("Nothing new. “Have fun, I'm watching you!”")]));
+        out.push(block("watch", "Watch for", [p(r.watch)]));
+        out.push(block("say", "After the run · they talk first", [list(["Water, visor up, warm or cold?", "“Tell me about that run!” (they point at the photo map)", "“" + r.ask.replace(/^“|”$/g, "") + "”", "Then ONE thing from you, in cue words only — or just praise what you saw."])]));
+        if (d && d.fix.length) out.push(block("ifthen", "If… then", [list(d.fix.map(function (f) { return "If " + f[0].charAt(0).toLowerCase() + f[0].slice(1) + " → " + f[1]; }))]));
+        break;
+      case "extra":
+        out.push(say(step.extra.say));
+        out.push(p(step.extra.body));
+        break;
+      case "choice":
+        out.push(p(CHOICE));
+        out.push(showBtn("🐢 🎯 🔁 🆓", "Your choice!", "Point to one"));
+        out.push(block("watch", "Why", [p("Choice keeps motivation up and helps learning. If they pick 🆓, ask no questions after.")]));
+        break;
+      case "lunch":
+        out.push(list(["Eat, drink, shade or warmth", "45+ minutes of free play — no karting talk", "Check: tired? Rubbing eyes? Grumpy? Then do only 1–2 runs this afternoon, or stop. 8–10 runs a day is a MAXIMUM."]));
+        out.push(block("watch", "Fun rule", [p("If fun dropped two sessions in a row (e.g. 4 → 3 → 2), or was 1–2 twice in a row, skip the twist: do “Fun Only” runs instead.")]));
+        break;
+      case "twist":
+        out.push(p("Same focus, done a bit differently. Varying it helps the skill stick."));
+        out.push(block("good", "Do", [p(step.body)]));
+        out.push(p("Stop early whenever attention fades. Always finish on a good run — if the last one went badly, do one short 🐢 snail lap.", "muted"));
+        break;
+      case "end":
+        out.push(h("ol", { class: "clean" }, [h("li", { text: "Finish on a good run." }), h("li", null, ["Fun face — ", h("button", { class: "link", type: "button", onclick: showFaces, text: "show the faces" })]), h("li", { text: "Ask: “What was the best bit?” Remember their words." })]));
+        out.push(funRecorder(lesson));
+        if (step.score.length) out.push(block("good", "Score tonight (1 not yet · 2 sometimes · 3 every time)", [list(step.score)]));
+        if (step.gate) out.push(gateBox(lesson, step));
+        else if (step.next) out.push(block("watch", "Next", [p(step.next)]));
+        out.push(block("watch", "In the car", [p("After “best bit?”, stop talking about karting unless your child brings it up.")]));
+        break;
+      case "simplan":
+        var sm = step.sim;
+        out.push(block("good", "Goal", [p(sm.goal)]));
+        out.push(h("div", { class: "showbar" }, [h("span", { class: "emoji-strip", text: sm.strip }), showBtn(sm.strip, sm.title, "Tonight on the sim!", "Show tonight's picture")]));
+        out.push(list(["Time cap: " + sm.cap + " minutes — set a sand timer your child can see", "At least 1 hour before bed", "You sit next to them the whole time", "Sim counts toward about 1 hour of screens today (AAP guidance for ages 2–5)", "Software: Automobilista 2, slowest rental kart (Kart Racing Pro later). Never iRacing (13+ only)", "No leaderboards. No “fastest lap” talk"]));
+        break;
+      case "simcheck":
+        out.push(h("div", { class: "checks" }, ["“KID” torque profile selected (Fanatec FF about 1 Nm peak)", "Fingers outside the rim and spokes", "Feet reach full brake with a firm squeeze; right foot go, left foot brake", "Power switch within your reach", "Practise: hands off the wheel = pause"].map(function (t, i) {
+          var id = "sim-" + lesson.id + "-" + i;
+          return h("label", { for: id }, [h("input", { type: "checkbox", id: id }), h("span", { text: t })]);
+        })));
+        out.push(block("ifthen", "Stop if", [p("Your child is upset or tired, or says their eyes, wrists or head hurt.")]));
+        break;
+      case "simgame":
+        if (step.sim.drill) out.push(p(DRILLS[step.sim.drill].name + " (" + step.sim.drill + ")", "eyebrow"));
+        out.push(h("ol", { class: "clean" }, step.sim.game.map(function (t) { return h("li", { text: t }); })));
+        out.push(block("good", "Score", [p(step.sim.score)]));
+        if (step.sim.drill && DRILLS[step.sim.drill].fix.length) out.push(block("ifthen", "If… then", [list(DRILLS[step.sim.drill].fix.map(function (f) { return "If " + f[0].charAt(0).toLowerCase() + f[0].slice(1) + " → " + f[1]; }))]));
+        break;
+      case "simchoice":
+        out.push(p("Free drive, or a favourite game from an earlier sim night. Their pick."));
+        break;
+      case "simend":
+        out.push(say("When the sand's gone, the sim goes to sleep."));
+        out.push(list(["Press the power button together", "Fun face"]));
+        out.push(h("button", { type: "button", onclick: showFaces, text: "Show the faces" }));
+        out.push(funRecorder(lesson));
+        out.push(block("watch", "Links to the track", [p(step.sim.link)]));
+        if (step.next) out.push(p(step.next, "muted"));
+        break;
+      case "lightplan":
+        out.push(p("A lighter weekend. One track day only (or two short days, max 6 runs each). The other day: another sport, a family outing, or rest."));
+        out.push(block("good", "Today", [list(["Morning: your child's favourite drills from this phase", "Afternoon: you watch and score the Phase " + step.phase.n + " check", "Celebrate what they've learned"])]));
+        break;
+      case "lightfav":
+        out.push(p("Show the picture strips of the cards you've done this phase. Your child picks 3–4 runs."));
+        var codes = [];
+        step.phase.weeks.forEach(function (w) { if (!w.light) [w.sat, w.sun].forEach(function (c) { if (codes.indexOf(c) < 0) codes.push(c); }); });
+        out.push(h("div", { class: "row" }, codes.map(function (c) { return showBtn(TR[c].strip, TR[c].title, c, TR[c].strip + " " + TR[c].title); })));
+        break;
+      case "phasecheck":
+        out.push(p("Watch the afternoon runs. A skill only counts as “every time” if you've seen it on 2 different track days."));
+        out.push(phaseChecks(step.phase, lesson));
+        break;
+      case "lightend":
+        out.push(funRecorder(lesson));
+        out.push(phaseDecision(step.phase, lesson));
+        break;
+    }
+    return out;
+  }
+
+  function drillCard(code) {
+    var d = DRILLS[code];
+    return block("good", "Drill " + code + " · " + d.name, [p(d.setup), p(d.how)]);
+  }
+  function drillMore(code) { return p("Drill " + code + " · " + DRILLS[code].name, "eyebrow"); }
+
+  function funRecorder(lesson) {
+    var wrap = h("div", { class: "row" }, [p("Record the face:", "muted small")]);
+    var current = state.funs.filter(function (f) { return f.id === lesson.id; }).pop();
+    ["😞", "🙁", "😐", "🙂", "🤩"].forEach(function (f, i) {
+      var b = h("button", { type: "button", "aria-pressed": current && current.v === i + 1 ? "true" : "false", "aria-label": "Fun " + (i + 1), text: f, style: "font-size:1.5rem;min-width:52px" });
+      b.addEventListener("click", function () {
+        state.funs = state.funs.filter(function (x) { return x.id !== lesson.id; });
+        state.funs.push({ id: lesson.id, v: i + 1, t: Date.now() });
+        persist(); render();
+      });
+      wrap.appendChild(b);
+    });
+    var vals = state.funs.slice().sort(function (a, b) { return a.t - b.t; }).map(function (x) { return x.v; });
+    var n = vals.length, warn = (n >= 3 && vals[n - 1] < vals[n - 2] && vals[n - 2] < vals[n - 3]) || (n >= 2 && vals[n - 1] <= 2 && vals[n - 2] <= 2);
+    var out = h("div", { class: "gate" }, [wrap]);
+    if (warn) out.appendChild(h("div", { class: "gate-out ifthen" }, ["Fun has dropped two sessions in a row. Next session: ", h("a", { href: "#fun-only", text: "Fun Only Day" }), ". No drills, no debrief questions."]));
+    return out;
+  }
+
+  function gateBox(lesson, step) {
+    var key = lesson.id + ":gate", val = state.done[key];
+    var out = h("div", { class: "gate" }, [h("h3", { text: "Weekend check" }), p(step.gate)]);
+    var yes = h("button", { type: "button", class: val === "yes" ? "primary" : null, text: "Yes" });
+    var no = h("button", { type: "button", class: val === "no" ? "primary" : null, text: "Not yet" });
+    yes.addEventListener("click", function () { state.done[key] = "yes"; persist(); render(); });
+    no.addEventListener("click", function () { state.done[key] = "no"; persist(); render(); });
+    out.appendChild(h("div", { class: "row" }, [yes, no]));
+    var nxt = LESSONS[lesson.index + 1];
+    if (val === "yes" && nxt && nxt.id !== "fun-only") out.appendChild(h("div", { class: "gate-out good" }, ["Great — move on. Next weekend starts with ", h("a", { href: "#" + nxt.id, text: nxt.code + " " + nxt.title }), "."]));
+    if (val === "no") out.appendChild(h("div", { class: "gate-out say" }, [step.fallback + " Staying longer is normal — at 5, it's expected."]));
+    return out;
+  }
+
+  function phaseChecks(phase, lesson) {
+    var ds = doneSet(lesson.id + ":exit");
+    return h("div", { class: "checks" }, phase.exit.map(function (t, i) {
+      var id = "exit-" + phase.n + "-" + i, cb = h("input", { type: "checkbox", id: id });
+      cb.checked = ds.indexOf(i) >= 0;
+      cb.addEventListener("change", function () { var k = ds.indexOf(i); if (cb.checked && k < 0) ds.push(i); if (!cb.checked && k >= 0) ds.splice(k, 1); persist(); });
+      return h("label", { for: id }, [cb, h("span", { text: t })]);
+    }));
+  }
+  function phaseDecision(phase, lesson) {
+    var ds = doneSet(lesson.id + ":exit"), all = ds.length === phase.exit.length;
+    var out = h("div", { class: "gate" }, [h("h3", { text: "Decision" })]);
+    if (all) {
+      var nextPh = PHASES[phase.n];
+      out.appendChild(h("div", { class: "gate-out good" }, nextPh
+        ? ["All exit criteria ticked. Phase " + nextPh.n + " (" + nextPh.name + ") starts next weekend with ", h("a", { href: "#" + lessonId(nextPh.weeks[0].w, "sat"), text: TR[nextPh.weeks[0].sat].title }), "."]
+        : ["All done! Talk with your child about what was most fun. Options: repeat Phase 3 at a new track, club Kid Kart events if they ask, or a break — other sports build the athlete too."]));
+    } else {
+      out.appendChild(h("div", { class: "gate-out say" }, ["Not all ticked (" + ds.length + " of " + phase.exit.length + "). Stay in Phase " + phase.n + ": next weekend, repeat the cards for the skills that aren't ticked yet. That's normal."]));
+    }
+    return out;
+  }
+
+  /* ---------- Screens ---------- */
+  function lessonStatus(l) {
+    var d = doneSet(l.id).length;
+    if (d >= l.steps.length) return ["Done", "done"];
+    if (d > 0) return [d + "/" + l.steps.length, "part"];
+    return [l.steps.length + " steps", ""];
+  }
+
+  function renderHome() {
+    var resume = state.last && BY_ID[state.last.id];
+    var top = h("header", { class: "card" }, [
+      h("p", { class: "eyebrow", text: "Age 5 · Kid Kart · Comer C52 · weekends" }),
+      h("h1", null, ["Kid Kart ", h("span", { text: "Coaching Course" })]),
+      p("Twelve weekends, step by step. Each lesson tells you what to set up, what to say, what to show your child, what to watch for, and what to do if it goes wrong.", "muted"),
+      h("div", { class: "row" }, [
+        resume ? h("a", { class: "btn primary", href: "#" + resume.id, style: "background:var(--accent);color:var(--accent-ink);border-color:var(--accent)", text: "Resume: " + resume.code + " " + resume.title }) :
+          h("a", { class: "btn", href: "#w1-sat", style: "background:var(--accent);color:var(--accent-ink);border-color:var(--accent)", text: "Start Week 1" }),
+        h("a", { class: "btn", href: "#fun-only", text: "🎉 Fun Only Day" })
+      ])
+    ]);
+    var rules = h("section", { class: "card" }, [
+      h("h2", { text: "Six rules for every session" }),
+      h("ol", { class: "clean" }, ["One focus, max 3 cues. Same words every time.", "Your child talks first after every run.", "Nothing new on the grid: “Have fun, I'm watching you!”", "A child's choice in every session.", "Fun drops two sessions in a row → next session is a Fun Only Day.", "Move on when the skill shows up, not when the calendar says."].map(function (t) { return h("li", { text: t }); }))
+    ]);
+    var map = PHASES.map(function (ph) {
+      return h("section", { class: "phase" }, [
+        h("div", { class: "phase-head" }, [h("p", { class: "eyebrow", text: "Phase " + ph.n }), h("h2", { text: ph.name }), p(ph.line, "muted")]),
+        h("div", { class: "phase" }, ph.weeks.map(function (wk) {
+          var ls = LESSONS.filter(function (l) { return l.week === wk.w; });
+          return h("div", { class: "week" }, [
+            h("div", { class: "week-title", text: "Weekend " + wk.w + (wk.light ? " · lighter" : "") }),
+            h("div", { class: "lessons" }, ls.map(function (l) {
+              var st = lessonStatus(l);
+              return h("a", { class: "btn lesson-btn", href: "#" + l.id }, [
+                h("span", { class: "lt" }, [h("span", { text: (l.kind === "sim" ? "🖥️ " : "🏎️ ") + l.title }), h("small", { text: l.day + " · " + l.code })]),
+                h("span", { class: "tag " + st[1], text: st[0] })
+              ]);
+            }))
+          ]);
+        }))
+      ]);
+    });
+    var reset = h("button", { type: "button", class: "link", text: "Reset all progress on this device" });
+    reset.addEventListener("click", function () {
+      if (reset.getAttribute("data-armed")) { state = { done: {}, last: null, funs: [] }; persist(); render(); return; }
+      reset.setAttribute("data-armed", "1"); reset.textContent = "Tap again to reset everything";
+    });
+    app.textContent = "";
+    [top, rules].concat(map).concat([h("p", { class: "muted small" }, ["Progress is saved in this browser only. Full program, drills and sources are in the repo's /program folder. ", reset])]).forEach(function (n) { app.appendChild(n); });
+  }
+
+  function renderLesson(l) {
+    var si = Math.min(state.last && state.last.id === l.id ? state.last.step : firstUndone(l), l.steps.length - 1);
+    state.last = { id: l.id, step: si }; persist();
+    var step = l.steps[si], ds = doneSet(l.id);
+    var pct = Math.round(ds.length / l.steps.length * 100);
+    var nav = h("nav", { class: "steps-nav", "aria-label": "Steps" }, l.steps.map(function (s, i) {
+      return h("button", { type: "button", class: ds.indexOf(i) >= 0 ? "done" : null, "aria-current": i === si ? "step" : null, title: s.title, text: String(i + 1),
+        onclick: function () { state.last = { id: l.id, step: i }; persist(); render(); } });
+    }));
+    var head = h("header", { class: "card" }, [
+      h("div", { class: "row" }, [h("a", { href: "#home", class: "btn", text: "← Course" }), h("span", { class: "grow" }), h("span", { class: "tag", text: l.day })]),
+      h("p", { class: "eyebrow", text: (l.week ? "Weekend " + l.week + " · " : "") + l.code }),
+      h("h1", { text: l.title, style: "font-size:2rem" }),
+      h("div", { class: "progress", role: "progressbar", "aria-valuenow": pct, "aria-valuemin": 0, "aria-valuemax": 100, "aria-label": "Lesson progress" }, [h("div", { style: "width:" + pct + "%" })]),
+      nav
+    ]);
+    var isLast = si === l.steps.length - 1;
+    var back = h("button", { type: "button", text: "Back", disabled: si === 0 ? "disabled" : null, onclick: function () { state.last.step = si - 1; persist(); render(); window.scrollTo(0, 0); } });
+    var next = h("button", { type: "button", class: "primary", text: isLast ? (ds.indexOf(si) >= 0 ? "Lesson done ✓" : "Finish lesson") : "Done · next step →",
+      onclick: function () {
+        if (ds.indexOf(si) < 0) ds.push(si);
+        if (isLast) { persist(); location.hash = "#home"; render(); return; }
+        state.last.step = si + 1; persist(); render(); window.scrollTo(0, 0);
+      } });
+    var body = h("section", { class: "card", "aria-labelledby": "stepTitle" }, [
+      h("p", { class: "eyebrow", text: "Step " + (si + 1) + " of " + l.steps.length }),
+      h("h2", { id: "stepTitle", text: step.title })
+    ].concat(stepBody(step, l)).concat([h("div", { class: "stepfoot" }, [back, next])]));
+    app.textContent = "";
+    app.appendChild(head); app.appendChild(body);
+  }
+  function firstUndone(l) { var d = doneSet(l.id); for (var i = 0; i < l.steps.length; i++) if (d.indexOf(i) < 0) return i; return 0; }
+
+  function render() {
+    var id = (location.hash || "").slice(1);
+    var l = BY_ID[id];
+    if (l) renderLesson(l); else renderHome();
+  }
+  window.addEventListener("hashchange", function () {
+    var l = BY_ID[(location.hash || "").slice(1)];
+    if (l && (!state.last || state.last.id !== l.id)) state.last = { id: l.id, step: firstUndone(l) };
+    render(); window.scrollTo(0, 0);
+  });
+  render();
+})();
+</script>
