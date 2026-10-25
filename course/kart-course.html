@@ -3,12 +3,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600;700&display=swap">
 <style>
-  /* Layout: course map (weekends → lessons), then one step at a time with a big Next button, like a pit board. */
+  /* Layout: course map → lesson → one step at a time. Corner diagrams drawn from real track geometry. */
   :root {
     --bg: #f2f3f0; --surface: #ffffff; --ink: #1a1d1b; --muted: #5b625d; --line: #d7dbd6;
     --accent: #d2361b; --accent-ink: #ffffff; --chip: #e9ece7;
     --say-bg: #fff4e5; --say-ink: #5c3400; --watch-bg: #e8f1fb; --watch-ink: #163a63;
     --ok-bg: #e3f2e7; --ok-ink: #1d5a2e; --warn-bg: #fdecea; --warn-ink: #7c1d12;
+    --grass: #dfe9d6; --tarmac: #5d6360; --edge: #f7f7f2; --kerb: #d2361b;
+    --good: #ffcf33; --bad: #4fc3f7; --cone: #ff8a00; --eye: #ffffff; --label: #1a1d1b;
     --display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
     --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
   }
@@ -18,6 +20,8 @@
       --accent: #ff6a4d; --accent-ink: #1a0b07; --chip: #252926;
       --say-bg: #33240f; --say-ink: #ffd9a3; --watch-bg: #142436; --watch-ink: #b9d6f7;
       --ok-bg: #16301f; --ok-ink: #9fe0b2; --warn-bg: #3a1a15; --warn-ink: #ffb3a6;
+      --grass: #1f2b1d; --tarmac: #3d4240; --edge: #c9ccc6; --kerb: #e0533a;
+      --good: #ffd84d; --bad: #6fd0fa; --cone: #ff9d2e; --eye: #ffffff; --label: #e8ebe8;
       color-scheme: dark;
     }
   }
@@ -26,6 +30,8 @@
     --accent: #ff6a4d; --accent-ink: #1a0b07; --chip: #252926;
     --say-bg: #33240f; --say-ink: #ffd9a3; --watch-bg: #142436; --watch-ink: #b9d6f7;
     --ok-bg: #16301f; --ok-ink: #9fe0b2; --warn-bg: #3a1a15; --warn-ink: #ffb3a6;
+    --grass: #1f2b1d; --tarmac: #3d4240; --edge: #c9ccc6; --kerb: #e0533a;
+    --good: #ffd84d; --bad: #6fd0fa; --cone: #ff9d2e; --eye: #ffffff; --label: #e8ebe8;
     color-scheme: dark;
   }
   * { box-sizing: border-box; }
@@ -35,7 +41,7 @@
     padding-right: max(16px, env(safe-area-inset-right, 0px));
     padding-block: 12px 40px;
   }
-  main { max-width: 720px; margin: 0 auto; display: grid; gap: 16px; }
+  main { max-width: 760px; margin: 0 auto; display: grid; gap: 16px; }
   h1, h2, h3 { font-family: var(--display); letter-spacing: .02em; text-wrap: balance; margin: 0; line-height: 1.1; }
   h1 { font-size: 2.2rem; text-transform: uppercase; }
   h1 span, .eyebrow { color: var(--accent); }
@@ -51,29 +57,28 @@
     display: inline-flex; align-items: center; justify-content: center; gap: 6px;
   }
   button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .primary, a.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
   button.link { background: none; border: none; color: var(--accent); padding: 4px 0; min-height: 36px; }
+  button[disabled] { opacity: .45; cursor: default; }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 12px; min-width: 0; }
   .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .grow { flex: 1 1 auto; }
 
-  /* Course map */
   .phase { display: grid; gap: 10px; }
-  .phase-head { display: grid; gap: 2px; }
   .week { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 8px; background: var(--surface); }
-  .week-title { font: 700 1.1rem var(--display); text-transform: uppercase; letter-spacing: .03em; }
+  .week-head { display: flex; gap: 12px; align-items: center; }
+  .week-head svg { width: 92px; flex: 0 0 auto; border-radius: 8px; }
+  .week-title { font: 700 1.15rem var(--display); text-transform: uppercase; letter-spacing: .03em; }
   .lessons { display: grid; gap: 6px; }
   .lesson-btn { justify-content: space-between; text-align: left; width: 100%; background: var(--bg); }
-  .lesson-btn .lt { display: grid; gap: 0; }
+  .lesson-btn .lt { display: grid; }
   .lesson-btn .lt small { color: var(--muted); font-weight: 500; }
   .tag { font: 700 .72rem var(--body); letter-spacing: .06em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: var(--chip); color: var(--muted); white-space: nowrap; }
   .tag.done { background: var(--ok-bg); color: var(--ok-ink); }
   .tag.part { background: var(--say-bg); color: var(--say-ink); }
 
-  /* Lesson */
   .progress { height: 8px; background: var(--chip); border-radius: 999px; overflow: hidden; }
-  .progress > div { height: 100%; background: var(--accent); width: 0; }
-  @media (prefers-reduced-motion: no-preference) { .progress > div { transition: width .25s; } }
+  .progress > div { height: 100%; background: var(--accent); }
   .steps-nav { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 4px; }
   .steps-nav button { min-height: 36px; min-width: 36px; padding: 4px 10px; font-size: .9rem; flex: 0 0 auto; }
   .steps-nav button[aria-current="step"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
@@ -85,30 +90,35 @@
   .watch { background: var(--watch-bg); color: var(--watch-ink); }
   .ifthen { background: var(--warn-bg); color: var(--warn-ink); }
   .good { background: var(--ok-bg); color: var(--ok-ink); }
-  ul.clean { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
-  .checks { display: grid; gap: 6px; }
+  ul.clean, ol.clean { margin: 0; padding-left: 1.3em; display: grid; gap: 4px; }
+  .checks { display: grid; gap: 4px; }
   .checks label { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; cursor: pointer; }
   .checks input { width: 22px; height: 22px; flex: 0 0 auto; margin-top: 2px; accent-color: var(--accent); }
-  .showbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .emoji-strip { font-size: 2rem; letter-spacing: 4px; }
   .cue-chip { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; font-size: .92rem; background: var(--bg); }
-  .cue-chip b { font-family: var(--display); }
   .stepfoot { display: grid; grid-template-columns: auto 1fr; gap: 8px; }
   .stepfoot .primary { min-height: 56px; font-size: 1.1rem; }
   .gate { display: grid; gap: 8px; }
   .gate-out { border-radius: 10px; padding: 12px 14px; font-weight: 600; }
 
-  /* Child view */
-  #kid { position: fixed; inset: 0; z-index: 50; background: var(--surface); display: grid; place-items: center; text-align: center;
-    padding: max(24px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(24px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+  figure.dia { margin: 0; display: grid; gap: 8px; }
+  figure.dia svg { width: 100%; height: auto; display: block; border-radius: 10px; background: var(--grass); }
+  figure.dia figcaption { font-size: .95rem; color: var(--muted); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .85rem; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 22px; height: 0; border-top: 4px solid var(--good); display: inline-block; }
+  .sw.bad { border-top: 3px dashed var(--bad); }
+  .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; border: 2px solid var(--edge); }
+  .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+
+  #kid { position: fixed; inset: 0; z-index: 50; background: var(--surface); display: grid; place-items: center; text-align: center; overflow-y: auto;
+    padding: max(20px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) max(20px, env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
   #kid[hidden] { display: none; }
-  #kid .big { font-size: min(28vw, 9rem); line-height: 1.1; }
-  #kid .phrase { font: 700 clamp(1.6rem, 7vw, 3rem)/1.15 var(--display); text-transform: uppercase; max-width: 16ch; margin: 16px auto 0; text-wrap: balance; }
-  #kid .hint { margin-top: 12px; color: var(--muted); }
-  #kid .faces { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; font-size: min(16vw, 4.5rem); }
-  #kid .faces span { cursor: default; }
-  #kid button { margin-top: 24px; }
-  @media (max-width: 520px) { h1 { font-size: 1.9rem; } body { font-size: 16px; } }
+  #kid .inner { width: min(100%, 720px); display: grid; gap: 14px; justify-items: center; }
+  #kid .big { font-size: min(22vw, 7rem); line-height: 1.1; }
+  #kid .phrase { font: 700 clamp(1.6rem, 7vw, 3rem)/1.15 var(--display); text-transform: uppercase; max-width: 18ch; text-wrap: balance; }
+  #kid .faces { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; font-size: min(15vw, 4.5rem); }
+  #kid figure { width: 100%; }
+  @media (max-width: 560px) { h1 { font-size: 1.9rem; } body { font-size: 16px; } .two { grid-template-columns: 1fr; } .week-head svg { width: 72px; } }
 </style>
 
 <main id="app"></main>
@@ -117,689 +127,770 @@
 <script>
 (function () {
   "use strict";
+  var REDUCED = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var NS = "http://www.w3.org/2000/svg";
 
-  /* ---------- Reference data (from the program files) ---------- */
+  /* =====================================================================
+     Corner geometry. A corner is a list of segments: straights ["S", len]
+     and arcs ["A", degrees (+ left / − right), radius]. Lines are lateral
+     offset profiles: [[s, d], …], d = +left / −right of the centre line.
+     ===================================================================== */
+  var W = 60, M = 24; // track width, usable half-width for the kart line
+  function build(segs) {
+    var x = 0, y = 0, h = 0, s = 0, pts = [{ x: x, y: y, h: h, s: 0, arc: 0 }];
+    segs.forEach(function (sg) {
+      var len = sg[0] === "S" ? sg[1] : Math.abs(sg[1]) * Math.PI / 180 * sg[2];
+      var dir = sg[0] === "A" ? (sg[1] > 0 ? 1 : -1) : 0;
+      for (var i = 0; i < Math.ceil(len); i++) {
+        var ds = Math.min(1, len - i);
+        if (dir) h += dir * ds / sg[2];
+        x += Math.cos(h) * ds; y -= Math.sin(h) * ds; s += ds;
+        pts.push({ x: x, y: y, h: h, s: s, arc: dir });
+      }
+    });
+    return pts;
+  }
+  function at(T, s, d) {
+    var i = Math.max(0, Math.min(T.length - 1, Math.round(s))), p = T[i];
+    return [p.x - Math.sin(p.h) * d, p.y - Math.cos(p.h) * d];
+  }
+  function prof(kf) {
+    return function (s) {
+      if (s <= kf[0][0]) return kf[0][1];
+      for (var i = 1; i < kf.length; i++) if (s <= kf[i][0]) {
+        var t = (s - kf[i - 1][0]) / (kf[i][0] - kf[i - 1][0]);
+        return kf[i - 1][1] + (kf[i][1] - kf[i - 1][1]) * (1 - Math.cos(Math.PI * t)) / 2;
+      }
+      return kf[kf.length - 1][1];
+    };
+  }
+  function pathD(pts) { return pts.map(function (p, i) { return (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(""); }
+  function el(tag, a, kids) {
+    var e = document.createElementNS(NS, tag);
+    Object.keys(a || {}).forEach(function (k) { e.setAttribute(k, a[k]); });
+    (kids || []).forEach(function (c) { e.appendChild(c); });
+    return e;
+  }
+  var uid = 0;
+
+  /* Draw one corner diagram. spec: {segs, lines:[{kf, kind, label, at}], marks:[{s,d,t,label,side}], eyes:[{from:[s,d], to:[s,d], label}], kart:true} */
+  function draw(spec, opts) {
+    opts = opts || {};
+    var T = build(spec.segs), L = T[T.length - 1].s, id = "d" + (++uid);
+    var minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+    T.forEach(function (p) { [-W / 2, W / 2].forEach(function (d) { var q = at(T, p.s, d); minX = Math.min(minX, q[0]); maxX = Math.max(maxX, q[0]); minY = Math.min(minY, q[1]); maxY = Math.max(maxY, q[1]); }); });
+    var pad = opts.mini ? 6 : 34;
+    var svg = el("svg", { viewBox: (minX - pad) + " " + (minY - pad) + " " + (maxX - minX + 2 * pad) + " " + (maxY - minY + 2 * pad), role: "img", "aria-label": spec.alt || spec.caption || "Corner diagram" });
+    var defs = el("defs");
+    defs.appendChild(el("marker", { id: id + "ar", viewBox: "0 0 10 10", refX: "8", refY: "5", markerWidth: "6", markerHeight: "6", orient: "auto-start-reverse" }, [el("path", { d: "M0 0L10 5L0 10z", fill: "var(--eye)" })]));
+    defs.appendChild(el("marker", { id: id + "dir", viewBox: "0 0 10 10", refX: "5", refY: "5", markerWidth: "5", markerHeight: "5", orient: "auto" }, [el("path", { d: "M0 0L10 5L0 10z", fill: "var(--edge)" })]));
+    svg.appendChild(defs);
+    var all = []; for (var s = 0; s <= L; s += 2) all.push(s);
+    var left = all.map(function (s) { return at(T, s, W / 2); }), right = all.map(function (s) { return at(T, s, -W / 2); });
+    svg.appendChild(el("path", { d: pathD(left.concat(right.slice().reverse())) + "Z", fill: "var(--tarmac)" }));
+    svg.appendChild(el("path", { d: pathD(left), fill: "none", stroke: "var(--edge)", "stroke-width": "2" }));
+    svg.appendChild(el("path", { d: pathD(right), fill: "none", stroke: "var(--edge)", "stroke-width": "2" }));
+    // kerbs on the inside of each arc
+    var run = null;
+    function flushKerb() {
+      if (run && run.pts.length > 3) {
+        var d = pathD(run.pts);
+        svg.appendChild(el("path", { d: d, fill: "none", stroke: "var(--edge)", "stroke-width": "6" }));
+        svg.appendChild(el("path", { d: d, fill: "none", stroke: "var(--kerb)", "stroke-width": "6", "stroke-dasharray": "6 6" }));
+      }
+      run = null;
+    }
+    T.forEach(function (p, i) {
+      if (i % 2) return;
+      if (p.arc) { if (!run || run.dir !== p.arc) { flushKerb(); run = { dir: p.arc, pts: [] }; } run.pts.push(at(T, p.s, p.arc * (W / 2 - 3))); }
+      else flushKerb();
+    });
+    flushKerb();
+    if (!opts.mini) {
+      var a0 = at(T, 6, 0), a1 = at(T, 24, 0);
+      svg.appendChild(el("line", { x1: a0[0], y1: a0[1], x2: a1[0], y2: a1[1], stroke: "var(--edge)", "stroke-width": "2", "marker-end": "url(#" + id + "dir)", opacity: ".7" }));
+    }
+    var goodPath = null;
+    (spec.lines || []).forEach(function (ln, k) {
+      var f = prof(ln.kf), pts = []; for (var s = 0; s <= L; s += 2) pts.push(at(T, s, f(s)));
+      var attrs = { d: pathD(pts), fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round" };
+      if (ln.kind === "bad") { attrs.stroke = "var(--bad)"; attrs["stroke-width"] = opts.mini ? "3" : "3"; attrs["stroke-dasharray"] = "7 6"; }
+      else if (ln.kind === "thin") { attrs.stroke = "var(--good)"; attrs["stroke-width"] = "1.6"; attrs.opacity = ".85"; }
+      else { attrs.stroke = "var(--good)"; attrs["stroke-width"] = opts.mini ? "5" : "4"; attrs.id = id + "g" + k; if (!goodPath) goodPath = attrs.id; }
+      svg.appendChild(el("path", attrs));
+    });
+    if (!opts.mini) {
+      (spec.eyes || []).forEach(function (e) {
+        var a = at(T, e.from[0], e.from[1]), b = at(T, e.to[0], e.to[1]);
+        svg.appendChild(el("line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: "var(--eye)", "stroke-width": "2", "stroke-dasharray": "3 4", "marker-end": "url(#" + id + "ar)" }));
+        svg.appendChild(el("text", { x: a[0], y: a[1] - 9, "text-anchor": "middle", "font-size": "17" }, [document.createTextNode("👀")]));
+      });
+      (spec.marks || []).forEach(function (m) {
+        var c = at(T, m.s, m.d), g;
+        if (m.t === "cone") g = el("path", { d: "M" + c[0] + " " + (c[1] - 9) + "l7 14h-14z", fill: "var(--cone)", stroke: "var(--edge)", "stroke-width": "1.5" });
+        else if (m.t === "kart") g = el("rect", { x: c[0] - 7, y: c[1] - 5, width: 14, height: 10, rx: 3, fill: m.color || "var(--good)", stroke: "var(--tarmac)", "stroke-width": "2" });
+        else {
+          g = el("g", {}, [el("circle", { cx: c[0], cy: c[1], r: 10, fill: m.color || "var(--surface)", stroke: "var(--tarmac)", "stroke-width": "2" }),
+            el("text", { x: c[0], y: c[1] + 4.5, "text-anchor": "middle", "font-size": "12", "font-weight": "700", fill: m.color ? "#1a1d1b" : "var(--label)", "font-family": "var(--body)" }, [document.createTextNode(m.t)])]);
+        }
+        svg.appendChild(g);
+        if (m.label) {
+          var side = m.side || (m.d >= 0 ? 1 : -1), off = (W / 2 - Math.abs(m.d)) + 18;
+          var lp = m.lp ? at(T, m.lp[0], m.lp[1]) : at(T, m.s, m.d + side * off);
+          svg.appendChild(el("text", { x: lp[0], y: lp[1] + 4, "text-anchor": "middle", "font-size": "13", "font-weight": "700", fill: "var(--label)", "font-family": "var(--body)", "paint-order": "stroke", stroke: "var(--grass)", "stroke-width": "4" }, [document.createTextNode(m.label)]));
+        }
+      });
+    }
+    if (goodPath && !REDUCED && spec.kart !== false) {
+      var kart = el("g", {}, [el("rect", { x: -8, y: -5.5, width: 16, height: 11, rx: 3, fill: "var(--accent)", stroke: "var(--edge)", "stroke-width": "1.5" })]);
+      var mo = el("animateMotion", { dur: (L / 95).toFixed(1) + "s", repeatCount: "indefinite", rotate: "auto" }, [el("mpath", { href: "#" + goodPath })]);
+      kart.appendChild(mo); svg.appendChild(kart);
+    }
+    return svg;
+  }
+
+  /* ---------- Corner library ---------- */
+  var C90 = [["S", 150], ["A", 90, 70], ["S", 150]];                 // 90° left; arc s 150–260
+  var HAIR = [["S", 170], ["A", 180, 42], ["S", 170]];               // hairpin left; arc s 170–302
+  var SWEEP = [["S", 90], ["A", 70, 170], ["S", 100]];               // sweeper left; arc s 90–298
+  var KINK = [["S", 130], ["A", 22, 160], ["S", 130]];               // kink left; arc s 130–191
+  var CHIC = [["S", 110], ["A", 70, 60], ["A", -70, 60], ["S", 130]]; // chicane L-R; arcs 110–183, 183–256
+  var LINK = [["S", 110], ["A", 90, 55], ["S", 55], ["A", -90, 55], ["S", 230]]; // left, short gap, right onto a long straight
+
+  var OIO = [[0, -M], [125, -M], [205, M], [300, -M], [410, -M]];
+  var DIAS = {
+    oio: { segs: C90, caption: "Wide, kiss, wide: start on the outside, touch the inside at the apex, roll back out to the outside edge. This is the biggest, roundest arc the corner allows, so the kart keeps the most speed.",
+      lines: [{ kf: OIO, label: "racing line", at: 60, lo: 14 }, { kf: [[0, 0], [410, 0]], kind: "bad", label: "middle of the road", at: 330, lo: -14 }],
+      marks: [{ s: 125, d: -M, t: "T", label: "turn-in", color: "var(--good)" }, { s: 205, d: M, t: "A", label: "apex", color: "var(--good)" }, { s: 300, d: -M, t: "E", label: "exit", color: "var(--good)" }] },
+    treasures: { segs: C90, caption: "The four treasures. Every corner has a slow-down spot (S), a turn-in spot (T), an apex (A) and an exit (E). Find a real thing next to each one: a post, a kerb end, a crack, a sign.",
+      lines: [{ kf: OIO }],
+      marks: [{ s: 70, d: -M, t: "S", label: "slow / lift", color: "var(--surface)" }, { s: 70, d: -W / 2 - 8, t: "cone" }, { s: 125, d: -W / 2 - 8, t: "cone" }, { s: 125, d: -M, t: "T", label: "turn", color: "var(--good)", side: 1 },
+        { s: 205, d: W / 2 + 7, t: "cone" }, { s: 205, d: M, t: "A", label: "kiss", color: "var(--good)", side: -1 }, { s: 300, d: -W / 2 - 8, t: "cone" }, { s: 300, d: -M, t: "E", label: "wide", color: "var(--good)", side: 1 }] },
+    late: { segs: C90, caption: "Early apex vs late apex. Turn in too early and the kart is pointed at the outside wall halfway round: it has to slow down or run off. Wait a little longer, apex later, and the kart is already straight at the exit, so it can go flat out sooner.",
+      lines: [{ kf: [[0, -M], [140, -M], [222, M], [295, -M], [410, -M]], label: "late kiss", at: 330, lo: 16 }, { kf: [[0, -M], [95, -M], [168, M], [250, -W / 2 - 16], [410, -W / 2 - 16]], kind: "bad", label: "too early: runs off the road" }],
+      marks: [{ s: 95, d: -M, t: "T", color: "var(--bad)" }, { s: 140, d: -M, t: "T", label: "wait…", color: "var(--good)", side: -1 }, { s: 222, d: M, t: "A", label: "late apex", color: "var(--good)" }] },
+    eyes: { segs: C90, caption: "Eyes lead the line. At the turn-in, the eyes are already on the apex. At the apex, the eyes are already on the exit. Hands follow eyes, kart follows hands.",
+      lines: [{ kf: OIO }],
+      eyes: [{ from: [80, -M], to: [125, -M] }, { from: [125, -M], to: [205, M] }, { from: [205, M], to: [300, -M] }],
+      marks: [{ s: 125, d: -M, t: "T", label: "look at A", color: "var(--good)", side: -1 }, { s: 205, d: M, t: "A", label: "look at E", color: "var(--good)" }, { s: 300, d: -M, t: "E", color: "var(--good)" }] },
+    hairpin: { segs: HAIR, caption: "Hairpin: slow in, rocket out. Come in wide, slow down while straight, turn late, kiss the apex past halfway round, then use all the road on the way out. Most of the lap time is won on the exit.",
+      lines: [{ kf: [[0, -M], [150, -M], [190, -8], [262, M], [340, -M], [470, -M]], label: "late apex", at: 110, lo: 14 }, { kf: [[0, -M], [120, -M], [205, M], [280, -W / 2 - 12], [470, -W / 2 - 12]], kind: "bad", label: "early: runs wide", at: 410, lo: -16 }],
+      marks: [{ s: 100, d: -M, t: "S", label: "slow", side: -1 }, { s: 150, d: -M, t: "T", color: "var(--good)" }, { s: 262, d: M, t: "A", color: "var(--good)" }, { s: 340, d: -M, t: "E", color: "var(--good)" }] },
+    sweeper: { segs: SWEEP, caption: "Sweeper: one smooth rainbow. A long fast bend needs one steady arc with one apex in the middle. Every wiggle of the wheel scrubs speed, and in a Kid Kart you can't get it back.",
+      lines: [{ kf: [[0, -M], [75, -M], [194, M], [315, -M], [400, -M]], label: "one rainbow", at: 40, lo: 14 }, { kf: [[0, -M], [80, -M], [120, 10], [150, -6], [190, 18], [225, 2], [265, 16], [320, -M], [400, -M]], kind: "bad", label: "wiggles", at: 360, lo: -14 }],
+      marks: [{ s: 194, d: M, t: "A", label: "one apex", color: "var(--good)" }] },
+    kink: { segs: KINK, caption: "Kink: drive it straight. If a bend is so gentle that a straight line fits inside the road, take the straight line and keep your foot down.",
+      lines: [{ kf: [[0, -14], [100, -14], [160, M - 2], [220, -14], [390, -14]], label: "straight through", at: 60, lo: 14 }, { kf: [[0, 0], [390, 0]], kind: "bad", label: "follows the road", at: 330, lo: -14 }] },
+    chicane: { segs: CHIC, caption: "Chicane: straight as an arrow. Clip the first apex and the second apex with the straightest line you can. Less steering means more speed.",
+      lines: [{ kf: [[0, -M], [100, -M], [162, M], [206, -M], [268, M], [390, M]], label: "arrow line: clips both apexes" }, { kf: [[0, 0], [390, 0]], kind: "bad", label: "follows the road: twice the steering" }],
+      marks: [{ s: 162, d: M, t: "1", color: "var(--good)" }, { s: 206, d: -M, t: "2", color: "var(--good)" }] },
+    linked: { segs: LINK, caption: "Linked corners: win the last corner. Corner 2 leads onto the long straight, so its exit matters most. Give up a little in corner 1 (stay on the left) so you arrive at corner 2 on the outside and can rocket out.",
+      lines: [{ kf: [[0, -M], [90, -M], [160, M], [255, M], [318, -M], [400, M], [567, M]], label: "gives up a little in 1, rockets out of 2" },
+        { kf: [[0, -M], [110, -M], [165, M], [225, -M], [300, -M], [372, W / 2 + 12], [567, W / 2 + 12]], kind: "bad", label: "perfect 1, then runs off at 2" }],
+      marks: [{ s: 160, d: M, t: "1", color: "var(--good)" }, { s: 318, d: -M, t: "2", color: "var(--good)" }] },
+    momentum: { segs: C90, caption: "Rainbow, not zigzag. A Kid Kart has very little power. Sharp steering makes the tyres slide sideways (scrub), and the speed you lose takes a whole straight to get back. Big, smooth arcs keep the speed.",
+      lines: [{ kf: OIO, label: "rainbow", at: 60, lo: 14 }, { kf: [[0, -M], [150, -M], [175, 4], [200, M], [235, 6], [250, -M], [410, -M]], kind: "bad", label: "late, sharp = scrub", at: 340, lo: -16 }] },
+    rails: { segs: C90, caption: "Same line every lap. Same rails: five laps that land on the same line. That beats one fast lap and four scattered ones. Consistency first, then speed.",
+      lines: [-3, -1, 0, 1, 3].map(function (o) { return { kind: "thin", kf: [[0, -M], [125 + o, -M], [205 + o, M - Math.abs(o)], [300, -M + Math.abs(o)], [410, -M]] }; }) },
+    scatter: { segs: C90, caption: "Scattered: the line is somewhere new every lap, so every corner is a fresh guess and the lap times jump around.", lines: [-25, -10, 0, 12, 22].map(function (o, i) { return { kind: "thin", kf: [[0, -M + (i % 2) * 6], [125 + o, -M + (i % 3) * 5], [205 + o, M - (i * 4)], [300 + o, -M + i * 4], [410, -M]] }; }) },
+    defend: { segs: HAIR, caption: "Racing near others. The kart on the inside before the corner owns the corner (A, yellow). The kart on the outside (B, blue) has to wait and go in behind. One move only, early, then hold your line: a train on its track.",
+      lines: [{ kf: [[0, 12], [140, 18], [262, M], [340, -M], [470, -M]], label: "A: inside line", at: 60, lo: 14 }, { kf: [[0, -M], [140, -M], [210, -10], [262, 4], [345, -M], [470, -M]], kind: "bad", label: "B: has to wait", at: 60, lo: -14 }],
+      marks: [{ s: 120, d: 16, t: "kart", color: "var(--good)" }, { s: 104, d: -M, t: "kart", color: "var(--bad)" }] }
+  };
+
+  /* =====================================================================
+     Coaching content
+     ===================================================================== */
   var CUES = {
-    B1: ["🧽", "Squeeze the brake like a sponge.", "Squeeze a fist slowly"],
-    B2: ["🗿", "Stop at the cone, like a statue.", "Flat palm: stop"],
-    B3: ["🚂↪️", "Brake first, then turn.", "Palm down, then a curving hand"],
-    B4: ["🧽", "Let the sponge go slowly.", "Open your fist slowly"],
-    T1: ["🪥", "Squeeze the go-pedal like toothpaste.", "Thumb pressing slowly"],
-    T2: ["🦶⬇️", "Foot to the floor until the cone.", "Gentle stamp, then point at the cone"],
-    T3: ["⬆️👍", "Wheel straight? Then go!", "Hands level, then thumbs up"],
-    T4: ["👣", "Feet take turns.", "One hand up, the other down"],
-    T5: ["🤫", "Quiet foot in the pits.", "Finger to lips"],
-    W1: ["🐦", "Hold the wheel like a baby bird.", "Cupped hands"],
-    W2: ["🕘🕒", "Hands on the clock: 9 and 3.", "Point at both sides"],
-    W3: ["🌈", "Paint a smooth rainbow.", "One smooth arc of your hand"],
-    W4: ["⏳🔶", "Wait for the turn cone.", "One finger up, then point"],
-    W5: ["⚽➡️", "Let it roll to the edge.", "Hand rolling outward"],
-    V1: ["🏴‍☠️🔭", "Pirate telescope: look far!", "Hands like a telescope"],
-    V2: ["👀➡️", "Middle of the corner, then the exit kerb.", "Point to the middle, then the exit"],
-    V3: ["👀🙌🏎️", "Hands follow eyes, kart follows hands.", "Point: eyes, hands, forward"],
-    V4: ["🕳️", "Look at the gap, not the wall.", "Point at an open space"],
-    V5: ["🔭➡️", "At the turn, look at the exit.", "Point one corner ahead"],
-    R1: ["⬆️", "Your lap is in front of you.", "Point forward"],
-    R2: ["🟩🟨🟥🏁", "Green go · yellow slow snail · red statue · chequered party.", "Hold up each flag card"],
-    R3: ["🚂", "Be a train on its track.", "Flat hand sliding straight"],
-    R4: ["✋", "Hand up, slowing down.", "Hand up"],
-    R5: ["✋🧍", "Stopped? Hand up, stay put, wait for help.", "Hand up, freeze"]
+    WKW: ["🐋💋🐋", "Wide, kiss, wide.", "Arm out wide, fingertips touch, arm out wide"],
+    KISS: ["💋🔶", "Kiss the apex cone.", "Touch two fingertips together"],
+    ROLL: ["⚽➡️", "Roll back out wide.", "Hand rolling outward"],
+    TREAS: ["🔎4️⃣", "Slow, turn, kiss, wide.", "Count four fingers"],
+    WAIT: ["⏳", "Wait… wait… turn!", "Hand held flat, then a sweep"],
+    LATE: ["💋⏰", "Late kiss.", "Tap your watch, then fingertips touch"],
+    EYES: ["👀💋➡️", "Eyes on the kiss, then the exit.", "Point at your eyes, then the apex, then the exit"],
+    HANDS: ["👀🙌🏎️", "Hands follow eyes.", "Point eyes, hands, forward"],
+    SLOWIN: ["🐢🚀", "Slow in, rocket out.", "Slow hand, then a rocket launch"],
+    RAINBOW: ["🌈", "One smooth rainbow.", "One big slow arc of your hand"],
+    ARROW: ["🏹", "Straight as an arrow.", "Point straight ahead"],
+    LAST: ["🏁➡️", "Win the last corner.", "Point down the long straight"],
+    NOZIG: ["🌈🚫⚡", "Rainbow, not zigzag.", "Smooth arc, then shake head at a zigzag"],
+    RAILS: ["🚂🛤️", "Same rails every lap.", "Two flat hands sliding forward"],
+    TRAIN: ["🚂", "Be a train on its track.", "Flat hand sliding straight"],
+    DOOR: ["🚪", "One move, then hold your line.", "One hand moves once, then freezes"],
+    MAP: ["🗺️", "Name the corner, drive its line.", "Point at the photo map"],
+    QUIET: ["🤫", "Quiet foot in the pits.", "Finger to lips"]
   };
 
-  var DRILLS = {
-    D01: { name: "Paddock Pedal Game", setup: "Kart on a stand or chocked, ENGINE OFF, kill switch off. Child in the seat. You stand in front with picture cards 🧽 (brake) and 🪥 (go).", how: "Show a card; they squeeze that pedal slowly, hold, let go slowly. 10–20 calls, about 2 minutes.", fix: [["They press both pedals together", "Slow your calls right down. Praise “feet took turns!”"], ["They stamp", "Say the cue again, slower: “squeeze… hold… let go slowly.”"]] },
-    D02: { name: "Stop Box", setup: "Four soft cones at the edge of a straight (or the pit lane, if allowed) making a box about 3 kart lengths long. Only with the track's permission and no other karts moving.", how: "Drive in slowly and stop with the kart's nose inside the box.", fix: [["They stamp and slide", "Go back to B1: “squeeze like a sponge.”"], ["They stop early", "That's fine. Praise it."], ["They overshoot", "Slower approach next lap. Make the box bigger."]] },
-    D03: { name: "Follow the Leader", setup: "An adult, coach or experienced older driver leads at a gentle steady pace — ONLY in a session the track approves. No lead kart? Do it on foot: walk the racing line with your child behind you holding a paper-plate wheel.", how: "Child follows the leader's line. Leader keeps several kart lengths of gap and never brakes suddenly. No overtaking.", fix: [["They look back for the leader after getting dropped", "R1: “Your lap is in front of you.”"], ["They get too close", "Leader slows gently; tell your child “stay one big gap behind.”"]] },
-    D04: { name: "Flag Game", setup: "Flag cards or real flags: 🟩 🟨 🟥 🏁.", how: "Paddock first: show a flag, they do the action — green drive fast, yellow slow snail, red freeze like a statue, chequered cheer. On track only where a marshal or allowed helper can show flags from a safe spot.", fix: [["They stop dead for yellow", "Yellow means SLOW, not stop. Act out a snail."]] },
-    D05: { name: "Pirate Telescope", setup: "A helper in the spectator area at the end of the main straight holds up a bright towel or big picture card. Never on the track side of the barrier.", how: "Change the colour each lap. After the run ask: “What did the pirate see?”", fix: [["They didn't see anything", "Bigger, brighter target. Make it a game, not a test."], ["They drift toward the target", "Move the target to the exit side, so looking at it means looking down the track."]] },
-    D06: { name: "Flat Out Until the Cone", setup: "One soft cone at the track edge, well before a corner. Day 1: put it where your child already lifts off easily.", how: "“Foot to the floor until the cone, then your normal corner.” After 2 good runs, move the cone about one kart length closer — only if your child says yes.", fix: [["They brake hard and late after the cone", "Move the cone BACK one step. Fear is information, not failure."], ["They lift before the cone", "Leave it where it is. Praise any lap they held it."]] },
-    D07: { name: "Brake at the Cone", setup: "One soft cone at the track edge where braking (or lifting) should START. Ask your club which corners need braking in a Kid Kart.", how: "“Squeeze the brake at the cone, finish, then turn.”", fix: [["They stamp", "B1: “squeeze like a sponge.”"], ["They brake while turning", "B3 again, and move the cone a little earlier."]] },
-    D08: { name: "Wait for the Turn Cone", setup: "One soft cone on the OUTSIDE edge where the kart should start turning.", how: "“Keep it straight… wait… turn at the cone.”", fix: [["They turn before the cone", "Totally normal — it's the most common beginner mistake. Repeat W4, praise any lap they waited."], ["They wait, then turn sharply", "W3: “paint a smooth rainbow.”"]] },
-    D09: { name: "Roll to the Edge", setup: "One cone outside the exit kerb, or a helper behind the barrier holding a picture.", how: "“Look at the exit cone, let the kart roll out to it. Wheel straight, then go.”", fix: [["They steer toward the edge (wiggle)", "“Let it roll — don't steer it.”"], ["They stay tight on the inside", "Point at the exit target before the run."]] },
-    D10: { name: "Cones on Holiday", setup: "Remove the cones. On a walk, your child picks a real “treasure” (post, kerb end, crack, sign) for each cone's job and you photograph it.", how: "“Today the cones are on holiday. Use the yellow post instead.”", fix: [["The skill drops a little", "Normal at first. Only bring cones back if it drops for a whole day."]] },
-    D11: { name: "Same Lap Again (Grapes)", setup: "Lap timing: transponder, lap timer or phone stopwatch. A notebook. Grape stickers 🍇.", how: "“Make every lap the same, like stickers in a row.” Write lap times. Spread = slowest minus fastest. Tell your child “close together!” — not the numbers.", fix: [["They chase one fast lap", "Praise the bunch of grapes, never the fastest lap."]] },
-    D12: { name: "Line Explorer", setup: "Pick one corner on the track walk. Name three lines: wide whale 🐋, middle fish 🐟, tight crab 🦀.", how: "One lap of each, in order. Then your child picks their favourite for the rest of the run.", fix: [["The crab line hits the kerb hard", "Tight means close, not on top."]] },
-    D13: { name: "Traffic Buddy", setup: "ONLY in a track-approved session with other karts. Agree it with the other driver's parent or coach first.", how: "“If someone comes past, be a train on its track.”", fix: [["They swerve or stop", "R3 again before the next run. Shorter session."], ["They keep looking behind", "R1: “Your lap is in front of you.”"]] },
-    D14: { name: "Video Detective", setup: "Camera securely mounted on the kart (many series ban helmet cameras) or a phone filming from a spectator spot.", how: "Show ONE clip under 2 minutes. Ask “What do you see?” then “Find one place you were smooth.”", fix: [["You start explaining the whole clip", "Stop. Let your child talk first."]] },
-    D15: { name: "Calm Hands", setup: "Stickers on the gloves at 9 and 3 (if allowed). Phone for a short video.", how: "One run of “baby bird hands”. Watch: quiet on the straights? One smooth arc in corners?", fix: [["“Calm” becomes floppy", "The bird mustn't fly away — firm, not tight."], ["Big sim-style steering", "W3: one smooth rainbow per corner."]] },
-    D16: { name: "Track Walk Treasure Hunt", setup: "Walk the track ONLY when it is closed and the track allows it. Hold hands near the edge.", how: "Give each corner a fun name (“Dinosaur Corner”). Find treasures: kerb colours, signs, posts. Photograph each corner — that's your picture map for between-run chats.", fix: [] },
-    D17: { name: "10-Lap Grapes (sim)", setup: "Short kart track, easy kart. Pen and paper.", how: "10 laps in a row, NO restarts. Write lap times; mark laps with an off-track as “oops”. Spread = slowest − fastest.", fix: [["They want to restart after a mistake", "“Real karts don't restart — keep going!”"]] },
-    D18: { name: "Sim Stop Box", setup: "Pick 3 features in the sim: a sign, a kerb end, a tyre wall.", how: "You point at the one to stop next to. One lap, then stop. Repeat with a different feature.", fix: [] },
-    D19: { name: "Gold Laps (no touching)", setup: "Phase track, rental kart.", how: "A lap with no wall, grass or barrier touch = ⭐ gold lap. How many before the timer ends?", fix: [["They go very slowly to avoid touches", "That's fine at first. Smooth beats fast."]] }
-  };
+  var CHOICE = "Your child points to one: 🐢 one slow lap waving at you · 🎯 you hold up a colour, they tell you after · 🔁 their favourite drill again · 🆓 free run with no questions after.";
+  var SAFETY = ["Brakes firm, throttle springs back, kill switch works (and you know where it is)", "Chain guard on, idle doesn't creep, nuts and bumpers tight", "Helmet strap snug, plus collar, chest protector, suit, gloves and boots as your series requires", "Cones allowed today? Soft cones only, at the track edge, placed only when no karts are moving", "Water, snacks, shade or warmth, first-aid kit, phone charged"];
 
-  var GAMES = {
-    G01: "Red Light, Green Light: call 🟩 green (run or “drive”), 🟥 red (freeze), 🟨 yellow (slow motion).",
-    G02: "Flag Statues: your child “drives” with a paper-plate wheel; you show a flag — 🟩 fast, 🟨 slow snail, 🟥 statue, 🏁 finish-party dance.",
-    G03: "Partner Toss: gentle underarm beanbag toss, 2–3 big steps apart. Count catches in a row.",
-    G04: "Ball Drop Catch: hold a tennis ball at shoulder height, drop it without warning, they catch after one bounce.",
-    G07: "Look-Far Game: from across the paddock, hold up coloured cards or fingers; they call them out.",
-    G08: "Scooter or Balance-Bike Slalom (helmet on): 4–6 cones in a wavy line. “Look at the NEXT cone, not this one.”",
-    G09: "Shadow Tag: your child walks a set path; you run past on either side; they stay on their path like a train on its track.",
-    G10: "Sponge Squeeze: wet sponge over a cup. “Make it rain slowly… now a storm… now slowly again.”",
-    G11: "Mirror Me: face each other, move your hands slowly like steering; your child copies like a mirror.",
-    G12: "Paper-Plate Driver: your child holds a paper plate as a wheel and follows you along the line, hands at 9 and 3."
-  };
+  // Each lesson: one weekend. sat = learn it at one corner with cones; sun = own it (new corner / cones away).
+  var LESSONS_DATA = [
+    { w: 1, ph: 1, code: "L1", title: "Wide, Kiss, Wide", dias: ["oio"], kid: "WKW",
+      why: ["The racing line is the biggest, roundest arc a corner allows. A rounder arc means less steering and less scrubbing, so the kart keeps more speed.", "Start wide on the outside, touch the inside at the apex, and let the kart roll back out to the outside edge. Turning in too early and not using the full width are the two most common line mistakes. [Kart Class]"],
+      cues: ["WKW", "KISS", "ROLL"],
+      sat: { corner: "Pick one medium 90° corner, ideally a left-hander you can see well from the fence.",
+        setup: "3 soft cones: one on the OUTSIDE edge at the turn-in, one on the INSIDE edge at the apex, one on the OUTSIDE edge at the exit (see the diagram).",
+        runs: [
+          ["Run 1 · Look at the cones", "2 slow laps, then normal pace. No instructions.", null, "Where does the kart go now? Note: does it start wide? Touch the inside? Use the exit?", "Which cone was easiest to drive past?"],
+          ["Run 2 · Start wide", "Same cones.", "WKW", "The kart is on the outside edge before turning.", "Were you out wide like a whale before the corner?"],
+          ["Run 3 · Kiss the cone", "Same cones.", "KISS", "The kart passes within about a kart-width of the apex cone.", "How close did you get to the kiss cone? Show me with your hands."],
+          ["Run 4 · Roll out", "Same cones.", "ROLL", "The kart drifts out to the exit cone without the steering being yanked.", "Did your ball roll out to the exit cone?"]
+        ],
+        twist: "Runs 6–9: put the same three cones at a SECOND corner of the same type. Run 10 = child's choice.",
+        fix: [["Starts in the middle of the track", "Point at the turn-in cone before the run: “Start next to this one.”"], ["Can't reach the apex", "Move the apex cone a little toward the middle of the track. Success first."], ["Steers back to the middle after the apex", "“Roll back out wide. Let it roll, don't steer it back.”"]] },
+      sim: { title: "Wide, Kiss, Wide in the sim", game: ["Pick one 90° corner on a short kart track (Automobilista 2, rental kart).", "Choose 3 trackside things for turn-in, apex and exit.", "Each lap your child says “wide… kiss… wide!” out loud at each spot."], score: "Laps that hit all three, out of 5." },
+      sun: { corner: "Two different corners: a left-hander and a right-hander.",
+        setup: "Cones at turn-in, apex and exit on BOTH corners.",
+        runs: [
+          ["Run 1 · Yesterday's cue", "Saturday's corner, cones in.", "WKW", "Wide, kiss, wide like yesterday.", "Does it still feel the same?"],
+          ["Run 2 · Mirror corner", "A right-hander: now wide means the LEFT edge.", "WKW", "Starts on the left edge for a right-hander.", "Which side was wide this time? Point."],
+          ["Run 3 · Both corners", "Both corners coned.", "KISS", "Kisses both apex cones.", "Which kiss was best?"],
+          ["Run 4 · Apex cones only", "Remove the turn-in and exit cones; keep the apex cones.", "WKW", "Still starts wide and rolls out wide.", "Did you miss the other cones?"]
+        ],
+        twist: "Runs 6–9: your child picks any corner on the track and shows you wide-kiss-wide there (no cones). You watch from that corner. Run 10 = choice." },
+      gate: "At the coned corners, the kart starts wide, kisses the apex and rolls out wide on most laps." },
 
-  var CHOICE = "Show the four choice pictures and let your child point: 🐢 snail lap waving at you, then normal driving · 🎯 pirate target (you hold up a colour) · 🔁 repeat today's favourite drill · 🆓 free run (no cue, no questions after).";
+    { w: 2, ph: 1, code: "L2", title: "The Four Treasures", dias: ["treasures"], kid: "TREAS",
+      why: ["Good drivers do the same thing in the same place every lap because they use reference points: real things beside the track that tell them where to slow, turn, apex and exit.", "Cones teach the spots quickly, but drivers who rely on cones can feel lost without them [Ross Bentley]. So this weekend the cones turn into real “treasures”: a post, a kerb end, a crack, a sign."],
+      cues: ["TREAS", "KISS"],
+      sat: { corner: "The same corner as last weekend, plus the corner before your longest straight.",
+        setup: "Walk the track while it's closed. At each corner, your child finds 4 treasures (slow, turn, kiss, wide) and you photograph each one. Use cones for the first two runs only.",
+        runs: [
+          ["Run 1 · Cones in", "Cones on all four spots at one corner.", "TREAS", "Slows, turns, kisses and goes wide at the cones.", "Which cone did you see first?"],
+          ["Run 2 · Cones next to treasures", "Same, but check each cone sits beside its treasure.", "TREAS", "Same as run 1.", "Can you name the treasure next to each cone?"],
+          ["Run 3 · Cones on holiday", "Remove all cones. Treasures only.", "TREAS", "The line stays the same without cones.", "Did your treasures work?"],
+          ["Run 4 · Second corner", "Treasures only at the corner before the long straight.", "KISS", "Finds the apex treasure.", "What's the kiss treasure at this corner?"]
+        ],
+        twist: "Runs 6–9: you stand behind the barrier at one treasure and give a thumbs-up each time the kart hits it. Run 10 = choice.",
+        fix: [["The line falls apart without cones", "Put ONLY the apex cone back for one run, then remove it again."], ["Can't find a treasure", "Pick a bigger one: a whole sign, a marshal post, a tyre stack."]] },
+      sim: { title: "Treasure hunt in the sim", game: ["Drive 2 slow laps. Your child names a treasure for slow, turn, kiss and wide at 2 corners.", "Then 5 laps using them.", "Each lap you ask: “Did you find all four?”"], score: "Treasures used, out of 8 (2 corners × 4)." },
+      sun: { corner: "Three corners, including one new one.",
+        setup: "No cones today. Bring the photo map with the treasures.",
+        runs: [
+          ["Run 1 · Yesterday's treasures", "Saturday's corner.", "TREAS", "Same line as yesterday.", "Did you remember all four?"],
+          ["Run 2 · New corner treasure hunt", "Walk to a new corner first and find 4 treasures together.", "TREAS", "Uses the new treasures.", "Point to the new treasures on the photos."],
+          ["Run 3 · Three corners", "All three corners.", "TREAS", "Treasures at all three.", "Which corner is easiest now?"],
+          ["Run 4 · Child's choice of corner", "Your child chooses a corner to show you.", "KISS", "—", "Show me your best corner!"]
+        ],
+        twist: "Runs 6–9: “Treasure teacher”: your child tells you the four treasures for a corner before each run, then drives it. Run 10 = choice." },
+      gate: "Without cones, your child can name the treasures for 2 corners and drives the same line there on most laps." },
 
-  /* ---------- Track cards ---------- */
-  var TR = {
-    "TR-00": { title: "Fun Only Day", focus: "Enjoy driving. No cues. Really, none.", strip: "🎉🏎️🐢🆓🍦", cues: [], kit: ["A non-karting treat for afterwards"], warm: "Any game your child chooses.",
-      runs: [
-        { label: "Runs 1–3 · Free runs", drill: null, cue: null, before: "Nothing to set up.", watch: "Smiling at the pit gate.", ask: "Did you have fun?" },
-        { label: "Run 4 · Snail & wave", drill: null, cue: null, before: "Tell them: one slow lap waving at you.", watch: "A wave.", ask: "What shall we have for lunch?" }
-      ],
-      twist: "No afternoon plan. Your child picks a choice run, or stops. Max 6 runs in total — stopping after 2 is fine.", score: [], next: "Repeat the last card your child enjoyed." },
-    "TR-01": { title: "Hello Kart", focus: "Feel at home in the kart again, and copy a smooth line.", strip: "👋🏎️ 🗺️ 🚶➡️🏎️ 👀⬆️", cues: ["R1", "V1", "T5"], kit: ["Phone for corner photos", "Paper plate (steering wheel)"], warm: "D16 track walk (name corners, photograph them), then G12 — your child walks the line behind you holding the paper plate.", warmDrill: "D16",
-      runs: [
-        { label: "Run 1 · Free, gentle pace", drill: null, cue: "T5", before: "No drill. YOU just watch — this is the baseline. Note: pedals smooth? Hands calm? Eyes up? Looks behind?", watch: "Leaves the pits calmly.", ask: "Point to your favourite corner on the photos." },
-        { label: "Run 2 · Follow the Leader", drill: "D03", cue: "R1", watch: "Stays behind the leader for most of a lap.", ask: "Was it easy or tricky to follow? Thumb up, sideways or down?" },
-        { label: "Run 3 · Follow a quicker leader", drill: "D03", cue: "R1", before: "Leader goes slightly quicker — still steady.", watch: "Eyes forward, not checking behind.", ask: "What colour was the kerb at Dinosaur Corner?" },
-        { label: "Run 4 · Show me Dinosaur Corner", drill: null, cue: "V1", before: "Free run: “Show me your favourite corner!”", watch: "Smiles, smooth.", ask: "Tell me about that run!" }
-      ],
-      twist: "Runs 6–9: the leader drives a slightly different line for 2 laps and your child copies it, then free running. Run 10 = your child's choice.", score: ["A01–A13 baseline (watch only)", "D03 follow score 1–3"] },
-    "TR-02": { title: "Sponge & Toothpaste", focus: "Smooth pedals: squeeze on, squeeze off, one at a time.", strip: "🧽 🪥 👣", cues: ["T1", "B1", "T4"], kit: ["A real sponge and a cup of water", "Picture cards 🧽 and 🪥"], warm: "G10 Sponge Squeeze, then D01 Paddock Pedal Game in the kart with the engine OFF.", warmDrill: "D01",
-      runs: [
-        { label: "Run 1 · Yesterday's cue", drill: null, cue: "R1", before: "Sunday warm-up run: repeat yesterday's main cue only.", watch: "Eyes forward.", ask: "Tell me about that run!" },
-        { label: "Run 2 · Toothpaste out of the corners", drill: null, cue: "T1", before: "Before the run, squeeze an imaginary toothpaste tube together.", watch: "The engine note rises smoothly out of each corner — no stab-stab.", ask: "Was your toothpaste slow or fast?" },
-        { label: "Run 3 · Sponge before the corners", drill: null, cue: "B1", watch: "Gentle slowing, no skids, the kart doesn't lurch.", ask: "Show me with your hand how you pressed the sponge." },
-        { label: "Run 4 · Feet take turns", drill: null, cue: "T4", watch: "Never both pedals at once (the kart doesn't pitch or bog in corners).", ask: "Which corner had the smoothest toothpaste? Point on the photos." }
-      ],
-      twist: "Do D01 again in the paddock with EYES CLOSED (you call “sponge!” / “toothpaste!”). Then runs 6–9 repeat runs 2–4 in any order your child picks. Run 10 = choice.", score: ["A02 smooth throttle", "A03 feet take turns", "A04 smooth brake"] },
-    "TR-03": { title: "Statue Stop", focus: "Stop on a chosen spot, every time.", strip: "🗿 📦 🧽", cues: ["B2", "B1"], kit: ["4 soft cones (track permission)"], warm: "G01 Red Light, Green Light — freeze on red.",
-      runs: [
-        { label: "Run 1 · Big box", drill: "D02", cue: "B2", before: "Normal warm-up laps. On the last lap, stop in the BIG box.", watch: "Stops in the box, even if early.", ask: "Were you a good statue? Show me!" },
-        { label: "Run 2 · Big box, faster entry", drill: "D02", cue: "B2", watch: "Smooth stop, no slide.", ask: "Did the kart stop IN the box, before it, or after it? Point." },
-        { label: "Run 3 · Smaller box", drill: "D02", cue: "B2", before: "Move the cones closer together (only when no karts are moving).", watch: "Stops inside 2 times out of 3.", ask: "Was the small box tricky?" },
-        { label: "Run 4 · Real feature", drill: "D02", cue: "B2", before: "No cones: “Stop next to the white post.”", watch: "Stops near the post.", ask: "Which stop was your best?" }
-      ],
-      twist: "Runs 6–9: before each run, show a picture card for WHERE to stop (🟦 blue post · 🟥 red kerb · 📦 box). Your child stops at whichever one you showed. Run 10 = choice.", score: ["A05 stops on a mark"] },
-    "TR-04": { title: "Pirate Telescope", focus: "Eyes up and far.", strip: "🏴‍☠️🔭 🎨 ⬆️", cues: ["V1", "R1"], kit: ["3 coloured towels or big picture cards", "A helper in the spectator area"], warm: "G07 Look-Far Game across the paddock.",
-      runs: [
-        { label: "Run 1 · Yesterday's cue", drill: null, cue: "B2", before: "Sunday warm-up: statue stop on the last lap.", watch: "Stops on the mark.", ask: "Good statue?" },
-        { label: "Run 2 · Target at the end of the straight", drill: "D05", cue: "V1", watch: "Names at least one colour.", ask: "What did the pirate see?" },
-        { label: "Run 3 · Target toward the next corner's exit", drill: "D05", cue: "V1", watch: "Names 2+ colours.", ask: "Where was the treasure hiding? Point on the photos." },
-        { label: "Run 4 · Two targets", drill: "D05", cue: "R1", watch: "Names both; head stays forward (count head turns behind on one lap).", ask: "Which treasure was easier to spot?" }
-      ],
-      twist: "Runs 6–9: the helper holds up ANIMAL pictures instead of colours. Every animal spotted = one sticker. Run 10 = choice.", score: ["A08 eyes far", "A09 rarely looks behind"] },
-    "TR-05": { title: "Flags & Track Rules", focus: "Know the flags and what to do after a spin.", strip: "🟩🟨🟥🏁 ✋ 🅿️", cues: ["R2", "R5", "W1"], kit: ["Flag cards or real flags", "Ask your track: what must a driver do after a spin? Pit-entry rule?"], warm: "G02 Flag Statues in the paddock.",
-      runs: [
-        { label: "Run 1 · Yesterday's cue", drill: null, cue: "W1", before: "Sunday warm-up: baby bird hands.", watch: "Calm hands.", ask: "Did the bird stay happy?" },
-        { label: "Run 2 · Normal laps + flag quiz", drill: "D04", cue: "R2", before: "Normal laps. AFTER the run: show 4 flag cards in random order.", watch: "3–4 of 4 correct.", ask: "What does yellow mean? Show me with your hands." },
-        { label: "Run 3 · Flags on track", drill: "D04", cue: "R2", before: "ONLY if a marshal or allowed helper can show flags from a safe spot. Otherwise repeat the paddock quiz faster.", watch: "Correct reaction.", ask: "Which flag did you see?" },
-        { label: "Run 4 · Pit-in practice", drill: null, cue: "R2", before: "Practise your track's pit-entry routine: signal (if your track uses one), slow, enter correctly.", watch: "Follows the routine.", ask: "Show me how you come into the pits." }
-      ],
-      extra: { title: "Spin role-play (between runs, engine off)", say: "Oh no, a spin!", body: "Your child sits still, puts a hand up and waits until you say “marshal is here”. Make it a game and repeat it 3 times. Teach YOUR track's rule." },
-      twist: "Runs 6–9: your child shows the flags to YOU and you act them out wrong on purpose — they correct you. Run 10 = choice.", score: ["A11 flags", "A12 pit routine", "A13 spin routine"] },
-    "TR-06": { title: "Baby Bird Hands", focus: "Relaxed hands, small smooth steering (swapping big sim-style inputs for real-kart ones).", strip: "🐦 🕘🕒 🌈", cues: ["W1", "W2", "W3"], kit: ["Stickers for the gloves at 9 and 3", "Phone for a short video"], warm: "G11 Mirror Me, then hold a soft toy bird gently.", warmDrill: "D15",
-      runs: [
-        { label: "Run 1 · Hands on the clock", drill: null, cue: "W2", watch: "Hands at 9 and 3.", ask: "Where were your hands?" },
-        { label: "Run 2 · Baby bird run", drill: "D15", cue: "W1", watch: "Quiet hands on the straights.", ask: "Did the bird fly away, get squashed, or stay happy?" },
-        { label: "Run 3 · Rainbow run", drill: "D15", cue: "W3", watch: "One smooth turn per corner, no sawing at the wheel.", ask: "Which corner had the best rainbow? Point on the photos." },
-        { label: "Run 4 · Video run", drill: "D14", cue: "W1", before: "Film one lap from the fence.", watch: "—", ask: "Tell me about that run!" }
-      ],
-      twist: "Watch ONE 30-second clip from run 4 together: “Were your hands birds or dinosaurs?” Then runs 6–9 with bird hands at your child's own chosen speed. Run 10 = choice.", score: ["A06 calm hands", "A07 smooth steering", "A25 small inputs (not sim-style)"] },
-    "TR-07": { title: "Flat Out to the Cone", focus: "Full throttle all the way to a marker.", strip: "🦶⬇️ 🔶 🏁", cues: ["T2", "V1"], kit: ["1 soft cone (track permission)"], warm: "G01 Red Light, Green Light with a “foot to the floor” stamp on green.",
-      runs: [
-        { label: "Run 1 · Cone far from the corner", drill: "D06", cue: "T2", watch: "Holds full throttle to the cone.", ask: "Was your foot on the floor all the way to the cone? Thumb up, sideways, down?" },
-        { label: "Run 2 · Same spot", drill: "D06", cue: "T2", watch: "Every lap.", ask: "Shall we move the cone closer, or keep it here? (THEIR choice)" },
-        { label: "Run 3 · One kart length closer", drill: "D06", cue: "T2", before: "Move the cone ONLY if run 2 was solid AND your child said yes.", watch: "Holds it, then slows calmly.", ask: "How did that feel?" },
-        { label: "Run 4 · Eyes past the cone", drill: "D06", cue: "V1", watch: "Eyes past the cone, not on it.", ask: "What did you see past the cone?" }
-      ],
-      twist: "Runs 6–9: put the cone on a DIFFERENT straight and start it far back again. Run 10 = choice.", score: ["A14 full throttle to a marker"] },
-    "TR-08": { title: "Brake First, Then Turn", focus: "Finish braking (or lifting) in a straight line, then turn.", strip: "🧽 🚂 ↪️", cues: ["T2", "B3", "B1"], kit: ["1 soft cone", "Ask your club which corners need braking in a Kid Kart"], warm: "G10 sponge squeeze, then a “train stops before the bend” walk: walk, stop, then turn.",
-      runs: [
-        { label: "Run 1 · Yesterday's cue", drill: null, cue: "T2", before: "Sunday warm-up: flat out to the cone.", watch: "Full commitment.", ask: "Foot on the floor?" },
-        { label: "Run 2 · Brake at the cone", drill: "D07", cue: "B3", watch: "Brakes at the cone.", ask: "Was the train stopped before the bend?" },
-        { label: "Run 3 · Brake, finish, turn", drill: "D07", cue: "B3", watch: "Brakes, finishes, THEN turns.", ask: "Show me with your hands: brake… then turn." },
-        { label: "Run 4 · Smooth sponge", drill: "D07", cue: "B1", watch: "Smooth squeeze, no lurch.", ask: "Was your sponge gentle?" }
-      ],
-      twist: "Runs 6–9: D07 at a SECOND corner. Your child chooses the cone spot on a walk (you check it's sensible). Run 10 = choice.", score: ["A15 brakes before turning"] },
-    "TR-09": { title: "Wait for the Turn Cone", focus: "Turn in at the right point, not early — the most common beginner mistake.", strip: "⏳ 🔶 ↪️", cues: ["W4", "W3"], kit: ["1 soft cone at the turn-in point (outside edge)"], warm: "G12 walk the line with the paper plate: put a toy at the turn point and they “wait for the toy”.",
-      runs: [
-        { label: "Run 1 · Warm-up laps", drill: null, cue: null, before: "Settle in. No drill.", watch: "Settled, smooth.", ask: "Tell me about that run!" },
-        { label: "Run 2 · Wait for the cone", drill: "D08", cue: "W4", watch: "Waits for the cone some laps.", ask: "Did you wait for the cone?" },
-        { label: "Run 3 · Again", drill: "D08", cue: "W4", watch: "Waits most laps.", ask: "Was waiting easy or tricky?" },
-        { label: "Run 4 · Wait, then rainbow", drill: "D08", cue: "W3", watch: "Waits, then one smooth turn (not a sharp one).", ask: "Was your rainbow smooth?" }
-      ],
-      twist: "Runs 6–9: D08 at a DIFFERENT corner, with one video run (D14). Watch one clip: “Where did the kart turn — before, at, or after the cone?” Run 10 = choice.", score: ["A16 waits for the turn-in"] },
-    "TR-10": { title: "Eyes Through the Corner", focus: "Look at the middle of the corner, then the exit kerb; hands follow.", strip: "👀 ➡️ ➡️ 🙌 🏎️", cues: ["W4", "V2", "V3"], kit: ["Coloured target for the exit (helper in the spectator area)", "Phone for video"], warm: "G08 Scooter or Balance-Bike Slalom — “look at the next cone, not this one”.",
-      runs: [
-        { label: "Run 1 · Yesterday's cue", drill: null, cue: "W4", before: "Sunday warm-up: wait for the turn.", watch: "Waits.", ask: "Did you wait?" },
-        { label: "Run 2 · Exit target", drill: "D05", cue: "V2", before: "Helper holds the target at the EXIT of one corner.", watch: "Names the exit colour.", ask: "What colour was at the exit?" },
-        { label: "Run 3 · Hands follow eyes", drill: "D05", cue: "V3", watch: "One smooth arc toward the exit.", ask: "Did the kart go where your eyes went?" },
-        { label: "Run 4 · Video run", drill: "D14", cue: "V2", watch: "On video, the helmet turns toward the exit before the kart does.", ask: "On the video, where are your eyes looking? Point." }
-      ],
-      twist: "Runs 6–9: exit targets at TWO corners, then one run with no target: “Can your eyes find the exit on their own?” Run 10 = choice.", score: ["A10 looks through the corner"] },
-    "TR-11": { title: "Roll to the Edge", focus: "Let the kart run out to the track edge on exit, throttle as the wheel straightens.", strip: "⚽➡️ ⬆️ 🦶", cues: ["W5", "T3", "V2"], kit: ["1 exit cone (outside the kerb) or a helper with a picture"], warm: "Roll a ball across the paddock: “See how it rolls out on its own?”",
-      runs: [
-        { label: "Run 1 · Eyes to the exit", drill: null, cue: "V2", watch: "Eyes to the exit.", ask: "Tell me about that run!" },
-        { label: "Run 2 · Roll to the edge", drill: "D09", cue: "W5", watch: "Uses the edge some laps.", ask: "Did your ball roll out to the edge?" },
-        { label: "Run 3 · Wheel straight, then go", drill: "D09", cue: "T3", watch: "Smooth run out, no wiggle.", ask: "Which corner was the best roll? Point." },
-        { label: "Run 4 · Second corner", drill: "D09", cue: "W5", watch: "Uses the edge at a new corner.", ask: "Was this corner easier or harder?" }
-      ],
-      twist: "Runs 6–9: “Ball run” — every corner, the kart is a ball rolling out. Your child counts the corners where they rolled to the edge. Run 10 = choice.", score: ["A17 runs to the edge on exit"] },
-    "TR-12": { title: "Cones on Holiday", focus: "Keep the Phase 2 skills with NO cones, using real track features.", strip: "🔶🏖️ 🔎", cues: ["W5", "V3", "V5"], kit: ["Phone photos of the chosen treasures"], warm: "D16 walk: for each old cone spot, your child picks a real treasure and photographs it.", warmDrill: "D10",
-      runs: [
-        { label: "Run 1 · Yesterday's cue", drill: null, cue: "W5", before: "Sunday warm-up: roll to the edge.", watch: "Uses the edge.", ask: "Did your ball roll?" },
-        { label: "Run 2 · Flat-out treasure", drill: "D10", cue: "V3", before: "The treasure replaces the D06 cone.", watch: "Holds throttle to the treasure.", ask: "Did your treasure work as well as the cone?" },
-        { label: "Run 3 · Brake and turn-in treasures", drill: "D10", cue: "V5", watch: "Waits for the treasure.", ask: "Which treasure is your favourite?" },
-        { label: "Run 4 · Exit treasure", drill: "D10", cue: "V3", watch: "Rolls to the edge.", ask: "Tell me about that run!" }
-      ],
-      twist: "Runs 6–9: your child chooses NEW treasures for one corner and teaches them to you on the photo map. Run 10 = choice.", score: ["A18 skills hold without cones"] },
-    "TR-13": { title: "Grapes", focus: "Laps that are more alike — laps close together are a bunch of grapes.", strip: "🍇 🔁 ⏱️", cues: ["V5"], kit: ["Lap timing (transponder, lap timer or phone stopwatch)", "Notebook", "Grape stickers 🍇"], warm: "G04 Ball Drop Catch — “catch it the same way every time”.",
-      runs: [
-        { label: "Run 1 · Warm-up laps", drill: null, cue: null, before: "No timing talk.", watch: "Settled.", ask: "Tell me about that run!" },
-        { label: "Run 2 · 3-lap grapes", drill: "D11", cue: "V5", before: "Time 3 laps. Just measure.", watch: "—", ask: "Were your laps the same, or all different?" },
-        { label: "Run 3 · 3-lap grapes", drill: "D11", cue: "V5", watch: "Spread the same or smaller than run 2.", ask: "Which corner is hardest to make the same?" },
-        { label: "Run 4 · 5-lap grapes", drill: "D11", cue: "V5", watch: "—", ask: "Did you get a big bunch of grapes?" }
-      ],
-      twist: "Runs 6–9: “Copy-cat laps” — your child chooses which lap to copy (“the one where you rolled to the edge at Dinosaur Corner”) and tries to make every lap like that one. Run 10 = choice.", score: ["A19 lap spread (compare only with their own earlier spreads)"] },
-    "TR-14": { title: "Line Explorer", focus: "Drive different lines on purpose to learn what the kart does.", strip: "🐋 🐟 🦀", cues: ["V5", "V2", "W5"], kit: ["Photo map with the chosen corner marked", "Whale, fish and crab picture cards"], warm: "G12: walk the three lines on foot with the paper plate.",
-      runs: [
-        { label: "Run 1 · Yesterday's cue", drill: null, cue: "V5", before: "Sunday warm-up: look at the exit.", watch: "Eyes ahead.", ask: "Tell me about that run!" },
-        { label: "Run 2 · Whale, fish, crab", drill: "D12", cue: "V2", watch: "Shows all three lines.", ask: "Which animal was fastest? Which was most fun?" },
-        { label: "Run 3 · You call the animal", drill: "D12", cue: "V2", before: "Show a picture card at the fence before each lap.", watch: "Matches the card.", ask: "Was the crab line bumpy?" },
-        { label: "Run 4 · Best animal", drill: "D12", cue: "W5", before: "Your child picks the best animal and drives it all run.", watch: "Same line every lap.", ask: "Why is that animal the best?" }
-      ],
-      twist: "Runs 6–9: D12 at a DIFFERENT corner. Which animal is best there? It might be different — that's the lesson. Run 10 = choice.", score: ["A21 drives a requested line"] },
-    "TR-15": { title: "Traffic Buddy", focus: "Stay calm and steady when another kart passes.", strip: "🚂 🏎️🏎️ ⬆️", cues: ["R3", "R1"], kit: ["A track-approved session with other karts", "Agreement with the other driver's parent or coach"], warm: "G09 Shadow Tag.",
-      runs: [
-        { label: "Run 1 · Laps with others on track", drill: null, cue: "R1", watch: "Eyes forward.", ask: "Was it fun to have friends on the track?" },
-        { label: "Run 2 · Buddy passes", drill: "D13", cue: "R3", watch: "Holds the line.", ask: "Did anyone come past? What did your train do?" },
-        { label: "Run 3 · Again", drill: "D13", cue: "R3", watch: "Calm — no swerve, no stop.", ask: "Was it scary, OK, or fun?" },
-        { label: "Run 4 · Free laps in traffic", drill: null, cue: "R1", watch: "Relaxed.", ask: "Tell me about that run!" }
-      ],
-      twist: "Runs 6–9: your child follows the buddy (D03) for a lap, then the buddy follows your child: “Show them your best line.” Run 10 = choice.", score: ["A22 calm when passed"] },
-    "TR-16": { title: "Different Day, Same Lap", focus: "Keep the laps alike when something changes.", strip: "🌦️ 🔄 🍇", cues: ["R3", "V5", "V1"], kit: ["Lap timing", "ONE change: a different track, reverse direction (if offered), cooler/wetter day, different time of day, or a small kart change your coach recommends"], warm: "Any warm-up game your child picks.",
-      runs: [
-        { label: "Run 1 · Yesterday's cue", drill: null, cue: "R3", before: "Sunday warm-up: train on its track.", watch: "Steady line.", ask: "Tell me about that run!" },
-        { label: "Run 2 · Explore", drill: null, cue: "V1", before: "“What's different today?”", watch: "Tells you one difference.", ask: "What felt different today?" },
-        { label: "Run 3 · 3-lap grapes", drill: "D11", cue: "V5", watch: "— (measure)", ask: "Did your treasures still work?" },
-        { label: "Run 4 · 5-lap grapes", drill: "D11", cue: "V5", watch: "Spread similar to a normal day.", ask: "Big bunch of grapes?" }
-      ],
-      twist: "Do a treasure hunt for NEW references on this changed day, then 2 more grape runs. Run 10 = choice.", score: ["A19 spread (note the change)"] },
-    "TR-17": { title: "Show Me!", focus: "Your child picks the drills and teaches YOU what they're doing.", strip: "👧🧑‍🏫 🏎️ ⭐", cues: [], kit: ["Picture cards of drills they've done"], warm: "Your child chooses.",
-      runs: [
-        { label: "Run 1 · Yesterday's cue", drill: null, cue: "V5", watch: "—", ask: "Tell me about that run!" },
-        { label: "Runs 2–4 · Child's three drills", drill: null, cue: null, before: "Show the drill picture cards; your child picks 3 and the order. Before each run, they tell YOU what they'll do.", watch: "They explain the plan before each run.", ask: "What should I do better, Coach?" }
-      ],
-      twist: "You “drive” the paper-plate wheel on foot and your child coaches you with their cue words. Write those words down — they're your new cues.", score: ["None needed — write down the cue words they use"] }
-  };
+    { w: 3, ph: 1, code: "L3", title: "The Late Kiss", dias: ["late"], kid: "LATE",
+      why: ["Turning in too early is the most common beginner mistake [Kart Class]. It feels right, but halfway round the kart is pointing at the outside edge, so the driver has to lift or run off.", "A slightly later turn-in and apex lets the kart straighten sooner, so it can be flat out earlier. Slow down a bit more before turning so you can go from the apex without running wide [Red Bull]. For a Kid Kart, keep it only a LITTLE late: too late wastes momentum. [Coaching synthesis]"],
+      cues: ["WAIT", "LATE"],
+      sat: { corner: "A 90° corner leading onto a straight.",
+        setup: "A turn-in cone on the outside edge and an apex cone on the inside, both about one kart length LATER than last weekend.",
+        runs: [
+          ["Run 1 · Old cones", "Last weekend's cone positions.", "WKW", "Baseline.", "Tell me about that run!"],
+          ["Run 2 · Wait for the cone", "Move the turn-in cone one kart length later.", "WAIT", "Keeps going straight until the cone, then turns.", "Was waiting easy or tricky?"],
+          ["Run 3 · Late kiss", "Move the apex cone one kart length later too.", "LATE", "Kisses the later apex; the kart is straight sooner after it.", "Did the kart point down the straight sooner?"],
+          ["Run 4 · Video run", "Film the corner from the outside.", "WAIT", "On video: the turn-in happens at the cone, not before.", "Where did the kart turn: before, at, or after the cone?"]
+        ],
+        twist: "Runs 6–9: alternate laps of “early” (old cones) and “late” (new cones), and your child tells you which felt faster out of the corner. Run 10 = choice.",
+        fix: [["Turns before the cone", "Totally normal. Move the cone back halfway, then try again. Praise any lap they waited."], ["Waits, then turns sharply", "“One smooth rainbow.” The late line is still a smooth arc."], ["Too late, slow everywhere", "Move the cones back halfway. Late, not very late."]] },
+      sim: { title: "Early vs late", game: ["Same corner, 3 laps with an early turn-in on purpose, 3 laps late.", "Look at the speed on the next straight (or just listen to the engine).", "Ask: “Which was faster down the straight?”"], score: "Late turn-ins on time, out of 5." },
+      sun: { corner: "A different corner onto a straight, and a hairpin-ish tight corner.",
+        setup: "Late turn-in cone and late apex cone at the new corner.",
+        runs: [
+          ["Run 1 · Yesterday's cue", "Saturday's corner, no cones.", "WAIT", "Still waits.", "Did you wait without the cone?"],
+          ["Run 2 · New corner, late cones", "New corner.", "LATE", "Late kiss at the new corner.", "Was the kiss later than before?"],
+          ["Run 3 · Tight corner", "Late cones at the tight corner.", "WAIT", "Waits for the turn on the tight corner.", "Was this one harder?"],
+          ["Run 4 · Cones away", "Remove all cones.", "LATE", "Late apex holds without cones.", "Which treasure tells you to turn now?"]
+        ],
+        twist: "Runs 6–9: “Wait game”: your child shouts “WAIT!” in their helmet before every turn-in, then turns. Run 10 = choice." },
+      gate: "At 2 corners, the turn-in is at or after the marker (not before) on most laps." },
 
-  /* ---------- Sim cards ---------- */
-  var SIM = {
-    "SIM-01": { title: "Set-up & Free Drive", strip: "🪑 🦶🦶 🐦 🏎️", cues: ["T4", "W1"], cap: 15, goal: "Your child fits the rig safely, and you WATCH their current sim habits.",
-      game: ["Fit check: feet reach full brake with a firm squeeze (check the brake readout); fingers outside the spokes.", "Pedal game in the pits: you say 🧽 or 🪥, they squeeze — same as D01.", "Free drive, 5 minutes. You say NOTHING. Watch: do they lean on walls or cut grass? Restart after mistakes? Press both pedals?"],
-      score: "For you, not them: A23 walls/grass, A24 restarts, A03 feet take turns.", link: "Tomorrow is TR-02 Sponge & Toothpaste. Say: “Tomorrow your feet do the sponge and toothpaste in the real kart.”" },
-    "SIM-02": { title: "Statue Stop", strip: "🗿 🪧 🧽", cues: ["B2", "B1"], cap: 12, goal: "Stop next to a chosen feature, every time.", drill: "D18",
-      game: ["Pick 3 features: a sign, a kerb end, a tyre wall.", "Point at the screen to show which one.", "One lap, then stop next to it. Repeat with a different feature."],
-      score: "1 = past it, 2 = near it, 3 = right next to it. Best 3 of 5.", link: "Tomorrow (TR-04), run 1 is a statue-stop warm-up." },
-    "SIM-03": { title: "Gold Laps", strip: "⭐ 🚫🧱 🌈", cues: ["W3", "V4", "W1"], cap: 12, goal: "Swap sim habits (walls, grass) for clean, smooth real-kart laps.", drill: "D19",
-      game: ["A lap with no wall, grass or barrier touch = ⭐ gold lap.", "Count gold laps until the timer ends.", "Slow is fine. Smooth beats fast."],
-      score: "Number of gold laps. Compare only with their last Gold Laps.", link: "Tomorrow (TR-05), run 1 is baby bird hands." },
-    "SIM-04": { title: "Pirate Telescope", strip: "🏴‍☠️🔭 🖥️🖥️🖥️", cues: ["V1", "V5"], cap: 10, goal: "Eyes up and far — use the side screens to look into corners early.",
-      game: ["While they drive, ask: “What's at the end of this straight?” or “What colour is the kerb at the next corner?”", "They answer BEFORE they get there."],
-      score: "Correct early answers out of 5.", link: "Leads into Phase 2's eyes work (TR-10)." },
-    "SIM-05": { title: "Flat Out to the Marker", strip: "🦶⬇️ 🪧 🏁", cues: ["T2", "V1"], cap: 12, goal: "Full throttle to a chosen feature.",
-      game: ["Pick a feature on one straight as the “cone”.", "2 laps flat to that spot.", "Your child CHOOSES whether to move it closer."],
-      score: "Laps held flat to the marker, out of 5.", link: "Tomorrow (TR-08), run 1 is flat out to the cone." },
-    "SIM-06": { title: "Wait for the Turn", strip: "⏳ 🪧 ↪️", cues: ["W4", "V2"], cap: 12, goal: "Turn in at a chosen feature, not early.",
-      game: ["Choose a turn-in feature for 2 corners.", "Each lap: “wait… turn!” — your child says “NOW!” out loud as they turn. You'll hear if it's on time."],
-      score: "On-time turns out of 6 (3 laps × 2 corners).", link: "Tomorrow (TR-10), run 1 is wait for the turn." },
-    "SIM-07": { title: "Roll to the Edge", strip: "⚽➡️ ⬆️ 🦶", cues: ["W5", "T3"], cap: 12, goal: "Let the kart run to the exit edge, throttle as the wheel straightens.",
-      game: ["Pick 2 corners.", "If the kart rolls out to the exit kerb smoothly, your child shouts “BALL!”", "You count the balls."],
-      score: "Balls out of 6.", link: "Tomorrow (TR-12 Cones on Holiday), run 1 is roll to the edge." },
-    "SIM-08": { title: "Treasure Markers", strip: "🔎 🪧 🧭", cues: ["V3", "V5"], cap: 12, goal: "Find and use real features for flat-out, brake, turn-in and exit, on a NEW track.",
-      game: ["2 slow laps: your child names a treasure for each job at one corner.", "Then 4 laps using them."],
-      score: "Treasures found and used, out of 4 jobs.", link: "Phase 3 starts with TR-13 Grapes, which uses the same treasures." },
-    "SIM-09": { title: "10-Lap Grapes", strip: "🍇 🔟 🔁", cues: ["V5"], cap: 15, goal: "Consistency: 10 laps judged on spread, never the fastest lap.", drill: "D17",
-      game: ["10 laps in a row. NO restarts.", "You write the lap times and mark “oops” laps.", "If 10 laps won't fit in the time cap, do 6."],
-      score: "Spread = slowest − fastest. Show it as grapes. Compare only with the last SIM-09.", link: "Tomorrow (TR-14), run 1 uses the same cue (V5)." },
-    "SIM-10": { title: "Line Explorer", strip: "🐋 🐟 🦀", cues: ["V2", "W5"], cap: 12, goal: "Drive three lines on purpose through one corner.",
-      game: ["1 lap each: whale (wide), fish (middle), crab (tight).", "Your child picks the best and drives it for 3 laps."],
-      score: "Lines shown on request, out of 3.", link: "Tomorrow (TR-16 Different Day) asks your child to adapt — this is practice for that." },
-    "SIM-11": { title: "Video Detective", strip: "🎬 🔎 ⭐", cues: [], cap: 10, goal: "Your child watches their own replay and finds ONE good thing.",
-      game: ["5 minutes of driving.", "3 minutes of the sim's replay: “Find one place you were smooth.” “Where were your eyes?”"],
-      score: "None. Write down what they spotted.", link: "Next track day, use what they spotted as the main cue." },
-    "SIM-12": { title: "Your Choice", strip: "🎉 👉 🏎️", cues: [], cap: 12, goal: "Fun and ownership: your child picks any earlier sim game.",
-      game: ["Show the picture strips of earlier sim games; they point to one.", "Play it with that card's cues."],
-      score: "None.", link: "Ask what they'd like to practise next." }
-  };
+    { w: 4, ph: 1, code: "L4", title: "Eyes Lead the Line", dias: ["eyes"], kid: "EYES", check: true,
+      why: ["The kart goes where the eyes go. Look one stage ahead: at the turn-in, look at the apex; at the apex, look at the exit [Red Bull].", "This vision sequence (middle of the corner, then the exit kerb; hands follow eyes) is what makes the line smooth instead of steered in pieces. [Your brief, attributed to David Sera]"],
+      cues: ["EYES", "HANDS"],
+      sat: { corner: "One corner you can see well, with a helper in the spectator area at the exit.",
+        setup: "A helper behind the barrier at the EXIT holds up coloured cards that change each lap. Apex cone only.",
+        runs: [
+          ["Run 1 · Exit colours", "Helper changes the card each lap.", "EYES", "Your child can name the colours afterwards.", "What colours did you see at the exit?"],
+          ["Run 2 · Look at the kiss early", "Same.", "EYES", "On video: the helmet turns toward the apex before the kart does.", "When did your eyes find the kiss cone?"],
+          ["Run 3 · Hands follow eyes", "Same.", "HANDS", "One smooth arc, no corrections.", "Did the kart go where your eyes went?"],
+          ["Run 4 · Two corners", "Exit cards at two corners.", "EYES", "Names colours at both corners.", "Which corner was easiest to look through?"]
+        ],
+        twist: "Runs 6–9: animals instead of colours. Every animal spotted at an exit = a sticker. Run 10 = choice.",
+        fix: [["Doesn't see the cards", "Bigger, brighter cards. Hold them where the eyes should land, not off to the side."], ["Stares at the apex cone and runs over it", "“Eyes on the kiss, then the exit.”"]] },
+      sim: { title: "Pirate telescope", game: ["While they drive, ask: “What colour is the kerb at the next corner?”", "They must answer BEFORE they reach it.", "On triple screens, the side screens show the corner early: use them."], score: "Early answers, out of 5." },
+      sun: null,
+      gate: null },
 
-  /* ---------- Course plan (weekends) ---------- */
-  var PHASES = [
-    { n: 1, name: "Foundations", line: "Driving the kart becomes automatic.",
-      exit: ["Quiet foot in the pits every time (A01 = 3)", "Feet take turns every time (A03 = 3)", "Stops on a mark every time (A05 = 3)", "Knows all 4 flags (A11 = 3)", "After a spin: hand up, stays put (A13 = 3)", "Smooth pedals, calm hands, eyes up, rarely looks behind — at least “sometimes” (A02, A04, A06–A09, A25 ≥ 2)", "Fun average 3+ over the last 4 sessions"],
-      weeks: [
-        { w: 1, sat: "TR-01", sim: "SIM-01", sun: "TR-02", gate: "Smooth throttle and feet taking turns are at least “sometimes” (A02, A03 ≥ 2).", fallback: "Next weekend: repeat TR-02 on Saturday, then carry on with Week 2's Sunday card." },
-        { w: 2, sat: "TR-03", sim: "SIM-02", sun: "TR-04", gate: "Stops on a mark and eyes far are at least “sometimes” (A05, A08 ≥ 2).", fallback: "Next weekend: repeat whichever card scored 1." },
-        { w: 3, sat: "TR-06", sim: "SIM-03", sun: "TR-05", gate: "Calm hands and flags are at least “sometimes” (A06, A11 ≥ 2).", fallback: "Next weekend: repeat whichever card scored 1." },
-        { w: 4, light: true, sim: "SIM-04" }
-      ] },
-    { n: 2, name: "Confidence", line: "Commit on the straights, wait for the corner, let the eyes lead.",
-      exit: ["Brakes before turning every time (A15 = 3)", "Waits for the turn-in every time (A16 = 3)", "Looks through corners, full throttle to a marker, runs to the edge, keeps it all without cones — at least “sometimes” (A10, A14, A17, A18 ≥ 2)", "All Phase 1 safety items still every time", "Fun average 3+ over the last 4 sessions"],
-      weeks: [
-        { w: 5, sat: "TR-07", sim: "SIM-05", sun: "TR-08", gate: "Full throttle to the marker and braking before turning are at least “sometimes” (A14, A15 ≥ 2).", fallback: "Next weekend: repeat the card that scored 1. If the cone scared them, move it back and do TR-10 / TR-11 first." },
-        { w: 6, sat: "TR-09", sim: "SIM-06", sun: "TR-10", gate: "Waiting for the turn and looking through corners are at least “sometimes” (A16, A10 ≥ 2).", fallback: "Next weekend: repeat the card that scored 1." },
-        { w: 7, sat: "TR-11", sim: "SIM-07", sun: "TR-12", gate: "Rolling to the edge and keeping skills without cones are at least “sometimes” (A17, A18 ≥ 2).", fallback: "Next weekend: repeat the card that scored 1." },
-        { w: 8, light: true, sim: "SIM-08" }
-      ] },
-    { n: 3, name: "Consistency", line: "The same good lap, again and again.",
-      exit: ["Track lap spread smaller or the same on 2 of the last 3 track days, vs the first Phase 3 day (A19)", "Sim 10-lap spread smaller than the first SIM-09, on 2 blocks (A20)", "Calm when passed, every time (A22 = 3)", "Can drive a requested line at least “sometimes” (A21 ≥ 2)", "Fun 3+ and your child WANTS to keep going"],
-      weeks: [
-        { w: 9, sat: "TR-13", sim: "SIM-09", sun: "TR-14", gate: "Fun average is 3 or more (spread is tracked, not gated).", fallback: "Next weekend: a TR-00 day first, then carry on." },
-        { w: 10, sat: "TR-15", sim: "SIM-10", sun: "TR-16", gate: "Calm when passed is at least “sometimes” (A22 ≥ 2).", fallback: "No other karts available? Swap TR-15 for TR-16 and do TR-15 whenever a club session comes up." },
-        { w: 11, sat: "TR-13", sim: "SIM-09", sun: "TR-17", gate: "Compare today's grapes with week 9's.", fallback: "No gate — carry on to the check weekend." },
-        { w: 12, light: true, sim: "SIM-11" }
-      ] }
+    { w: 5, ph: 2, code: "L5", title: "Hairpins: Slow In, Rocket Out", dias: ["hairpin"], kid: "SLOWIN",
+      why: ["A hairpin turns almost all the way round. The exit leads onto a straight, so the exit speed matters most.", "Come in wide, finish slowing down while you're still straight, turn late, kiss the apex past halfway round, and use all the road on the way out. An early apex in a hairpin runs out of road on the exit (see the blue line). [Coaching synthesis, built on Kart Class and Red Bull]"],
+      cues: ["SLOWIN", "LATE", "ROLL"],
+      sat: { corner: "The tightest corner on your track.",
+        setup: "Cones: slow-down spot (outside), turn-in (outside), a LATE apex (inside, past halfway round), exit (outside).",
+        runs: [
+          ["Run 1 · Look at the hairpin", "Cones in. Normal pace.", null, "Baseline: where's the apex now? Early?", "Tell me about the big U-turn corner."],
+          ["Run 2 · Slow in", "Same.", "SLOWIN", "Finishes slowing (lift or brake) before turning.", "Were you slow before the turn, or during it?"],
+          ["Run 3 · Late kiss", "Same.", "LATE", "Apex past halfway round.", "Was the kiss cone far round the corner?"],
+          ["Run 4 · Rocket out", "Same.", "ROLL", "Flat out from the apex, kart rolls to the exit edge.", "Did you rocket out?"]
+        ],
+        twist: "Runs 6–9: you time from the exit cone to a point down the straight with a phone. Your child tries to make the “rocket” faster. Praise the rocket, not the lap time. Run 10 = choice.",
+        fix: [["Apex too early, runs wide", "Move the apex cone later still. Say “slow in, rocket out” before the run."], ["Brakes in the turn", "Move the slow-down cone earlier: finish slowing while straight."]] },
+      sim: { title: "Hairpin rockets", game: ["Find a hairpin in the sim.", "5 laps: “slow in, rocket out.”", "Your child says “ROCKET!” when they go flat out. You listen for whether it's at the apex."], score: "Rockets at or after the apex, out of 5." },
+      sun: { corner: "The hairpin again, then a second tight corner.",
+        setup: "Apex cone only at the hairpin, then no cones.",
+        runs: [
+          ["Run 1 · Yesterday's cue", "Hairpin, apex cone only.", "SLOWIN", "Same line as yesterday.", "Did you remember slow in, rocket out?"],
+          ["Run 2 · No cones", "Hairpin, no cones. Use treasures.", "LATE", "Late apex without the cone.", "What's your kiss treasure here?"],
+          ["Run 3 · Second tight corner", "Apex cone at the second corner.", "SLOWIN", "Same pattern at a new corner.", "Is this one a hairpin too?"],
+          ["Run 4 · Whole track", "No cones anywhere.", "ROLL", "Uses the exit road at tight corners.", "Which rocket was best?"]
+        ],
+        twist: "Runs 6–9: “Rocket count”: your child counts their rockets each lap and tells you. Run 10 = choice." },
+      gate: "At the hairpin, slowing is finished before turning, the apex is late, and the kart uses the exit road on most laps." },
+
+    { w: 6, ph: 2, code: "L6", title: "Sweepers & Kinks", dias: ["sweeper", "kink"], kid: "RAINBOW",
+      why: ["Fast bends are where a Kid Kart wins or loses the most, because it has so little power to win speed back. One steady arc with one apex keeps the speed; wiggles scrub it away.", "If a bend is gentle enough that a straight line fits inside the road, it's a “kink”: take the straight line and stay flat out. [Coaching synthesis]"],
+      cues: ["RAINBOW", "ARROW"],
+      sat: { corner: "Your fastest bend.",
+        setup: "One apex cone in the middle of the inside edge. A helper filming from the outside.",
+        runs: [
+          ["Run 1 · Baseline", "Apex cone in.", null, "Count the steering corrections (video).", "Tell me about the fast bend."],
+          ["Run 2 · One rainbow", "Same.", "RAINBOW", "One steady steering input, no wiggles.", "Did you draw one rainbow, or lots of little ones?"],
+          ["Run 3 · Keep your foot down", "Same. Only if it's safely flat out for this kart.", "RAINBOW", "No lift, no wiggles.", "Did the kart stay fast?"],
+          ["Run 4 · Video run", "Film again.", "RAINBOW", "Fewer corrections than run 1.", "Let's count your wiggles on the video!"]
+        ],
+        twist: "Runs 6–9: find a kink (if your track has one) and try the straight line: “straight as an arrow.” If not, repeat the sweeper with no cone. Run 10 = choice.",
+        fix: [["Wiggles mid-corner", "Do the rainbow hand sign before the run, and look further ahead."], ["Lifts because it feels fast", "Fine. Never push this. Speed comes when the arc feels smooth."]] },
+      sim: { title: "Wiggle counter", game: ["Find a long fast bend in the sim.", "5 laps: you count the wiggles each lap out loud.", "Can they do a zero-wiggle lap?"], score: "Zero-wiggle laps, out of 5." },
+      sun: { corner: "The sweeper, then any bend that's nearly straight.",
+        setup: "No cones.",
+        runs: [
+          ["Run 1 · Yesterday's cue", "Sweeper.", "RAINBOW", "One rainbow.", "One rainbow?"],
+          ["Run 2 · Kink or gentle bend", "Find the gentlest bend.", "ARROW", "The straightest line through.", "Did you need to turn at all?"],
+          ["Run 3 · Both", "Whole lap.", "RAINBOW", "Smooth in both.", "Which was more fun?"],
+          ["Run 4 · Video", "Film the sweeper.", "RAINBOW", "Fewer corrections than Saturday's run 1.", "Count the wiggles with me."]
+        ],
+        twist: "Runs 6–9: your child chooses a bend and tells you whether it's a rainbow or an arrow before each lap. Run 10 = choice." },
+      gate: "On the sweeper, the video shows one smooth steering input (no more than one small correction) on most laps." },
+
+    { w: 7, ph: 2, code: "L7", title: "Chicanes: Straight as an Arrow", dias: ["chicane"], kid: "ARROW",
+      why: ["A chicane is a quick left-right (or right-left). Following the road means turning the wheel twice. The fast way is the straightest line that clips both apexes.", "The straighter the line, the less steering, the less scrub and the more speed. [Coaching synthesis]"],
+      cues: ["ARROW", "KISS"],
+      sat: { corner: "A chicane or quick left-right on your track. No chicane? Make one with cones only if the track allows, at very low speed in the paddock or a closed area.",
+        setup: "Apex cones on the inside of corner 1 and corner 2.",
+        runs: [
+          ["Run 1 · Baseline", "Apex cones in.", null, "Does the kart follow the road (two big turns)?", "Was that wiggly bit fun?"],
+          ["Run 2 · Arrow line", "Same.", "ARROW", "Fewer, smaller steering inputs.", "Was your line straight like an arrow?"],
+          ["Run 3 · Kiss both", "Same.", "KISS", "Close to both apex cones.", "Which kiss was easier, 1 or 2?"],
+          ["Run 4 · Video", "Film from the side.", "ARROW", "Straighter than run 1.", "Look how straight your arrow is!"]
+        ],
+        twist: "Runs 6–9: remove cone 1, keep cone 2. Then remove both. Run 10 = choice.",
+        fix: [["Hits a kerb hard", "Kiss means close, not on top. Move the line out a little."], ["Turns too early for corner 1", "“Wait… wait… turn!” (from Weekend 3). The arrow starts from the outside edge."]] },
+      sim: { title: "Arrow line", game: ["Find a chicane or esses in the sim.", "3 laps following the road on purpose, 3 laps with the arrow line.", "Which is faster on the next straight?"], score: "Arrow laps with no kerb hits, out of 5." },
+      sun: { corner: "The chicane, then any two corners close together.",
+        setup: "No cones.",
+        runs: [
+          ["Run 1 · Yesterday's cue", "Chicane.", "ARROW", "Arrow line.", "Still an arrow?"],
+          ["Run 2 · Treasures", "Pick treasures for both apexes.", "KISS", "Uses the treasures.", "Which treasures did you pick?"],
+          ["Run 3 · Other close corners", "Two corners close together.", "ARROW", "Straightens the line where it can.", "Is this a chicane too?"],
+          ["Run 4 · Whole lap", "Everything so far.", "ARROW", "—", "Your best bit of the lap?"]
+        ],
+        twist: "Runs 6–9: your child calls out “arrow!” when they're on the straight line. Run 10 = choice." },
+      gate: "Through the chicane, the line is visibly straighter than Saturday's first run on most laps." },
+
+    { w: 8, ph: 2, code: "L8", title: "Win the Last Corner", dias: ["linked"], kid: "LAST", check: true,
+      why: ["When corners come one after another, you can't take them all on the perfect line. Choose the corner that leads onto the longest straight and get THAT one right, even if the corner before it is a bit slower.", "In the diagram, the yellow line gives up a little in corner 1 to arrive wide for corner 2 and rocket onto the straight. The blue line is perfect in corner 1, then stuck on the wrong side for corner 2. [Coaching synthesis]"],
+      cues: ["LAST", "LATE"],
+      sat: { corner: "Two linked corners before your longest straight.",
+        setup: "An apex cone in corner 2 only, placed late. A cone on the side of the track where your child should be BETWEEN the corners.",
+        runs: [
+          ["Run 1 · Baseline", "Cones in.", null, "Which side of the track is the kart on between the corners?", "Which of these two corners is more important?"],
+          ["Run 2 · Be on the right side", "Same.", "LAST", "Arrives at corner 2 on its outside.", "Were you next to the in-between cone?"],
+          ["Run 3 · Late kiss in 2", "Same.", "LATE", "Late apex in corner 2, then flat out.", "Did you rocket down the long straight?"],
+          ["Run 4 · Timing run", "Time from the corner 2 exit to the end of the straight with a phone.", "LAST", "Faster straight than run 1.", "Faster down the straight?"]
+        ],
+        twist: "Runs 6–9: remove the in-between cone. Then find another pair of linked corners. Run 10 = choice.",
+        fix: [["Stays on the perfect line for corner 1", "That's normal. Show the diagram again: corner 2 matters more."], ["Confused by two corners at once", "Go back to corner 2 only for one run, then add corner 1."]] },
+      sim: { title: "Which corner matters?", game: ["On the sim track, your child points to the longest straight.", "Ask: “Which corner comes before it?”", "5 laps: get that corner perfect."], score: "Laps with a late apex onto the long straight, out of 5." },
+      sun: null, gate: null },
+
+    { w: 9, ph: 3, code: "L9", title: "Rainbow, Not Zigzag", dias: ["momentum"], kid: "NOZIG",
+      why: ["A Kid Kart has very little power, so momentum is everything. A late, sharp turn makes the tyres slide sideways (scrub), and the lost speed takes most of the next straight to win back.", "So the Kid Kart line is a little rounder than a faster kart's: big smooth arcs, small hands, foot down as much as possible. [Coaching synthesis, built on Kart Class: small, smooth inputs]"],
+      cues: ["NOZIG", "RAINBOW"],
+      sat: { corner: "The whole lap, focusing on the 2 corners where the kart slows most.",
+        setup: "No cones. A phone for video at one corner.",
+        runs: [
+          ["Run 1 · Listen to the engine", "Normal laps. You listen at the corner.", null, "Does the engine note dip (scrub) in the corner?", "Tell me about that run!"],
+          ["Run 2 · Rainbow not zigzag", "Same.", "NOZIG", "The engine note stays higher through the corner.", "Rainbow or zigzag?"],
+          ["Run 3 · Second slow corner", "The other slow corner.", "NOZIG", "Same there.", "Which corner felt fastest?"],
+          ["Run 4 · Video", "Film both corners.", "RAINBOW", "Fewer sharp inputs.", "Rainbow on the video?"]
+        ],
+        twist: "Runs 6–9: “Silent tyres”: if you hear the tyres squeal or scrub, they try to make it quieter next lap. Run 10 = choice.",
+        fix: [["Makes the arc so big it runs wide", "Rainbow AND kiss: the apex still matters."], ["Sharp turns at hairpins", "At the hairpin, go back to “slow in, rocket out”; rainbow everywhere else."]] },
+      sim: { title: "Speed keeper", game: ["Pick a corner and watch the speedo at the apex.", "5 laps: can the apex speed number go up with a smoother arc?", "No restarts."], score: "Smooth laps (no slide), out of 5." },
+      sun: { corner: "The whole lap.", setup: "No cones.",
+        runs: [
+          ["Run 1 · Yesterday's cue", "Whole lap.", "NOZIG", "Smooth arcs.", "Rainbow lap?"],
+          ["Run 2 · Fast bends", "Focus on the fast bends.", "RAINBOW", "One arc each.", "Wiggles?"],
+          ["Run 3 · Slow corners", "Focus on the slow corners.", "NOZIG", "No scrub.", "Silent tyres?"],
+          ["Run 4 · Whole lap", "Everything.", "RAINBOW", "—", "Best corner?"]
+        ],
+        twist: "Runs 6–9: child's choice of corner to perfect. Run 10 = choice." },
+      gate: "At the 2 slowest corners, the arc is smooth and the tyres don't scrub on most laps." },
+
+    { w: 10, ph: 3, code: "L10", title: "Same Rails Every Lap", dias: ["rails", "scatter"], kid: "RAILS",
+      why: ["The best drivers aren't the ones with one great lap. They put the kart on the same line, in the same places, lap after lap.", "Judge laps on how close together they are (the spread: slowest minus fastest), never on the fastest lap. Chasing one fast lap teaches over-driving. [Your brief, attributed to Alessio Lorandi]"],
+      cues: ["RAILS", "TREAS"],
+      sat: { corner: "Two key corners.", setup: "Lap timing (transponder, lap timer or phone). Apex cones at 2 corners (you'll watch whether the kart passes the same distance from them every lap).",
+        runs: [
+          ["Run 1 · Baseline", "Time 5 laps. Watch the apex distances.", null, "Spread of the 5 laps.", "Were your laps the same or all different?"],
+          ["Run 2 · Same rails", "Same.", "RAILS", "The apex distance looks the same every lap.", "Was your kart on rails?"],
+          ["Run 3 · Treasures", "Remind them of the treasures at both corners.", "TREAS", "Same treasures every lap.", "Which treasure helps most?"],
+          ["Run 4 · 5-lap grapes", "Time 5 laps.", "RAILS", "Spread smaller or the same as run 1.", "Big bunch of grapes? 🍇"]
+        ],
+        twist: "Runs 6–9: “Copy-cat laps”: your child picks their best lap from the video and tries to copy it. Run 10 = choice.",
+        fix: [["Tries to go faster instead", "Praise only the grapes. Never say the fastest time."], ["Spread gets bigger", "Normal when tired. Stop timing and finish on a fun run."]] },
+      sim: { title: "10-lap grapes", game: ["10 laps in a row. NO restarts.", "You write the lap times and mark laps with an off-track as “oops”.", "Spread = slowest − fastest."], score: "Spread, compared only with their last sim spread." },
+      sun: { corner: "Whole lap.", setup: "Lap timing. No cones.",
+        runs: [
+          ["Run 1 · Yesterday's cue", "Whole lap.", "RAILS", "—", "Rails?"],
+          ["Run 2 · 3-lap grapes", "Time 3 laps.", "RAILS", "Spread recorded.", "Same or different?"],
+          ["Run 3 · 5-lap grapes", "Time 5 laps.", "TREAS", "Spread similar to run 2.", "Which corner is hardest to make the same?"],
+          ["Run 4 · Free", "No timing.", null, "Relaxed.", "Fun?"]
+        ],
+        twist: "Runs 6–9: another 5-lap grapes, then free runs. Run 10 = choice." },
+      gate: "Today's 5-lap spread is the same or smaller than Saturday's first run." },
+
+    { w: 11, ph: 3, code: "L11", title: "Racing Near Others", dias: ["defend"], kid: "TRAIN",
+      why: ["When other karts are around, being predictable keeps everyone safe: hold your line like a train on its track.", "Whoever is on the inside before the corner usually gets to take the corner. Make one move only, early, before the slowing zone, and then hold it. Never weave, and never move over in the slowing zone. Follow your series' and track's rules, and only practise this in sessions the track approves. [Coaching synthesis]"],
+      cues: ["TRAIN", "DOOR"],
+      sat: { corner: "A hairpin or the corner after the longest straight.",
+        setup: "ONLY in a track-approved session with other karts. Agree it with the other driver's parent or coach first. Start with following, not passing.",
+        runs: [
+          ["Run 1 · Laps with others", "Normal laps in traffic.", "TRAIN", "Holds a steady line.", "Was it fun with friends on the track?"],
+          ["Run 2 · Follow a buddy", "Your child follows a buddy for 2 laps at a gap.", "TRAIN", "Copies the buddy's line at a safe gap.", "What did you learn from their line?"],
+          ["Run 3 · Being passed", "The buddy passes once, agreed in advance.", "TRAIN", "No swerve, no stop.", "Did your train stay on its track?"],
+          ["Run 4 · The inside", "Talk through the diagram first. One move, early, then hold the line.", "DOOR", "One early, smooth move only (if racing is allowed in this session).", "Did you make one move or lots?"]
+        ],
+        twist: "Runs 6–9: swap. Your child leads and the buddy follows. “Show them your best line.” Run 10 = choice.",
+        fix: [["Swerves or brakes when passed", "“Be a train on its track” again. Shorter session next time."], ["Keeps looking behind", "“Your lap is in front of you.”"], ["Weaves or moves late", "Stop the exercise. Back to following only."]] },
+      sim: { title: "Train on its track", game: ["If your sim has AI karts, run a short race with slow AI.", "Your child holds their line when passed.", "No AI? Watch a short onboard video of a kart race together and point out who's on the inside."], score: "Calm passes, out of 3." },
+      sun: { corner: "Track-approved session with others.", setup: "As Saturday.",
+        runs: [
+          ["Run 1 · Yesterday's cue", "Traffic laps.", "TRAIN", "Steady line.", "Train?"],
+          ["Run 2 · Follow and learn", "Follow a buddy.", "TRAIN", "Safe gap.", "What did you notice?"],
+          ["Run 3 · Passed again", "Agreed pass.", "TRAIN", "Calm.", "What did you do?"],
+          ["Run 4 · Free laps", "Traffic.", null, "Relaxed.", "Best bit?"]
+        ],
+        twist: "Runs 6–9: free laps with others. Run 10 = choice." },
+      gate: "When passed, your child holds the line calmly with no swerve and no sudden slowing." },
+
+    { w: 12, ph: 3, code: "L12", title: "The Whole Lap", dias: ["oio", "hairpin", "sweeper", "chicane", "linked"], kid: "MAP", check: true,
+      why: ["Every corner on your track is one of the types you've learned: a 90°, a hairpin, a sweeper, a kink, a chicane, or linked corners.", "This weekend you and your child build a whole-lap map: name each corner, decide its type, and pick its four treasures. Then drive the lap corner by corner. [Coaching synthesis]"],
+      cues: ["MAP", "RAILS"],
+      sat: { corner: "Every corner.",
+        setup: "Walk the closed track with the photo map. For each corner: a fun name, its type, and 4 treasures. Draw the line on a printed track map together.",
+        runs: [
+          ["Run 1 · Corners 1–2", "Focus on the first two corners.", "MAP", "Each driven with its type's line.", "What's corner 1 called? What kind is it?"],
+          ["Run 2 · Corners 3–4", "Next two.", "MAP", "Same.", "Which line goes here?"],
+          ["Run 3 · The rest", "The remaining corners.", "MAP", "Same.", "Favourite corner?"],
+          ["Run 4 · Whole lap", "Everything. Time 5 laps.", "RAILS", "Spread recorded.", "Was every corner on its rails?"]
+        ],
+        twist: "Runs 6–9: your child narrates the lap to you on foot first (“Dinosaur: hairpin, slow in rocket out…”), then drives it. Run 10 = choice.",
+        fix: [["Too many corners to think about", "One corner focus per run. That's why the morning goes two at a time."]] },
+      sim: { title: "Your track in the sim", game: ["If your home track is in a sim, drive it. If not, pick a similar short track.", "Your child names each corner's type as they reach it.", "5 laps."], score: "Corners named correctly, out of the whole lap." },
+      sun: null, gate: null }
   ];
 
-  var SAFETY = ["Brakes: firm pedal, kart doesn't roll when pushed with the brake on", "Throttle springs back to idle by itself", "Kill switch stops the engine — and you know where it is", "Chain guard fitted and tight", "Idle set so the kart doesn't creep (centrifugal clutch)", "Wheel nuts, steering bolts and pins, bumpers all tight", "Seat fit: reaches full brake and throttle with a slight knee bend", "Ballast bolted, never taped", "Helmet (right size, strap snug), neck collar and chest protector if your series requires them, suit, gloves, boots", "Long hair tucked in; nothing loose that could reach the chain", "Cones only if the track allows; soft cones at the edge, placed when no karts are moving", "Water, snacks, shade or warmth, first-aid kit, phone charged"];
+  var PHASES = [
+    { n: 1, name: "The Line", line: "Wide, kiss, wide; the four treasures; a late apex; eyes leading.",
+      exit: ["Starts wide, kisses the apex, rolls out wide at 2+ corners on most laps", "Names the four treasures for 2+ corners and uses them without cones", "Turns in at or after the turn-in point, not before, on most laps", "Looks at the apex before turning and at the exit at the apex (video)", "Fun average 3 or more over the last 4 sessions"] },
+    { n: 2, name: "Corner Types", line: "Hairpins, sweepers, kinks, chicanes and linked corners.",
+      exit: ["Hairpin: slowing is finished before turning, with a late apex and full use of the exit road", "Sweeper: one smooth steering input; kink taken straight", "Chicane: a visibly straighter line than when they started", "Linked corners: sets up for the corner before the long straight", "Fun average 3 or more over the last 4 sessions"] },
+    { n: 3, name: "Race Lines", line: "Momentum, consistency, racing near others, the whole lap.",
+      exit: ["Smooth arcs with no scrub at the slowest corners", "5-lap spread smaller than at the start of Phase 3 on 2 track days", "Holds the line calmly when passed", "Can name every corner's type and drive its line", "Fun average 3 or more, and your child WANTS to keep going"] }
+  ];
 
   /* ---------- Build lessons ---------- */
   var LESSONS = [];
-  function lessonId(w, part) { return "w" + w + "-" + part; }
-
-  function cueBlock(ids) { return ids.filter(Boolean); }
-
-  function trackSteps(code, opts) {
-    var c = TR[code], s = [];
-    s.push({ title: "Before you go", kind: "plan", focus: c.focus, kit: c.kit, cues: c.cues, strip: c.strip, note: opts.sunday ? "Sunday: run 1 repeats yesterday's main cue. Today's cards keep to 3 cues in total." : null });
-    s.push({ title: "Safety check", kind: "checks", items: SAFETY, say: null, body: "Tick every line before run 1. Brakes are never disabled or restricted — for any drill." });
-    s.push({ title: "Warm-up game", kind: "warm", body: c.warm, drill: c.warmDrill, cues: c.cues });
-    if (c.cues.length) s.push({ title: "Teach today's cue", kind: "cue", cue: c.cues[0], cues: c.cues });
-    s.push({ title: "Pit routine", kind: "pit" });
-    c.runs.forEach(function (r) { s.push({ title: r.label, kind: "run", run: r }); });
-    if (c.extra) s.push({ title: c.extra.title, kind: "extra", extra: c.extra });
-    s.push({ title: "Run 5 · Your Choice", kind: "choice" });
-    s.push({ title: "Lunch & reset", kind: "lunch" });
-    s.push({ title: "Afternoon twist", kind: "twist", body: c.twist });
-    s.push({ title: "End the day", kind: "end", score: c.score, gate: opts.gate, fallback: opts.fallback, next: opts.next || c.next });
-    return s;
-  }
-  function simSteps(code, opts) {
-    var c = SIM[code], s = [];
-    s.push({ title: "Before you start", kind: "simplan", sim: c, code: code });
-    s.push({ title: "Rig check", kind: "simcheck" });
-    s.push({ title: "Teach the cue", kind: c.cues.length ? "cue" : "nocue", cue: c.cues[0], cues: c.cues });
-    s.push({ title: "The game", kind: "simgame", sim: c });
-    s.push({ title: "Your Choice · 2 minutes", kind: "simchoice" });
-    s.push({ title: "The sim goes to sleep", kind: "simend", sim: c, next: opts.next });
-    return s;
-  }
-  function lightSteps(phase) {
-    return [
-      { title: "This weekend", kind: "lightplan", phase: phase },
-      { title: "Safety check", kind: "checks", items: SAFETY, body: "Tick every line before run 1." },
-      { title: "Favourites morning", kind: "lightfav", phase: phase },
-      { title: "Lunch & reset", kind: "lunch" },
-      { title: "Phase " + phase.n + " check", kind: "phasecheck", phase: phase },
-      { title: "End the day", kind: "lightend", phase: phase }
-    ];
-  }
-
-  PHASES.forEach(function (ph) {
-    ph.weeks.forEach(function (wk) {
-      if (wk.light) {
-        LESSONS.push({ id: lessonId(wk.w, "check"), week: wk.w, phase: ph.n, day: "Saturday", kind: "light", code: "Check", title: "Favourites & Phase " + ph.n + " check", steps: lightSteps(ph) });
-        LESSONS.push({ id: lessonId(wk.w, "sim"), week: wk.w, phase: ph.n, day: "Saturday evening · optional", kind: "sim", code: wk.sim, title: SIM[wk.sim].title, steps: simSteps(wk.sim, { next: "Sunday: another sport, a family outing, or rest. No karting." }) });
-        return;
-      }
-      LESSONS.push({ id: lessonId(wk.w, "sat"), week: wk.w, phase: ph.n, day: "Saturday", kind: "track", code: wk.sat, title: TR[wk.sat].title,
-        steps: trackSteps(wk.sat, { sunday: false, next: "Tonight: " + wk.sim + " " + SIM[wk.sim].title + ". Tomorrow: " + wk.sun + " " + TR[wk.sun].title + "." }) });
-      LESSONS.push({ id: lessonId(wk.w, "sim"), week: wk.w, phase: ph.n, day: "Saturday evening", kind: "sim", code: wk.sim, title: SIM[wk.sim].title, steps: simSteps(wk.sim, { next: "Tomorrow: " + wk.sun + " " + TR[wk.sun].title + "." }) });
-      LESSONS.push({ id: lessonId(wk.w, "sun"), week: wk.w, phase: ph.n, day: "Sunday", kind: "track", code: wk.sun, title: TR[wk.sun].title,
-        steps: trackSteps(wk.sun, { sunday: true, gate: wk.gate, fallback: wk.fallback }) });
-    });
+  LESSONS_DATA.forEach(function (d) {
+    LESSONS.push({ id: "w" + d.w + "-sat", w: d.w, ph: d.ph, d: d, part: "sat", day: "Saturday", icon: "🏎️", code: d.code + " · learn", title: d.title, steps: trackSteps(d, "sat") });
+    LESSONS.push({ id: "w" + d.w + "-sim", w: d.w, ph: d.ph, d: d, part: "sim", day: "Saturday evening", icon: "🖥️", code: d.code + " · sim", title: d.sim.title, steps: simSteps(d) });
+    if (d.check) LESSONS.push({ id: "w" + d.w + "-check", w: d.w, ph: d.ph, d: d, part: "check", day: "Sunday", icon: "✅", code: "Phase " + d.ph + " check", title: "Phase " + d.ph + " check", steps: checkSteps(PHASES[d.ph - 1]) });
+    else LESSONS.push({ id: "w" + d.w + "-sun", w: d.w, ph: d.ph, d: d, part: "sun", day: "Sunday", icon: "🏎️", code: d.code + " · own it", title: d.title, steps: trackSteps(d, "sun") });
   });
-  LESSONS.push({ id: "fun-only", week: 0, phase: 0, day: "Any day", kind: "track", code: "TR-00", title: "Fun Only Day", steps: trackSteps("TR-00", { sunday: false }) });
   var BY_ID = {}; LESSONS.forEach(function (l, i) { l.index = i; BY_ID[l.id] = l; });
 
-  /* ---------- Progress (this device only) ---------- */
-  var KEY = "kid-kart-course-v1", state = { done: {}, last: null, funs: [] };
+  function trackSteps(d, part) {
+    var day = d[part], s = [];
+    if (part === "sat") s.push({ title: "Understand the line", kind: "concept" });
+    else s.push({ title: "Recap the line", kind: "recap" });
+    s.push({ title: "Choose the corner & set up", kind: "setup", day: day });
+    s.push({ title: "Safety & pit routine", kind: "safety" });
+    s.push({ title: "Show your child", kind: "teach" });
+    day.runs.forEach(function (r, i) { s.push({ title: r[0], kind: "run", run: r, i: i }); });
+    s.push({ title: "Run 5 · Your Choice", kind: "choice" });
+    s.push({ title: "Lunch & reset", kind: "lunch" });
+    s.push({ title: "Afternoon twist", kind: "twist", day: day });
+    s.push({ title: "End the day", kind: "end", part: part });
+    return s;
+  }
+  function simSteps(d) {
+    return [{ title: "Before you start", kind: "simplan" }, { title: "Show the corner", kind: "simshow" }, { title: "The game", kind: "simgame" }, { title: "Sim goes to sleep", kind: "simend" }];
+  }
+  function checkSteps(ph) {
+    return [{ title: "This day", kind: "chkplan", ph: ph }, { title: "Safety & pit routine", kind: "safety" }, { title: "Favourites morning", kind: "chkfav", ph: ph }, { title: "Phase " + ph.n + " check", kind: "chk", ph: ph }, { title: "Decision", kind: "chkend", ph: ph }];
+  }
+
+  /* ---------- State ---------- */
+  var KEY = "kid-kart-lines-v1", state = { done: {}, last: null, funs: [] };
   try { var raw = localStorage.getItem(KEY); if (raw) state = Object.assign(state, JSON.parse(raw)); } catch (e) {}
   function persist() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
   function doneSet(id) { return state.done[id] || (state.done[id] = []); }
 
-  /* ---------- Rendering helpers ---------- */
+  /* ---------- DOM helpers ---------- */
   var app = document.getElementById("app"), kid = document.getElementById("kid");
-  function h(tag, attrs, kids) {
-    var el = document.createElement(tag);
-    if (attrs) Object.keys(attrs).forEach(function (k) {
-      if (k === "text") el.textContent = attrs[k];
-      else if (k === "class") { if (attrs[k]) el.className = attrs[k]; }
-      else if (k.slice(0, 2) === "on") el.addEventListener(k.slice(2), attrs[k]);
-      else if (attrs[k] !== null && attrs[k] !== undefined && attrs[k] !== false) el.setAttribute(k, attrs[k]);
+  function h(tag, a, kids) {
+    var e = document.createElement(tag);
+    Object.keys(a || {}).forEach(function (k) {
+      var v = a[k];
+      if (v === null || v === undefined || v === false) return;
+      if (k === "text") e.textContent = v; else if (k === "class") e.className = v;
+      else if (k.slice(0, 2) === "on") e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
     });
-    (kids || []).forEach(function (c) { if (c == null) return; el.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
-    return el;
+    (kids || []).forEach(function (c) { if (c != null) e.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+    return e;
   }
-  function block(cls, label, kids) { return h("div", { class: "block " + cls }, [h("div", { class: "lbl", text: label })].concat(kids)); }
-  function say(text) { return block("say", "Say", [h("q", { text: text })]); }
-  function list(items) { return h("ul", { class: "clean" }, items.map(function (t) { return h("li", { text: t }); })); }
-  function p(text, cls) { return h("p", { class: cls || null, text: text }); }
-  function cueChip(id) { var c = CUES[id]; return h("span", { class: "cue-chip" }, [h("b", { text: id }), c[0] + " " + c[1]]); }
-
-  function showKid(strip, phrase, hint) {
-    kid.textContent = "";
-    kid.appendChild(h("div", null, [
-      h("div", { class: "big", text: strip }),
-      phrase ? h("div", { class: "phrase", text: phrase }) : null,
-      hint ? p(hint, "hint") : null,
-      h("button", { class: "primary", type: "button", onclick: hideKid, text: "Back to coaching" })
-    ]));
-    kid.hidden = false; kid.querySelector("button").focus();
+  function p(t, c) { return h("p", { class: c, text: t }); }
+  function block(cls, lbl, kids) { return h("div", { class: "block " + cls }, [h("div", { class: "lbl", text: lbl })].concat(kids)); }
+  function say(t) { return block("say", "Say", [h("q", { text: t })]); }
+  function list(items, ordered) { return h(ordered ? "ol" : "ul", { class: "clean" }, items.map(function (t) { return h("li", { text: t }); })); }
+  function cueChip(id) { return h("span", { class: "cue-chip" }, [CUES[id][0] + " " + CUES[id][1]]); }
+  function legend(name) {
+    var spec = DIAS[name], items = [], seen = {};
+    (spec.lines || []).forEach(function (ln) {
+      var name = ln.label || (ln.kind === "bad" ? "wrong line" : ln.kind === "thin" ? "one line per lap" : "racing line");
+      if (seen[name]) return; seen[name] = 1;
+      items.push(h("span", null, [h("i", { class: ln.kind === "bad" ? "sw bad" : "sw" }), name]));
+    });
+    var LET = { S: "slow down", T: "turn-in", A: "apex (the kiss)", E: "exit" };
+    var lets = {}; (spec.marks || []).forEach(function (m) { if (LET[m.t]) lets[m.t] = 1; });
+    Object.keys(LET).forEach(function (k) { if (lets[k]) items.push(h("span", null, [h("b", { text: k }), " " + LET[k]])); });
+    if ((spec.marks || []).some(function (m) { return m.t === "cone"; })) items.push(h("span", null, ["🔺 cone"]));
+    if ((spec.eyes || []).length) items.push(h("span", null, ["👀 → where the eyes look"]));
+    items.push(h("span", null, [h("i", { class: "dot", style: "background:var(--kerb)" }), "kerb on the inside"]));
+    return h("div", { class: "legend" }, items);
   }
-  function showFaces() {
+  function figure(name, opts) {
+    var spec = DIAS[name];
+    return h("figure", { class: "dia" }, [draw(spec, opts), (opts && opts.bare) ? null : legend(name), (opts && opts.bare) ? null : h("figcaption", { text: spec.caption })]);
+  }
+  function showKid(nodes) {
     kid.textContent = "";
-    kid.appendChild(h("div", null, [
-      h("div", { class: "phrase", text: "How much fun?" }),
-      h("div", { class: "faces", style: "margin-top:16px" }, ["😞", "🙁", "😐", "🙂", "🤩"].map(function (f) { return h("span", { text: f }); })),
-      p("Your child points. Tap Back, then record the face.", "hint"),
-      h("button", { class: "primary", type: "button", onclick: hideKid, text: "Back to coaching" })
-    ]));
-    kid.hidden = false; kid.querySelector("button").focus();
+    kid.appendChild(h("div", { class: "inner" }, nodes.concat([h("button", { class: "primary", type: "button", onclick: hideKid, text: "Back to coaching" })])));
+    kid.hidden = false; kid.querySelector("button.primary").focus();
   }
   function hideKid() { kid.hidden = true; }
   document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !kid.hidden) hideKid(); });
-  function showBtn(strip, phrase, hint, label) {
-    return h("button", { type: "button", onclick: function () { showKid(strip, phrase, hint); }, text: label || "Show your child" });
+  function showCue(id, dia) {
+    return h("button", { type: "button", text: "Show your child", onclick: function () {
+      showKid([dia ? figure(dia, { bare: true }) : null, h("div", { class: "big", text: CUES[id][0] }), h("div", { class: "phrase", text: CUES[id][1] })]);
+    } });
   }
+  function showFaces() {
+    showKid([h("div", { class: "phrase", text: "How much fun?" }), h("div", { class: "faces" }, ["😞", "🙁", "😐", "🙂", "🤩"].map(function (f) { return h("span", { text: f }); }))]);
+  }
+  function fixes(list2) { return block("ifthen", "If… then", [list(list2.map(function (f) { return "If " + f[0].charAt(0).toLowerCase() + f[0].slice(1) + " → " + f[1]; }))]); }
 
   /* ---------- Step bodies ---------- */
-  function stepBody(step, lesson) {
-    var out = [];
+  function body(step, l) {
+    var d = l.d, o = [];
     switch (step.kind) {
-      case "plan":
-        out.push(block("good", "Today's one focus", [p(step.focus)]));
-        out.push(h("div", { class: "showbar" }, [h("span", { class: "emoji-strip", text: step.strip }), showBtn(step.strip, lesson.title, "Today we're doing this!", "Show today's picture")]));
-        if (step.cues.length) out.push(h("div", { class: "row" }, step.cues.map(cueChip)));
-        out.push(h("h3", { text: "Pack" }));
-        out.push(list(step.kit.concat(["Gear bag, water, snacks", "Phone (photos, video)"])));
-        if (step.note) out.push(p(step.note, "muted small"));
-        out.push(say("Today we're going to " + (lesson.code === "TR-00" ? "just have fun driving!" : "play " + lesson.title + "!")));
-        out.push(block("watch", "Don't", [p("Talk about times, other kids or “trying hard”. Don't run through the whole plan.")]));
+      case "concept":
+        o.push(block("good", "This weekend's one focus", [p(d.title + ".")]));
+        d.why.forEach(function (t) { o.push(p(t)); });
+        if (d.dias.length > 1) o.push(h("div", { class: "two" }, d.dias.map(function (n) { return figure(n); })));
+        else o.push(figure(d.dias[0]));
+        o.push(h("div", { class: "row" }, d.cues.map(cueChip)));
+        o.push(p("Read this the night before. At the track, you'll show your child the moving picture, not the words.", "muted small"));
         break;
-      case "checks":
-        out.push(p(step.body));
-        var ds = doneSet(lesson.id + ":checks:" + step.title);
-        out.push(h("div", { class: "checks" }, step.items.map(function (t, i) {
-          var cb = h("input", { type: "checkbox", id: "chk-" + lesson.id + "-" + i });
+      case "recap":
+        o.push(p("Same focus as yesterday. Today you take it to new corners, or take the cones away."));
+        o.push(figure(d.dias[0]));
+        break;
+      case "setup":
+        o.push(block("good", "Corner", [p(step.day.corner)]));
+        o.push(block("good", "Set up", [p(step.day.setup)]));
+        if (d.dias[0] && l.part === "sat") o.push(figure(d.dias[0] === "oio" && d.w === 1 ? "treasures" : d.dias[0], { bare: false }));
+        o.push(p("Cones: only with the track's permission, soft cones at the very edge, and placed only when no karts are moving. Take them away after 2–3 track days, so your child learns real reference points.", "muted small"));
+        break;
+      case "safety":
+        var ds = doneSet(l.id + ":safety");
+        o.push(h("div", { class: "checks" }, SAFETY.map(function (t, i) {
+          var id = "s-" + l.id + "-" + i, cb = h("input", { type: "checkbox", id: id });
           cb.checked = ds.indexOf(i) >= 0;
           cb.addEventListener("change", function () { var k = ds.indexOf(i); if (cb.checked && k < 0) ds.push(i); if (!cb.checked && k >= 0) ds.splice(k, 1); persist(); });
-          return h("label", { for: "chk-" + lesson.id + "-" + i }, [cb, h("span", { text: t })]);
+          return h("label", { for: id }, [cb, h("span", { text: t })]);
         })));
+        o.push(say(CUES.QUIET[1]));
+        o.push(p("Before every run: helmet strap snug, hands at 9 and 3, no throttle until the helper says go (the Comer C52's centrifugal clutch moves the kart as soon as the revs rise). On the grid, say only: “Have fun, I'm watching you!”", "muted small"));
         break;
-      case "warm":
-        out.push(p("5–10 minutes in the paddock. Laugh. This is play, not a test."));
-        out.push(block("good", "Do", [p(step.body)]));
-        if (step.drill && DRILLS[step.drill]) out.push(drillCard(step.drill));
-        break;
-      case "cue":
-        var c = CUES[step.cue];
-        out.push(p("Teach ONE cue now. Use the same words all day."));
-        out.push(say(c[1]));
-        out.push(block("good", "Hand sign", [p(c[2] + ". Your child does the sign back to you. Now you can cue from the fence without shouting (where parents are allowed).")]));
-        out.push(h("div", { class: "showbar" }, [h("span", { class: "emoji-strip", text: c[0] }), showBtn(c[0], c[1])]));
-        if (step.cues.length > 1) out.push(h("div", { class: "row" }, [p("Back-up cues if needed:", "muted small")].concat(step.cues.slice(1).map(cueChip))));
-        break;
-      case "nocue":
-        out.push(p("No new cue tonight. Your child does the talking."));
-        break;
-      case "pit":
-        out.push(p("Same routine before every run, all day."));
-        out.push(list(["Helmet on, strap snug (one finger under it)", "Hands on the wheel at 9 and 3", "Engine starts — NO throttle until the helper says go"]));
-        out.push(say(CUES.T5[1]));
-        out.push(block("watch", "Why", [p("The Comer C52 has a centrifugal clutch: the kart moves as soon as the revs rise.")]));
-        out.push(block("watch", "On the grid, say only one of these", [list(["Have fun, I'm watching you!", "I love watching you drive.", "Thumbs up 👍 + the cue's hand sign"])]));
+      case "teach":
+        o.push(p("Show your child the moving picture. Let them trace the yellow line with a finger, then say the cue together and do the hand sign."));
+        o.push(figure(d.dias[0], { bare: true }));
+        o.push(say(CUES[d.kid][1]));
+        o.push(block("good", "Hand sign", [p(CUES[d.kid][2] + ". Now you can cue from the fence without shouting.")]));
+        o.push(showCue(d.kid, d.dias[0]));
+        o.push(h("div", { class: "row" }, [p("Today's cues (max 3):", "muted small")].concat(d.cues.map(cueChip))));
         break;
       case "run":
-        var r = step.run, d = r.drill && DRILLS[r.drill];
-        if (d && !r.before) out.push(drillMore(r.drill));
-        if (r.before || d) out.push(block("good", "Set up", [p(r.before || (d.setup + " " + d.how))]));
-        if (d && r.before) out.push(drillCard(r.drill));
-        if (r.cue) out.push(h("div", { class: "row" }, [say(CUES[r.cue][1]), showBtn(CUES[r.cue][0], CUES[r.cue][1])]));
-        else out.push(block("say", "Say", [p("Nothing new. “Have fun, I'm watching you!”")]));
-        out.push(block("watch", "Watch for", [p(r.watch)]));
-        out.push(block("say", "After the run · they talk first", [list(["Water, visor up, warm or cold?", "“Tell me about that run!” (they point at the photo map)", "“" + r.ask.replace(/^“|”$/g, "") + "”", "Then ONE thing from you, in cue words only — or just praise what you saw."])]));
-        if (d && d.fix.length) out.push(block("ifthen", "If… then", [list(d.fix.map(function (f) { return "If " + f[0].charAt(0).toLowerCase() + f[0].slice(1) + " → " + f[1]; }))]));
-        break;
-      case "extra":
-        out.push(say(step.extra.say));
-        out.push(p(step.extra.body));
+        var r = step.run;
+        o.push(h("div", { style: "max-width:420px;width:100%" }, [figure(d.dias[0], { bare: true })]));
+        o.push(block("good", "Set up", [p(r[1])]));
+        if (r[2]) o.push(h("div", { class: "row" }, [say(CUES[r[2]][1]), showCue(r[2], d.dias[0])]));
+        else o.push(block("say", "Say", [p("Nothing new. “Have fun, I'm watching you!”")]));
+        o.push(block("watch", "Watch for", [p(r[3])]));
+        o.push(block("say", "After the run · they talk first", [list(["Water, visor up.", "“Tell me about that run!”", "“" + r[4] + "”", "Then ONE thing from you, in cue words only, or just praise what you saw."])]));
+        if (step.i >= 1 && d[l.part] && d[l.part].fix) o.push(fixes(d[l.part].fix));
+        else if (step.i >= 1 && d.sat.fix) o.push(fixes(d.sat.fix));
         break;
       case "choice":
-        out.push(p(CHOICE));
-        out.push(showBtn("🐢 🎯 🔁 🆓", "Your choice!", "Point to one"));
-        out.push(block("watch", "Why", [p("Choice keeps motivation up and helps learning. If they pick 🆓, ask no questions after.")]));
+        o.push(p(CHOICE));
+        o.push(h("button", { type: "button", text: "Show the choices", onclick: function () { showKid([h("div", { class: "big", text: "🐢 🎯 🔁 🆓" }), h("div", { class: "phrase", text: "Your choice!" })]); } }));
         break;
       case "lunch":
-        out.push(list(["Eat, drink, shade or warmth", "45+ minutes of free play — no karting talk", "Check: tired? Rubbing eyes? Grumpy? Then do only 1–2 runs this afternoon, or stop. 8–10 runs a day is a MAXIMUM."]));
-        out.push(block("watch", "Fun rule", [p("If fun dropped two sessions in a row (e.g. 4 → 3 → 2), or was 1–2 twice in a row, skip the twist: do “Fun Only” runs instead.")]));
+        o.push(list(["Eat, drink, shade or warmth.", "45+ minutes of free play, with no karting talk.", "Tired, grumpy or rubbing their eyes? Then do only 1–2 runs this afternoon, or stop. 10 runs is a maximum, not a target."]));
+        o.push(block("watch", "Fun rule", [p("If fun dropped two sessions in a row, skip the twist and do free runs only.")]));
         break;
       case "twist":
-        out.push(p("Same focus, done a bit differently. Varying it helps the skill stick."));
-        out.push(block("good", "Do", [p(step.body)]));
-        out.push(p("Stop early whenever attention fades. Always finish on a good run — if the last one went badly, do one short 🐢 snail lap.", "muted"));
+        o.push(p("Same focus, done differently. Varying it helps the skill stick."));
+        o.push(block("good", "Do", [p(step.day.twist)]));
+        o.push(p("Always finish on a good run. If the last one went badly, do one slow 🐢 lap.", "muted"));
         break;
       case "end":
-        out.push(h("ol", { class: "clean" }, [h("li", { text: "Finish on a good run." }), h("li", null, ["Fun face — ", h("button", { class: "link", type: "button", onclick: showFaces, text: "show the faces" })]), h("li", { text: "Ask: “What was the best bit?” Remember their words." })]));
-        out.push(funRecorder(lesson));
-        if (step.score.length) out.push(block("good", "Score tonight (1 not yet · 2 sometimes · 3 every time)", [list(step.score)]));
-        if (step.gate) out.push(gateBox(lesson, step));
-        else if (step.next) out.push(block("watch", "Next", [p(step.next)]));
-        out.push(block("watch", "In the car", [p("After “best bit?”, stop talking about karting unless your child brings it up.")]));
+        o.push(list(["Finish on a good run.", "Fun face.", "“What was the best bit?” Remember their words."], true));
+        o.push(h("button", { type: "button", onclick: showFaces, text: "Show the faces" }));
+        o.push(funRec(l));
+        if (step.part === "sun" && d.gate) o.push(gate(l, d));
+        else if (step.part === "sat") o.push(block("watch", "Next", [p("Tonight: " + d.sim.title + " (10–15 min). Tomorrow: " + (d.check ? "Phase " + d.ph + " check." : d.title + ", own it."))]));
         break;
       case "simplan":
-        var sm = step.sim;
-        out.push(block("good", "Goal", [p(sm.goal)]));
-        out.push(h("div", { class: "showbar" }, [h("span", { class: "emoji-strip", text: sm.strip }), showBtn(sm.strip, sm.title, "Tonight on the sim!", "Show tonight's picture")]));
-        out.push(list(["Time cap: " + sm.cap + " minutes — set a sand timer your child can see", "At least 1 hour before bed", "You sit next to them the whole time", "Sim counts toward about 1 hour of screens today (AAP guidance for ages 2–5)", "Software: Automobilista 2, slowest rental kart (Kart Racing Pro later). Never iRacing (13+ only)", "No leaderboards. No “fastest lap” talk"]));
+        o.push(list(["Time cap: 10–15 minutes on a visible sand timer.", "At least 1 hour before bed. Sit next to them the whole time.", "Torque profile low (Fanatec FF about 1 Nm peak). Fingers outside the spokes. Hands off the wheel = pause.", "Automobilista 2 rental or GX390 kart. Never iRacing (13+ only).", "No leaderboards and no “fastest lap” talk."]));
         break;
-      case "simcheck":
-        out.push(h("div", { class: "checks" }, ["“KID” torque profile selected (Fanatec FF about 1 Nm peak)", "Fingers outside the rim and spokes", "Feet reach full brake with a firm squeeze; right foot go, left foot brake", "Power switch within your reach", "Practise: hands off the wheel = pause"].map(function (t, i) {
-          var id = "sim-" + lesson.id + "-" + i;
-          return h("label", { for: id }, [h("input", { type: "checkbox", id: id }), h("span", { text: t })]);
-        })));
-        out.push(block("ifthen", "Stop if", [p("Your child is upset or tired, or says their eyes, wrists or head hurt.")]));
+      case "simshow":
+        o.push(figure(d.dias[0]));
+        o.push(showCue(d.kid, d.dias[0]));
         break;
       case "simgame":
-        if (step.sim.drill) out.push(p(DRILLS[step.sim.drill].name + " (" + step.sim.drill + ")", "eyebrow"));
-        out.push(h("ol", { class: "clean" }, step.sim.game.map(function (t) { return h("li", { text: t }); })));
-        out.push(block("good", "Score", [p(step.sim.score)]));
-        if (step.sim.drill && DRILLS[step.sim.drill].fix.length) out.push(block("ifthen", "If… then", [list(DRILLS[step.sim.drill].fix.map(function (f) { return "If " + f[0].charAt(0).toLowerCase() + f[0].slice(1) + " → " + f[1]; }))]));
-        break;
-      case "simchoice":
-        out.push(p("Free drive, or a favourite game from an earlier sim night. Their pick."));
+        o.push(list(d.sim.game, true));
+        o.push(block("good", "Score", [p(d.sim.score)]));
         break;
       case "simend":
-        out.push(say("When the sand's gone, the sim goes to sleep."));
-        out.push(list(["Press the power button together", "Fun face"]));
-        out.push(h("button", { type: "button", onclick: showFaces, text: "Show the faces" }));
-        out.push(funRecorder(lesson));
-        out.push(block("watch", "Links to the track", [p(step.sim.link)]));
-        if (step.next) out.push(p(step.next, "muted"));
+        o.push(say("When the sand's gone, the sim goes to sleep."));
+        o.push(h("button", { type: "button", onclick: showFaces, text: "Show the faces" }));
+        o.push(funRec(l));
+        o.push(block("watch", "Tomorrow", [p(d.check ? "Phase " + d.ph + " check day." : "Run 1 tomorrow uses tonight's cue.")]));
         break;
-      case "lightplan":
-        out.push(p("A lighter weekend. One track day only (or two short days, max 6 runs each). The other day: another sport, a family outing, or rest."));
-        out.push(block("good", "Today", [list(["Morning: your child's favourite drills from this phase", "Afternoon: you watch and score the Phase " + step.phase.n + " check", "Celebrate what they've learned"])]));
+      case "chkplan":
+        o.push(p("A lighter day: at most 6 runs. Morning: your child's favourite lessons from this phase. Afternoon: you watch and tick the phase check."));
         break;
-      case "lightfav":
-        out.push(p("Show the picture strips of the cards you've done this phase. Your child picks 3–4 runs."));
-        var codes = [];
-        step.phase.weeks.forEach(function (w) { if (!w.light) [w.sat, w.sun].forEach(function (c) { if (codes.indexOf(c) < 0) codes.push(c); }); });
-        out.push(h("div", { class: "row" }, codes.map(function (c) { return showBtn(TR[c].strip, TR[c].title, c, TR[c].strip + " " + TR[c].title); })));
+      case "chkfav":
+        o.push(p("Show the pictures. Your child picks 3–4 runs."));
+        var ls = LESSONS_DATA.filter(function (x) { return x.ph === step.ph.n; });
+        o.push(h("div", { class: "two" }, ls.map(function (x) {
+          return h("button", { type: "button", style: "display:grid;gap:6px;padding:8px", onclick: function () { showKid([figure(x.dias[0], { bare: true }), h("div", { class: "phrase", text: CUES[x.kid][1] })]); } },
+            [draw(DIAS[x.dias[0]], { mini: true }), h("span", { text: x.title })]);
+        })));
         break;
-      case "phasecheck":
-        out.push(p("Watch the afternoon runs. A skill only counts as “every time” if you've seen it on 2 different track days."));
-        out.push(phaseChecks(step.phase, lesson));
+      case "chk":
+        o.push(p("Tick only what you've seen on 2 different track days."));
+        var cs = doneSet(l.id + ":exit");
+        o.push(h("div", { class: "checks" }, step.ph.exit.map(function (t, i) {
+          var id = "x-" + l.id + "-" + i, cb = h("input", { type: "checkbox", id: id });
+          cb.checked = cs.indexOf(i) >= 0;
+          cb.addEventListener("change", function () { var k = cs.indexOf(i); if (cb.checked && k < 0) cs.push(i); if (!cb.checked && k >= 0) cs.splice(k, 1); persist(); });
+          return h("label", { for: id }, [cb, h("span", { text: t })]);
+        })));
         break;
-      case "lightend":
-        out.push(funRecorder(lesson));
-        out.push(phaseDecision(step.phase, lesson));
+      case "chkend":
+        o.push(funRec(l));
+        var c2 = doneSet(l.id + ":exit"), all = c2.length === step.ph.exit.length, nx = PHASES[step.ph.n];
+        if (all && nx) { var first = LESSONS.filter(function (x) { return x.ph === nx.n; })[0]; o.push(h("div", { class: "gate-out good" }, ["All ticked. Phase " + nx.n + " (" + nx.name + ") starts next weekend: ", h("a", { href: "#" + first.id, text: first.d.code + " " + first.title }), "."])); }
+        else if (all) o.push(h("div", { class: "gate-out good", text: "Course complete. Ask your child what was most fun. Next: repeat Phase 3 at a new track, try club Kid Kart events if they ask, or take a break and play other sports." }));
+        else o.push(h("div", { class: "gate-out say", text: c2.length + " of " + step.ph.exit.length + " ticked. Stay in Phase " + step.ph.n + ": next weekend, repeat the lessons for the unticked lines. That's normal." }));
         break;
     }
-    return out;
+    return o;
   }
 
-  function drillCard(code) {
-    var d = DRILLS[code];
-    return block("good", "Drill " + code + " · " + d.name, [p(d.setup), p(d.how)]);
-  }
-  function drillMore(code) { return p("Drill " + code + " · " + DRILLS[code].name, "eyebrow"); }
-
-  function funRecorder(lesson) {
-    var wrap = h("div", { class: "row" }, [p("Record the face:", "muted small")]);
-    var current = state.funs.filter(function (f) { return f.id === lesson.id; }).pop();
+  function funRec(l) {
+    var cur = state.funs.filter(function (f) { return f.id === l.id; }).pop();
+    var row = h("div", { class: "row" }, [p("Record the face:", "muted small")]);
     ["😞", "🙁", "😐", "🙂", "🤩"].forEach(function (f, i) {
-      var b = h("button", { type: "button", "aria-pressed": current && current.v === i + 1 ? "true" : "false", "aria-label": "Fun " + (i + 1), text: f, style: "font-size:1.5rem;min-width:52px" });
-      b.addEventListener("click", function () {
-        state.funs = state.funs.filter(function (x) { return x.id !== lesson.id; });
-        state.funs.push({ id: lesson.id, v: i + 1, t: Date.now() });
-        persist(); render();
-      });
-      wrap.appendChild(b);
+      row.appendChild(h("button", { type: "button", "aria-pressed": cur && cur.v === i + 1 ? "true" : "false", "aria-label": "Fun " + (i + 1), text: f, class: cur && cur.v === i + 1 ? "primary" : null, style: "font-size:1.5rem;min-width:52px",
+        onclick: function () { state.funs = state.funs.filter(function (x) { return x.id !== l.id; }); state.funs.push({ id: l.id, v: i + 1, t: Date.now() }); persist(); render(); } }));
     });
-    var vals = state.funs.slice().sort(function (a, b) { return a.t - b.t; }).map(function (x) { return x.v; });
-    var n = vals.length, warn = (n >= 3 && vals[n - 1] < vals[n - 2] && vals[n - 2] < vals[n - 3]) || (n >= 2 && vals[n - 1] <= 2 && vals[n - 2] <= 2);
-    var out = h("div", { class: "gate" }, [wrap]);
-    if (warn) out.appendChild(h("div", { class: "gate-out ifthen" }, ["Fun has dropped two sessions in a row. Next session: ", h("a", { href: "#fun-only", text: "Fun Only Day" }), ". No drills, no debrief questions."]));
-    return out;
+    var v = state.funs.slice().sort(function (a, b) { return a.t - b.t; }).map(function (x) { return x.v; }), n = v.length;
+    var warn = (n >= 3 && v[n - 1] < v[n - 2] && v[n - 2] < v[n - 3]) || (n >= 2 && v[n - 1] <= 2 && v[n - 2] <= 2);
+    return h("div", { class: "gate" }, [row, warn ? h("div", { class: "gate-out ifthen", text: "Fun has dropped two sessions in a row. Next session: free runs only, no drills, no questions. Then repeat the last lesson your child enjoyed." }) : null]);
   }
-
-  function gateBox(lesson, step) {
-    var key = lesson.id + ":gate", val = state.done[key];
-    var out = h("div", { class: "gate" }, [h("h3", { text: "Weekend check" }), p(step.gate)]);
-    var yes = h("button", { type: "button", class: val === "yes" ? "primary" : null, text: "Yes" });
-    var no = h("button", { type: "button", class: val === "no" ? "primary" : null, text: "Not yet" });
-    yes.addEventListener("click", function () { state.done[key] = "yes"; persist(); render(); });
-    no.addEventListener("click", function () { state.done[key] = "no"; persist(); render(); });
-    out.appendChild(h("div", { class: "row" }, [yes, no]));
-    var nxt = LESSONS[lesson.index + 1];
-    if (val === "yes" && nxt && nxt.id !== "fun-only") out.appendChild(h("div", { class: "gate-out good" }, ["Great — move on. Next weekend starts with ", h("a", { href: "#" + nxt.id, text: nxt.code + " " + nxt.title }), "."]));
-    if (val === "no") out.appendChild(h("div", { class: "gate-out say" }, [step.fallback + " Staying longer is normal — at 5, it's expected."]));
-    return out;
-  }
-
-  function phaseChecks(phase, lesson) {
-    var ds = doneSet(lesson.id + ":exit");
-    return h("div", { class: "checks" }, phase.exit.map(function (t, i) {
-      var id = "exit-" + phase.n + "-" + i, cb = h("input", { type: "checkbox", id: id });
-      cb.checked = ds.indexOf(i) >= 0;
-      cb.addEventListener("change", function () { var k = ds.indexOf(i); if (cb.checked && k < 0) ds.push(i); if (!cb.checked && k >= 0) ds.splice(k, 1); persist(); });
-      return h("label", { for: id }, [cb, h("span", { text: t })]);
-    }));
-  }
-  function phaseDecision(phase, lesson) {
-    var ds = doneSet(lesson.id + ":exit"), all = ds.length === phase.exit.length;
-    var out = h("div", { class: "gate" }, [h("h3", { text: "Decision" })]);
-    if (all) {
-      var nextPh = PHASES[phase.n];
-      out.appendChild(h("div", { class: "gate-out good" }, nextPh
-        ? ["All exit criteria ticked. Phase " + nextPh.n + " (" + nextPh.name + ") starts next weekend with ", h("a", { href: "#" + lessonId(nextPh.weeks[0].w, "sat"), text: TR[nextPh.weeks[0].sat].title }), "."]
-        : ["All done! Talk with your child about what was most fun. Options: repeat Phase 3 at a new track, club Kid Kart events if they ask, or a break — other sports build the athlete too."]));
-    } else {
-      out.appendChild(h("div", { class: "gate-out say" }, ["Not all ticked (" + ds.length + " of " + phase.exit.length + "). Stay in Phase " + phase.n + ": next weekend, repeat the cards for the skills that aren't ticked yet. That's normal."]));
-    }
-    return out;
+  function gate(l, d) {
+    var key = l.id + ":gate", val = state.done[key], nxt = LESSONS[l.index + 1];
+    var yes = h("button", { type: "button", class: val === "yes" ? "primary" : null, text: "Yes", onclick: function () { state.done[key] = "yes"; persist(); render(); } });
+    var no = h("button", { type: "button", class: val === "no" ? "primary" : null, text: "Not yet", onclick: function () { state.done[key] = "no"; persist(); render(); } });
+    return h("div", { class: "gate" }, [h("h3", { text: "Weekend check" }), p(d.gate), h("div", { class: "row" }, [yes, no]),
+      val === "yes" && nxt ? h("div", { class: "gate-out good" }, ["Move on. Next weekend: ", h("a", { href: "#" + nxt.id, text: nxt.d.code + " " + nxt.title }), "."]) : null,
+      val === "no" ? h("div", { class: "gate-out say", text: "Repeat this lesson next weekend at a different corner. Staying longer is normal, and the line is worth getting right." }) : null]);
   }
 
   /* ---------- Screens ---------- */
-  function lessonStatus(l) {
-    var d = doneSet(l.id).length;
-    if (d >= l.steps.length) return ["Done", "done"];
-    if (d > 0) return [d + "/" + l.steps.length, "part"];
-    return [l.steps.length + " steps", ""];
-  }
-
-  function renderHome() {
+  function status(l) { var n = doneSet(l.id).length; return n >= l.steps.length ? ["Done", "done"] : n ? [n + "/" + l.steps.length, "part"] : [l.steps.length + " steps", ""]; }
+  function home() {
     var resume = state.last && BY_ID[state.last.id];
-    var top = h("header", { class: "card" }, [
-      h("p", { class: "eyebrow", text: "Age 5 · Kid Kart · Comer C52 · weekends" }),
-      h("h1", null, ["Kid Kart ", h("span", { text: "Coaching Course" })]),
-      p("Twelve weekends, step by step. Each lesson tells you what to set up, what to say, what to show your child, what to watch for, and what to do if it goes wrong.", "muted"),
-      h("div", { class: "row" }, [
-        resume ? h("a", { class: "btn primary", href: "#" + resume.id, style: "background:var(--accent);color:var(--accent-ink);border-color:var(--accent)", text: "Resume: " + resume.code + " " + resume.title }) :
-          h("a", { class: "btn", href: "#w1-sat", style: "background:var(--accent);color:var(--accent-ink);border-color:var(--accent)", text: "Start Week 1" }),
-        h("a", { class: "btn", href: "#fun-only", text: "🎉 Fun Only Day" })
-      ])
-    ]);
-    var rules = h("section", { class: "card" }, [
-      h("h2", { text: "Six rules for every session" }),
-      h("ol", { class: "clean" }, ["One focus, max 3 cues. Same words every time.", "Your child talks first after every run.", "Nothing new on the grid: “Have fun, I'm watching you!”", "A child's choice in every session.", "Fun drops two sessions in a row → next session is a Fun Only Day.", "Move on when the skill shows up, not when the calendar says."].map(function (t) { return h("li", { text: t }); }))
-    ]);
-    var map = PHASES.map(function (ph) {
-      return h("section", { class: "phase" }, [
-        h("div", { class: "phase-head" }, [h("p", { class: "eyebrow", text: "Phase " + ph.n }), h("h2", { text: ph.name }), p(ph.line, "muted")]),
-        h("div", { class: "phase" }, ph.weeks.map(function (wk) {
-          var ls = LESSONS.filter(function (l) { return l.week === wk.w; });
-          return h("div", { class: "week" }, [
-            h("div", { class: "week-title", text: "Weekend " + wk.w + (wk.light ? " · lighter" : "") }),
-            h("div", { class: "lessons" }, ls.map(function (l) {
-              var st = lessonStatus(l);
-              return h("a", { class: "btn lesson-btn", href: "#" + l.id }, [
-                h("span", { class: "lt" }, [h("span", { text: (l.kind === "sim" ? "🖥️ " : "🏎️ ") + l.title }), h("small", { text: l.day + " · " + l.code })]),
-                h("span", { class: "tag " + st[1], text: st[0] })
-              ]);
-            }))
-          ]);
-        }))
-      ]);
-    });
-    var reset = h("button", { type: "button", class: "link", text: "Reset all progress on this device" });
-    reset.addEventListener("click", function () {
-      if (reset.getAttribute("data-armed")) { state = { done: {}, last: null, funs: [] }; persist(); render(); return; }
-      reset.setAttribute("data-armed", "1"); reset.textContent = "Tap again to reset everything";
-    });
-    app.textContent = "";
-    [top, rules].concat(map).concat([h("p", { class: "muted small" }, ["Progress is saved in this browser only. Full program, drills and sources are in the repo's /program folder. ", reset])]).forEach(function (n) { app.appendChild(n); });
-  }
-
-  function renderLesson(l) {
-    var si = Math.min(state.last && state.last.id === l.id ? state.last.step : firstUndone(l), l.steps.length - 1);
-    state.last = { id: l.id, step: si }; persist();
-    var step = l.steps[si], ds = doneSet(l.id);
-    var pct = Math.round(ds.length / l.steps.length * 100);
-    var nav = h("nav", { class: "steps-nav", "aria-label": "Steps" }, l.steps.map(function (s, i) {
-      return h("button", { type: "button", class: ds.indexOf(i) >= 0 ? "done" : null, "aria-current": i === si ? "step" : null, title: s.title, text: String(i + 1),
-        onclick: function () { state.last = { id: l.id, step: i }; persist(); render(); } });
-    }));
     var head = h("header", { class: "card" }, [
-      h("div", { class: "row" }, [h("a", { href: "#home", class: "btn", text: "← Course" }), h("span", { class: "grow" }), h("span", { class: "tag", text: l.day })]),
-      h("p", { class: "eyebrow", text: (l.week ? "Weekend " + l.week + " · " : "") + l.code }),
-      h("h1", { text: l.title, style: "font-size:2rem" }),
-      h("div", { class: "progress", role: "progressbar", "aria-valuenow": pct, "aria-valuemin": 0, "aria-valuemax": 100, "aria-label": "Lesson progress" }, [h("div", { style: "width:" + pct + "%" })]),
-      nav
+      h("p", { class: "eyebrow", text: "Kid Kart · racing lines · 12 weekends" }),
+      h("h1", null, ["Kid Kart ", h("span", { text: "Coaching Course" })]),
+      p("For a driver who already handles the kart. Every weekend is one racing-line idea, drawn as a corner diagram, then coached step by step: what to set up, what to say, what to show your child, what to watch for, and what to do if it goes wrong.", "muted"),
+      figure("oio"),
+      h("div", { class: "row" }, [h("a", { class: "btn primary", href: "#" + (resume ? resume.id : "w1-sat"), text: resume ? "Resume: " + resume.code : "Start Weekend 1" })])
     ]);
-    var isLast = si === l.steps.length - 1;
-    var back = h("button", { type: "button", text: "Back", disabled: si === 0 ? "disabled" : null, onclick: function () { state.last.step = si - 1; persist(); render(); window.scrollTo(0, 0); } });
-    var next = h("button", { type: "button", class: "primary", text: isLast ? (ds.indexOf(si) >= 0 ? "Lesson done ✓" : "Finish lesson") : "Done · next step →",
-      onclick: function () {
-        if (ds.indexOf(si) < 0) ds.push(si);
-        if (isLast) { persist(); location.hash = "#home"; render(); return; }
-        state.last.step = si + 1; persist(); render(); window.scrollTo(0, 0);
-      } });
-    var body = h("section", { class: "card", "aria-labelledby": "stepTitle" }, [
-      h("p", { class: "eyebrow", text: "Step " + (si + 1) + " of " + l.steps.length }),
-      h("h2", { id: "stepTitle", text: step.title })
-    ].concat(stepBody(step, l)).concat([h("div", { class: "stepfoot" }, [back, next])]));
+    var rules = h("section", { class: "card" }, [h("h2", { text: "Rules for every session" }), list(["One focus, max 3 cues. Same words every time.", "Your child talks first after every run.", "Nothing new on the grid.", "A child's choice in every session.", "Fun drops two sessions in a row → free runs only next time.", "Move on when the skill shows up, not when the calendar says."], true)]);
+    var map = PHASES.map(function (ph) {
+      return h("section", { class: "phase" }, [h("p", { class: "eyebrow", text: "Phase " + ph.n }), h("h2", { text: ph.name }), p(ph.line, "muted"),
+        h("div", { class: "phase" }, LESSONS_DATA.filter(function (x) { return x.ph === ph.n; }).map(function (x) {
+          return h("div", { class: "week" }, [
+            h("div", { class: "week-head" }, [draw(DIAS[x.dias[0]], { mini: true }), h("div", null, [h("div", { class: "week-title", text: "Weekend " + x.w + " · " + x.title }), p(CUES[x.kid][0] + " “" + CUES[x.kid][1] + "”", "muted small")])]),
+            h("div", { class: "lessons" }, LESSONS.filter(function (l) { return l.w === x.w; }).map(function (l) {
+              var st = status(l);
+              return h("a", { class: "btn lesson-btn", href: "#" + l.id }, [h("span", { class: "lt" }, [h("span", { text: l.icon + " " + l.day }), h("small", { text: l.code })]), h("span", { class: "tag " + st[1], text: st[0] })]);
+            }))]);
+        }))]);
+    });
+    var reset = h("button", { type: "button", class: "link", text: "Reset progress on this device" });
+    reset.addEventListener("click", function () { if (reset.dataset.armed) { state = { done: {}, last: null, funs: [] }; persist(); render(); } else { reset.dataset.armed = "1"; reset.textContent = "Tap again to reset everything"; } });
+    var srcs = h("section", { class: "card" }, [h("h3", { text: "Where the ideas come from" }), p("Turning in too early and not using the full track width as common mistakes; small, smooth inputs: David Sera, Kart Class. Look one stage ahead; slow before turning for a later apex: Red Bull, “Karting mistakes novices make”. Cones can cause fixation: Ross Bentley, Speed Secrets. Consistency judged on spread: from your brief, attributed to Alessio Lorandi. Everything marked “coaching synthesis”, including all Kid Kart momentum advice, is coaching judgement, not a sourced fact. Full list: program/10-sources.md.", "muted small")]);
     app.textContent = "";
-    app.appendChild(head); app.appendChild(body);
+    [head, rules].concat(map).concat([srcs, h("p", { class: "muted small" }, ["Progress is saved on this device only. ", reset])]).forEach(function (n) { app.appendChild(n); });
   }
-  function firstUndone(l) { var d = doneSet(l.id); for (var i = 0; i < l.steps.length; i++) if (d.indexOf(i) < 0) return i; return 0; }
-
-  function render() {
-    var id = (location.hash || "").slice(1);
-    var l = BY_ID[id];
-    if (l) renderLesson(l); else renderHome();
+  function first(l) { var d = doneSet(l.id); for (var i = 0; i < l.steps.length; i++) if (d.indexOf(i) < 0) return i; return 0; }
+  function lesson(l) {
+    var si = Math.min(state.last && state.last.id === l.id ? state.last.step : first(l), l.steps.length - 1);
+    state.last = { id: l.id, step: si }; persist();
+    var st = l.steps[si], ds = doneSet(l.id), last = si === l.steps.length - 1;
+    var go = function (i) { state.last = { id: l.id, step: i }; persist(); render(); window.scrollTo(0, 0); };
+    app.textContent = "";
+    app.appendChild(h("header", { class: "card" }, [
+      h("div", { class: "row" }, [h("a", { href: "#home", class: "btn", text: "← Course" }), h("span", { class: "grow" }), h("span", { class: "tag", text: l.day })]),
+      h("p", { class: "eyebrow", text: "Weekend " + l.w + " · " + l.code }),
+      h("h1", { text: l.title, style: "font-size:2rem" }),
+      h("div", { class: "progress", role: "progressbar", "aria-label": "Lesson progress", "aria-valuenow": Math.round(ds.length / l.steps.length * 100), "aria-valuemin": "0", "aria-valuemax": "100" }, [h("div", { style: "width:" + Math.round(ds.length / l.steps.length * 100) + "%" })]),
+      h("nav", { class: "steps-nav", "aria-label": "Steps" }, l.steps.map(function (s, i) { return h("button", { type: "button", title: s.title, class: ds.indexOf(i) >= 0 ? "done" : null, "aria-current": i === si ? "step" : null, text: String(i + 1), onclick: function () { go(i); } }); }))
+    ]));
+    app.appendChild(h("section", { class: "card", "aria-labelledby": "stepTitle" }, [h("p", { class: "eyebrow", text: "Step " + (si + 1) + " of " + l.steps.length }), h("h2", { id: "stepTitle", text: st.title })]
+      .concat(body(st, l))
+      .concat([h("div", { class: "stepfoot" }, [
+        h("button", { type: "button", text: "Back", disabled: si === 0 ? "disabled" : null, onclick: function () { go(si - 1); } }),
+        h("button", { type: "button", class: "primary", text: last ? "Finish lesson ✓" : "Done · next step →", onclick: function () { if (ds.indexOf(si) < 0) ds.push(si); if (last) { persist(); location.hash = "#home"; render(); } else go(si + 1); } })
+      ])])));
   }
-  window.addEventListener("hashchange", function () {
-    var l = BY_ID[(location.hash || "").slice(1)];
-    if (l && (!state.last || state.last.id !== l.id)) state.last = { id: l.id, step: firstUndone(l) };
-    render(); window.scrollTo(0, 0);
-  });
+  function render() { var l = BY_ID[(location.hash || "").slice(1)]; if (l) lesson(l); else home(); }
+  window.addEventListener("hashchange", function () { var l = BY_ID[(location.hash || "").slice(1)]; if (l && (!state.last || state.last.id !== l.id)) state.last = { id: l.id, step: first(l) }; render(); window.scrollTo(0, 0); });
   render();
 })();
 </script>
